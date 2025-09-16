@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -348,7 +348,12 @@ const industries = [
 ];
 
 // === Student Registration Component ===
-const StudentRegistration = () => {
+interface StudentRegistrationProps {
+  collegeToken: string | null;
+  collegeInfo: any;
+}
+
+const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken, collegeInfo }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -1965,7 +1970,7 @@ const ProfessionalRegistration = () => {
 };
 
 // === Main Register Component ===
-export default function RegisterPage() {
+function RegisterPage() {
   const [userType, setUserType] = useState<'student' | 'professional' | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 40 });
 
@@ -2053,7 +2058,7 @@ export default function RegisterPage() {
         <div className="max-w-5xl mx-auto px-4 py-8">
           <Card className="border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl">
             <CardContent className="p-8">
-              {isStudent ? <StudentRegistration /> : <ProfessionalRegistration />}
+              {isStudent ? <StudentRegistration collegeToken={null} collegeInfo={null} /> : <ProfessionalRegistration />}
             </CardContent>
           </Card>
         </div>
@@ -2075,5 +2080,6 @@ export default function RegisterPage() {
       </div>
     </div>
   );
-}
+};
 
+export default StudentRegistration;

@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { CollegeRow } from '@/lib/db-types';
+
+interface LoginCollegeRow extends CollegeRow {
+  password_hash: string;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +23,12 @@ export async function POST(request: NextRequest) {
     const connection = await pool.getConnection();
     
     // Find college by email
-    const [collegeResult] = await connection.execute(
+    const [collegeResult] = await connection.execute<LoginCollegeRow[]>(
       'SELECT id, college_name, email, password_hash, college_token, is_active FROM colleges WHERE email = ?',
       [email]
     );
 
-    if (Array.isArray(collegeResult) && collegeResult.length === 0) {
+    if (!collegeResult || collegeResult.length === 0) {
       connection.release();
       return NextResponse.json(
         { error: 'Invalid email or password' },
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const college = collegeResult[0] as any;
+    const college = collegeResult[0];
 
     // Check if college is active
     if (!college.is_active) {

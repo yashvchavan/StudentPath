@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { UserRow, StudentRow, SuccessResult } from '@/lib/db-types';
 
 export async function POST(request: NextRequest) {
   try {

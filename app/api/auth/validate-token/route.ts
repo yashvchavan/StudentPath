@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { CollegeRow } from '@/lib/db-types';
+
+interface ExtendedCollegeRow extends CollegeRow {
+  usage_count: number;
+  max_usage: number;
+  expires_at: Date | null;
+  college_type: string;
+  city: string;
+  state: string;
+  country: string;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     const connection = await pool.getConnection();
     
-    const [result] = await connection.execute(
+    const [result] = await connection.execute<ExtendedCollegeRow[]>(
       `SELECT c.id, c.college_name, c.college_type, c.city, c.state, c.country,
               ct.usage_count, ct.max_usage, ct.is_active, ct.expires_at
        FROM colleges c 
@@ -26,14 +37,14 @@ export async function GET(request: NextRequest) {
 
     connection.release();
 
-    if (Array.isArray(result) && result.length === 0) {
+    if (!result || result.length === 0) {
       return NextResponse.json(
         { error: 'Invalid or expired token' },
         { status: 404 }
       );
     }
 
-    const tokenData = result[0] as any;
+    const tokenData = result[0];
 
     // Check if token usage limit exceeded
     if (tokenData.usage_count >= tokenData.max_usage) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { CollegeRow, StudentRow, StudentDataRow } from '@/lib/db-types';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const connection = await pool.getConnection();
     
     // First validate the token
-    const [tokenResult] = await connection.execute(
+    const [tokenResult] = await connection.execute<CollegeRow[]>(
       `SELECT c.id, c.college_name 
        FROM colleges c 
        JOIN college_tokens ct ON c.id = ct.college_id 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       [token]
     );
 
-    if (Array.isArray(tokenResult) && tokenResult.length === 0) {
+    if (!tokenResult || tokenResult.length === 0) {
       connection.release();
       return NextResponse.json(
         { error: 'Invalid token' },
@@ -33,8 +34,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    interface ExtendedStudentRow extends StudentRow {
+      college_name: string;
+      college_type: string;
+      city: string;
+      state: string;
+      country: string;
+      academic_interests: string;
+      career_quiz_answers: string;
+      technical_skills: string;
+      soft_skills: string;
+      language_skills: string;
+      industry_focus: string;
+    }
+
     // Get student data
-    const [students] = await connection.execute(
+    const [students] = await connection.execute<ExtendedStudentRow[]>(
       `SELECT 
         s.student_id,
         s.first_name,
@@ -69,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     connection.release();
 
-    if (Array.isArray(students) && students.length === 0) {
+    if (!students || students.length === 0) {
       return NextResponse.json(
         { error: 'Student not found' },
         { status: 404 }

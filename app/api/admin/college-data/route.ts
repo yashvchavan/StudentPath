@@ -1,5 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
+import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+
+interface CollegeRow extends RowDataPacket {
+  id: number;
+  college_name: string;
+  college_token: string;
+  total_students: number;
+  programs: string;
+  created_at: Date;
+}
+
+interface StudentCountRow extends RowDataPacket {
+  total_students: number;
+}
+
+interface TokenUsageRow extends RowDataPacket {
+  usage_count: number;
+  max_usage: number;
+  is_active: boolean;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,14 +38,14 @@ export async function GET(request: NextRequest) {
     const connection = await pool.getConnection();
     
     // Get college basic info
-    const [collegeResult] = await connection.execute(
+    const [collegeResult] = await connection.execute<CollegeRow[]>(
       `SELECT id, college_name, college_token, total_students, programs, created_at 
        FROM colleges 
        WHERE id = ? AND is_active = TRUE`,
       [collegeId]
     );
 
-    if (Array.isArray(collegeResult) && collegeResult.length === 0) {
+    if (!collegeResult || collegeResult.length === 0) {
       connection.release();
       return NextResponse.json(
         { error: 'College not found' },
@@ -33,15 +53,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const college = collegeResult[0] as any;
+    const college = collegeResult[0];
 
     // Get student count
-    const [studentCountResult] = await connection.execute(
+    const [studentCountResult] = await connection.execute<StudentCountRow[]>(
       'SELECT COUNT(*) as total_students FROM students WHERE college_id = ? AND is_active = TRUE',
       [collegeId]
     );
 
-    const totalStudents = (studentCountResult as any)[0].total_students;
+    const totalStudents = studentCountResult[0].total_students;
 
     // Get recent registrations
     const [recentRegistrations] = await connection.execute(
@@ -54,14 +74,14 @@ export async function GET(request: NextRequest) {
     );
 
     // Get token usage info
-    const [tokenUsageResult] = await connection.execute(
+    const [tokenUsageResult] = await connection.execute<TokenUsageRow[]>(
       `SELECT usage_count, max_usage, is_active 
        FROM college_tokens 
        WHERE college_id = ?`,
       [collegeId]
     );
 
-    const tokenUsage = tokenUsageResult[0] as any;
+    const tokenUsage = tokenUsageResult[0];
 
     connection.release();
 
