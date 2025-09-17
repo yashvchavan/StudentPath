@@ -6,10 +6,12 @@
   "framework": "nextjs",
   "regions": ["bom1"],
   "env": {
-    "DB_HOST": "required",
-    "DB_PORT": "required",
-    "DB_USER": "required",
-    "DB_PASSWORD": "required",
-    "DB_NAME": "required"
+    "DB_HOST": "studentpath-atharvabagade2312-d3eb.d.aivencloud.com",
+    "DB_PORT": "26363",
+    "DB_USER": "avnadmin",
+    "DB_PASSWORD": "AVNS_ZlEVtgizslmXeWE4n0K",
+    "DB_NAME": "StudentPath",
+    
+"NODE_ENV":"production"
   }
 }
