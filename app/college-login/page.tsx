@@ -113,37 +113,50 @@ export default function CollegeLoginPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  e.preventDefault();
+  if (!validateForm()) return;
 
-    setIsLoading(true);
-    
-    try {
-      const response = await fetch('/api/auth/login-college', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+  setIsLoading(true);
+  
+  try {
+    const response = await fetch('/api/auth/login-college', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (response.ok) {
-        // Instead of using localStorage, we now use cookies (set by the API)
-        // Redirect to admin dashboard
-        window.location.href = '/admin';
-      } else {
-        setErrors({ email: data.error || 'Login failed' });
-      }
-    } catch (error) {
-      console.error('Login failed:', error);
-      setErrors({ email: 'Login failed. Please try again.' });
-    } finally {
-      setIsLoading(false);
+    if (response.ok) {
+      // Store college data in localStorage as backup
+      const collegeData = {
+        id: data.college.id,
+        name: data.college.name,
+        email: data.college.email,
+        token: data.college.token,
+        type: 'college'
+      };
+      
+      // Store in localStorage for immediate access
+      localStorage.setItem('collegeData', JSON.stringify(collegeData));
+      
+      console.log('✅ Login successful, stored college data:', collegeData);
+      console.log('🍪 Cookie should also be set for:', collegeData.name);
+      
+      // Redirect to admin dashboard
+      window.location.href = '/admin';
+    } else {
+      setErrors({ email: data.error || 'Login failed' });
     }
-  };
-
+  } catch (error) {
+    console.error('❌ Login failed:', error);
+    setErrors({ email: 'Login failed. Please try again.' });
+  } finally {
+    setIsLoading(false);
+  }
+};
   const collegeTestimonials = [
     { name: "Dr. Rajesh Kumar", text: "Managing student data has never been easier!", position: "Academic Director" },
     { name: "Prof. Meera Singh", text: "Excellent analytics and reporting features.", position: "Department Head" },

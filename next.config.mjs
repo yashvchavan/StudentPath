@@ -9,7 +9,6 @@ const nextConfig = {
   // },
   poweredByHeader: false,
   reactStrictMode: true,
-  swcMinify: true,
   images: {
     domains: ['localhost'],
     unoptimized: true,
@@ -17,7 +16,6 @@ const nextConfig = {
   // Optimize for production
   compress: true,
   productionBrowserSourceMaps: false,
-  optimizeFonts: true,
 }
 
 export default nextConfig

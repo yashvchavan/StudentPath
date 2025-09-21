@@ -74,8 +74,8 @@ export default function AdminShell({ title, description, showRange = false, chil
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary-foreground" />
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground">IIT Delhi</h1>
@@ -110,7 +110,6 @@ export default function AdminShell({ title, description, showRange = false, chil
               </span>
             </Button>
 
-            {/* Theme toggle beside alerts on all pages */}
             <ThemeToggle />
 
             <Button variant="outline" size="sm" className="hidden md:inline-flex bg-transparent">
@@ -118,7 +117,6 @@ export default function AdminShell({ title, description, showRange = false, chil
               Export
             </Button>
 
-            {/* Profile dropdown like the provided screenshot */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -179,23 +177,25 @@ export default function AdminShell({ title, description, showRange = false, chil
       <div className="flex">
         {/* Sidebar */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-200 ease-in-out ${
+          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
           <nav className="p-4">
             <ul className="space-y-2">
               {adminNav.map((item) => {
-                const active = pathname === item.href || pathname.startsWith(item.href + "/")
+                const active = pathname === item.href
                 return (
                   <li key={item.href}>
                     <a
                       href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                        active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-300 ${
+                        active
+                          ? "bg-blue-500 text-white"
+                          : "text-muted-foreground hover:bg-blue-100 hover:text-blue-700"
                       }`}
                     >
-                      <item.icon className="w-4 h-4" />
+                      <item.icon className="w-4 h-4 transition-colors duration-300" />
                       {item.label}
                     </a>
                   </li>
@@ -215,7 +215,7 @@ export default function AdminShell({ title, description, showRange = false, chil
           {(title || description || showRange) && (
             <div className="flex items-center justify-between mb-6">
               <div>
-                {title && <h2 className="text-3xl font-bold text-foreground text-balance">{title}</h2>}
+                {title && <h2 className="text-3xl font-bold text-foreground">{title}</h2>}
                 {description && <p className="text-muted-foreground">{description}</p>}
               </div>
               {showRange && (
