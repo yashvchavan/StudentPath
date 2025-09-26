@@ -10,13 +10,14 @@ import {
   CheckCircle,
   AlertCircle,
   Building,
-  GraduationCap
+  GraduationCap,
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [userType, setUserType] = useState<'student' | 'college'>('student');
+  const [userType, setUserType] = useState<'student' | 'college' | 'professional'>('student');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -118,7 +119,13 @@ export default function ForgotPasswordPage() {
               </Button>
               
               <Link 
-                href={userType === 'college' ? '/college-login' : '/login'}
+                href={
+                  userType === 'college'
+                    ? '/college-login'
+                    : userType === 'professional'
+                    ? '/professional-login'
+                    : '/login'
+                }
                 className="block w-full"
               >
                 <Button
@@ -157,7 +164,8 @@ export default function ForgotPasswordPage() {
             {/* User Type Selection */}
             <div className="space-y-3">
               <Label className="text-white font-medium">Account Type</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                {/* Student */}
                 <button
                   type="button"
                   onClick={() => setUserType('student')}
@@ -170,6 +178,8 @@ export default function ForgotPasswordPage() {
                   <GraduationCap className="w-4 h-4" />
                   <span className="text-sm font-medium">Student</span>
                 </button>
+
+                {/* College */}
                 <button
                   type="button"
                   onClick={() => setUserType('college')}
@@ -182,6 +192,20 @@ export default function ForgotPasswordPage() {
                   <Building className="w-4 h-4" />
                   <span className="text-sm font-medium">College</span>
                 </button>
+
+                {/* Professional */}
+                <button
+                  type="button"
+                  onClick={() => setUserType('professional')}
+                  className={`p-3 rounded-xl border-2 transition-all duration-300 flex items-center justify-center gap-2 ${
+                    userType === 'professional'
+                      ? 'border-green-500 bg-green-500/20 text-white'
+                      : 'border-white/20 bg-white/5 text-gray-300 hover:border-green-500/50 hover:bg-green-500/10'
+                  }`}
+                >
+                  <User className="w-4 h-4" />
+                  <span className="text-sm font-medium">Professional</span>
+                </button>
               </div>
             </div>
 
@@ -193,7 +217,13 @@ export default function ForgotPasswordPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder={userType === 'college' ? 'admin@college.edu' : 'student@example.com'}
+                placeholder={
+                  userType === 'college'
+                    ? 'admin@college.edu'
+                    : userType === 'professional'
+                    ? 'pro@example.com'
+                    : 'student@example.com'
+                }
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-green-400 focus:ring-green-400/20"
@@ -223,7 +253,13 @@ export default function ForgotPasswordPage() {
             {/* Back to Login */}
             <div className="text-center">
               <Link 
-                href={userType === 'college' ? '/college-login' : '/login'}
+                href={
+                  userType === 'college'
+                    ? '/college-login'
+                    : userType === 'professional'
+                    ? '/professional-login'
+                    : '/login'
+                }
                 className="inline-flex items-center text-sm text-green-400 hover:text-green-300 font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />

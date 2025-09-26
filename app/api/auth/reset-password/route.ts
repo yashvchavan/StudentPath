@@ -4,12 +4,17 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 
+type UserType = 'student' | 'college' | 'professional';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token, newPassword, userType } = body;
+    const { token, newPassword, userType } = body as {
+      token: string;
+      newPassword: string;
+      userType: UserType;
+    };
 
-    // Validate required fields
     if (!token || !newPassword || !userType) {
       return NextResponse.json(
         { error: 'Token, new password, and user type are required' },
@@ -17,14 +22,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['student', 'college'].includes(userType)) {
+    if (!['student', 'college', 'professional'].includes(userType)) {
       return NextResponse.json(
         { error: 'Invalid user type' },
         { status: 400 }
       );
     }
 
-    // Validate password strength
     if (newPassword.length < 8) {
       return NextResponse.json(
         { error: 'Password must be at least 8 characters long' },
@@ -35,10 +39,10 @@ export async function POST(request: NextRequest) {
     const connection = await pool.getConnection();
 
     try {
-      // Hash the token to match what's stored in database
+      // Hash the token to match DB
       const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-      // Find valid reset token
+      // Get reset token
       const [tokenResult] = await connection.execute(
         `SELECT user_id, user_type, expires_at, used 
          FROM password_reset_tokens 
@@ -46,30 +50,37 @@ export async function POST(request: NextRequest) {
         [tokenHash, userType]
       );
 
-      if (!Array.isArray(tokenResult) || tokenResult.length === 0) {
+      const tokens = tokenResult as Array<any>;
+      if (!tokens || tokens.length === 0) {
         return NextResponse.json(
           { error: 'Invalid or expired reset token' },
           { status: 400 }
         );
       }
 
-      const resetData = (tokenResult as any[])[0];
+      const resetData = tokens[0];
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-      // Hash the new password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-
-      // Update user's password
-      if (userType === 'student') {
-        await connection.execute(
-          'UPDATE Students SET password_hash = ?, updated_at = NOW() WHERE student_id = ?',
-          [hashedPassword, resetData.user_id]
-        );
-      } else {
-        await connection.execute(
-          'UPDATE colleges SET password_hash = ?, updated_at = NOW() WHERE id = ?',
-          [hashedPassword, resetData.user_id]
-        );
+      // Update password based on userType
+      switch (userType) {
+        case 'student':
+          await connection.execute(
+            'UPDATE Students SET password_hash = ?, updated_at = NOW() WHERE student_id = ?',
+            [hashedPassword, resetData.user_id]
+          );
+          break;
+        case 'college':
+          await connection.execute(
+            'UPDATE colleges SET password_hash = ?, updated_at = NOW() WHERE id = ?',
+            [hashedPassword, resetData.user_id]
+          );
+          break;
+        case 'professional':
+          await connection.execute(
+            'UPDATE Professionals SET password_hash = ?, updated_at = NOW() WHERE id = ?',
+            [hashedPassword, resetData.user_id]
+          );
+          break;
       }
 
       // Mark token as used
@@ -80,7 +91,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'Password has been reset successfully'
+        message: 'Password has been reset successfully',
       });
 
     } finally {

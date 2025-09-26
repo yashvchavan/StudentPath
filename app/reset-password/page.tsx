@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Eye, 
-  EyeOff, 
-  Lock, 
+import {
+  Eye,
+  EyeOff,
+  Lock,
   CheckCircle,
   AlertCircle,
   Shield
@@ -24,7 +24,7 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [token, setToken] = useState('');
-  const [userType, setUserType] = useState<'student' | 'college'>('student');
+  const [userType, setUserType] = useState<'student' | 'college' | 'professional'>('student');
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -33,9 +33,9 @@ export default function ResetPasswordPage() {
     const urlToken = urlParams.get('token');
     const urlType = urlParams.get('type');
 
-    if (urlToken && urlType && ['student', 'college'].includes(urlType)) {
+    if (urlToken && urlType && ['student', 'college', 'professional'].includes(urlType)) {
       setToken(urlToken);
-      setUserType(urlType as 'student' | 'college');
+      setUserType(urlType as 'student' | 'college' | 'professional');
       setTokenValid(true);
     } else {
       setTokenValid(false);
@@ -87,10 +87,10 @@ export default function ResetPasswordPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          token, 
-          newPassword, 
-          userType 
+        body: JSON.stringify({
+          token,
+          newPassword,
+          userType
         }),
       });
 
@@ -169,7 +169,7 @@ export default function ResetPasswordPage() {
                   You can now log in with your new password.
                 </p>
               </div>
-              <Link 
+              <Link
                 href={userType === 'college' ? '/college-login' : '/login'}
                 className="block w-full"
               >

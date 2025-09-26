@@ -5,7 +5,7 @@ interface SendPasswordResetEmailParams {
   to: string;
   name: string;
   resetUrl: string;
-  userType: 'student' | 'college';
+  userType: 'student' | 'college' | 'professional';
 }
 
 // Configure your email transporter
@@ -25,7 +25,9 @@ export async function sendPasswordResetEmail({
   resetUrl,
   userType
 }: SendPasswordResetEmailParams) {
-  const userTypeDisplay = userType === 'college' ? 'College Administrator' : 'Student';
+  const userTypeDisplay =
+    userType === 'college' ? 'College Administrator' :
+    userType === 'professional' ? 'Professional' : 'Student';
   const platformName = 'StudentPath';
 
   const htmlContent = `
