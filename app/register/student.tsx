@@ -1534,6 +1534,7 @@ const ProfessionalRegistration = () => {
     preferredLearningStyle: "" as string,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>(""); // Add error state
   const router = useRouter();
 
   const totalSteps = 3;
@@ -1553,12 +1554,60 @@ const ProfessionalRegistration = () => {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    setError("");
+
     try {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      console.log("Professional registration completed:", formData);
-      // router.push("/dashboard");
-    } catch (e) {
-      console.error("Registration failed:", e);
+      // Validate required fields
+      if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+        throw new Error("Please fill in all required fields");
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
+
+      if (!formData.agreeToTerms) {
+        throw new Error("Please agree to the terms and conditions");
+      }
+
+      // Make API call to register professional
+      const response = await fetch("/api/professionals/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          designation: formData.designation,
+          industry: formData.industry,
+          experience: formData.experience,
+          currentSalary: formData.currentSalary,
+          expectedSalary: formData.expectedSalary,
+          linkedin: formData.linkedin,
+          github: formData.github,
+          portfolio: formData.portfolio,
+          password: formData.password,
+          skills: formData.skills,
+          certifications: formData.certifications,
+          careerGoals: formData.careerGoals,
+          preferredLearningStyle: formData.preferredLearningStyle,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+
+      // Registration successful - redirect to professional login
+      router.push("/professional-login");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -1623,7 +1672,7 @@ const ProfessionalRegistration = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="text-white font-medium">
-                    Phone Number *
+                    Phone Number
                   </Label>
                   <Input
                     id="phone"
@@ -1708,7 +1757,7 @@ const ProfessionalRegistration = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Current Company *</Label>
+                  <Label className="text-white font-medium">Current Company</Label>
                   <Select
                     value={formData.company}
                     onValueChange={(value) => updateFormData({ company: value })}
@@ -1728,7 +1777,7 @@ const ProfessionalRegistration = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="designation" className="text-white font-medium">
-                    Current Designation *
+                    Current Designation
                   </Label>
                   <Input
                     id="designation"
@@ -1740,7 +1789,7 @@ const ProfessionalRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Industry *</Label>
+                  <Label className="text-white font-medium">Industry</Label>
                   <Select
                     value={formData.industry}
                     onValueChange={(value) => updateFormData({ industry: value })}
@@ -1759,7 +1808,7 @@ const ProfessionalRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Years of Experience *</Label>
+                  <Label className="text-white font-medium">Years of Experience</Label>
                   <Select
                     value={formData.experience}
                     onValueChange={(value) => updateFormData({ experience: value })}
@@ -1876,7 +1925,7 @@ const ProfessionalRegistration = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="careerGoals" className="text-white font-medium">
-                  Career Goals (Brief Description) *
+                  Career Goals (Brief Description)
                 </Label>
                 <textarea
                   id="careerGoals"
@@ -1932,6 +1981,13 @@ const ProfessionalRegistration = () => {
               >
                 {isLoading ? "Creating Account..." : "Complete Registration"}
               </Button>
+
+              {/* Error display */}
+              {error && (
+                <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-300">
+                  {error}
+                </div>
+              )}
             </div>
           </StepTransition>
         );
@@ -2082,4 +2138,4 @@ function RegisterPage() {
   );
 };
 
-export default StudentRegistration;
+export default RegisterPage;

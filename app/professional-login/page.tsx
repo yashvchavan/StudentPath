@@ -2,33 +2,25 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Eye, 
-  EyeOff, 
-  Briefcase, 
-  TrendingUp,
-  Settings,
-  BarChart3,
-  Users,
-  GraduationCap
-} from "lucide-react";
+import { Eye, EyeOff, Briefcase, TrendingUp, Settings } from "lucide-react";
 import Link from "next/link";
 
 // Animated Background Component
 const AnimatedBackground = () => {
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
+  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({length: 30}, (_, i) => ({
+    const newParticles = Array.from({ length: 30 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
-      delay: Math.random() * 5
+      delay: Math.random() * 5,
     }));
     setParticles(newParticles);
   }, []);
@@ -43,7 +35,7 @@ const AnimatedBackground = () => {
             left: `${particle.x}%`,
             top: `${particle.y}%`,
             animationDelay: `${particle.delay}s`,
-            animationDuration: '2s'
+            animationDuration: "2s",
           }}
         />
       ))}
@@ -51,62 +43,46 @@ const AnimatedBackground = () => {
   );
 };
 
-// Professional Briefcase Loading Animation
-const ProfessionalLoader = () => {
-  return (
-    <div className="flex flex-col items-center justify-center py-4">
-      <div className="relative">
-        <div className="animate-pulse">
-          <Briefcase className="w-12 h-12 text-yellow-400 drop-shadow-lg" 
-            style={{
-              filter: 'drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))'
-            }}
-          />
-        </div>
-        <div className="absolute inset-0 animate-ping">
-          <Briefcase className="w-12 h-12 text-yellow-400/30" />
-        </div>
+// Professional Loader Animation
+const ProfessionalLoader = () => (
+  <div className="flex flex-col items-center justify-center py-4">
+    <div className="relative">
+      <div className="animate-pulse">
+        <Briefcase className="w-12 h-12 text-yellow-400 drop-shadow-lg" style={{ filter: "drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))" }} />
       </div>
-      <p className="text-white/80 text-sm mt-4 animate-pulse">Accessing professional portal...</p>
+      <div className="absolute inset-0 animate-ping">
+        <Briefcase className="w-12 h-12 text-yellow-400/30" />
+      </div>
     </div>
-  );
-};
+    <p className="text-white/80 text-sm mt-4 animate-pulse">Accessing professional portal...</p>
+  </div>
+);
 
 export default function ProfessionalLoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [apiError, setApiError] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 100,
-        y: (e.clientY / window.innerHeight) * 100
-      });
+      setMousePosition({ x: (e.clientX / window.innerWidth) * 100, y: (e.clientY / window.innerHeight) * 100 });
     };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
+    if (!email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = "Please enter a valid email address";
 
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
-    }
+    if (!password) newErrors.password = "Password is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -114,13 +90,35 @@ export default function ProfessionalLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setApiError(null);
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsLoading(false);
+    try {
+      const res = await fetch("/api/professionals/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    console.log('Professional login successful', { email, password, rememberMe });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setApiError(data.error || "Login failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // Successful login
+      console.log("Professional login successful:", data.professional);
+      router.push("/professional-dashboard");
+    } catch (err) {
+      console.error("Login error:", err);
+      setApiError("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const professionalTestimonials = [
@@ -130,11 +128,8 @@ export default function ProfessionalLoginPage() {
   ];
 
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % professionalTestimonials.length);
-    }, 4000);
+    const interval = setInterval(() => setCurrentTestimonial((prev) => (prev + 1) % professionalTestimonials.length), 4000);
     return () => clearInterval(interval);
   }, [professionalTestimonials.length]);
 
@@ -142,20 +137,19 @@ export default function ProfessionalLoginPage() {
     <div className="min-h-screen flex bg-black text-white overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
-        <div 
+        <div
           className="absolute inset-0 opacity-20"
           style={{
             background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(251, 191, 36, 0.3) 0%, rgba(217, 119, 6, 0.2) 25%, transparent 50%)`,
-            transition: 'background 0.5s ease'
+            transition: "background 0.5s ease",
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-br from-black via-yellow-900/20 to-orange-600/20" />
         <AnimatedBackground />
       </div>
 
-      {/* Content Container */}
+      {/* Content */}
       <div className="flex w-full">
-        
         {/* Left Side - Branding & Hero Content */}
         <div className="hidden lg:flex lg:w-2/5 relative z-10 p-12 flex-col justify-between">
           <div
@@ -167,11 +161,11 @@ export default function ProfessionalLoginPage() {
               <h2 className="text-5xl font-bold mb-6 leading-tight">
                 Advance Your Career,{" "}<br/>
                 <span className="bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
-                  Achieve Excellence
+                  Unlock Potential
                 </span>
               </h2>
               <p className="text-xl text-white/80 leading-relaxed">
-                Professional development platform with personalized learning paths, industry insights, and career advancement tools for working professionals.
+                Professional development platform designed to accelerate your career growth through personalized learning paths, skill assessments, and industry connections.
               </p>
             </div>
           </div>
@@ -224,7 +218,6 @@ export default function ProfessionalLoginPage() {
               </div>
             </div>
 
-            {/* Login Card */}
             <Card className="border-0 shadow-2xl backdrop-blur-xl border bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/20">
               <CardHeader className="text-center pb-6">
                 <div className="flex justify-center mb-4">
@@ -236,7 +229,7 @@ export default function ProfessionalLoginPage() {
                   Professional Portal
                 </CardTitle>
                 <CardDescription className="text-gray-300 text-lg">
-                  Access your professional development dashboard
+                  Continue your professional journey
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -246,10 +239,9 @@ export default function ProfessionalLoginPage() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Email */}
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-white font-medium">
-                        Email Address
-                      </Label>
+                      <Label htmlFor="email" className="text-white font-medium">Email Address</Label>
                       <Input
                         id="email"
                         type="email"
@@ -261,10 +253,9 @@ export default function ProfessionalLoginPage() {
                       {errors.email && <p className="text-sm text-red-400">{errors.email}</p>}
                     </div>
 
+                    {/* Password */}
                     <div className="space-y-2">
-                      <Label htmlFor="password" className="text-white font-medium">
-                        Password
-                      </Label>
+                      <Label htmlFor="password" className="text-white font-medium">Password</Label>
                       <div className="relative">
                         <Input
                           id="password"
@@ -274,17 +265,17 @@ export default function ProfessionalLoginPage() {
                           onChange={(e) => setPassword(e.target.value)}
                           className="pr-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400/20"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                        >
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                       {errors.password && <p className="text-sm text-red-400">{errors.password}</p>}
                     </div>
 
+                    {/* API Error */}
+                    {apiError && <p className="text-sm text-red-400">{apiError}</p>}
+
+                    {/* Remember Me & Forgot */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -293,18 +284,12 @@ export default function ProfessionalLoginPage() {
                           onCheckedChange={(checked) => setRememberMe(checked as boolean)}
                           className="border-white/20 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
                         />
-                        <Label htmlFor="remember" className="text-sm text-gray-300">
-                          Remember me
-                        </Label>
+                        <Label htmlFor="remember" className="text-sm text-gray-300">Remember me</Label>
                       </div>
-                      <Link
-                        href="/forgot-password"
-                        className="text-sm font-medium text-yellow-400 hover:text-yellow-300"
-                      >
-                        Forgot password?
-                      </Link>
+                      <Link href="/forgot-password" className="text-sm font-medium text-yellow-400 hover:text-yellow-300">Forgot password?</Link>
                     </div>
 
+                    {/* Submit Button */}
                     <Button
                       type="submit"
                       className="w-full font-semibold py-3 rounded-xl transform hover:scale-[1.02] transition-all duration-300 shadow-2xl group bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white"
@@ -366,9 +351,9 @@ export default function ProfessionalLoginPage() {
 
                     <div className="text-center">
                       <p className="text-sm text-gray-400">
-                        Don't have a professional account?{" "}
-                        <Link href="/register" className="text-yellow-400 hover:text-yellow-300 font-medium underline">
-                          Register as professional
+                        Don't have an account?{" "}
+                        <Link href="/register-other" className="text-yellow-400 hover:text-yellow-300 font-medium underline">
+                          Sign up for free
                         </Link>
                       </p>
                     </div>
