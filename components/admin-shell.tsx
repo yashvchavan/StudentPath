@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type PropsWithChildren } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   BarChart3,
   Users,
@@ -62,13 +62,29 @@ export default function AdminShell({ title, description, showRange = false, chil
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
   const pathname = usePathname()
+  const router = useRouter()
+
+  // 🔹 Logout function
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" })
+      const data = await res.json()
+      if (data.success) {
+        router.replace("/college-login")
+      } else {
+        console.error("Logout failed:", data.error)
+      }
+    } catch (err) {
+      console.error("Error logging out:", err)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-50">
         <div className="flex items-center justify-between px-4 py-3">
-          {/* Left: Logo and Mobile Menu */}
+          {/* Left */}
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -84,7 +100,7 @@ export default function AdminShell({ title, description, showRange = false, chil
             </div>
           </div>
 
-          {/* Center: Search */}
+          {/* Center */}
           <div className="flex-1 max-w-md mx-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -97,7 +113,7 @@ export default function AdminShell({ title, description, showRange = false, chil
             </div>
           </div>
 
-          {/* Right: status, notifications, theme toggle, profile */}
+          {/* Right */}
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden sm:flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full" aria-hidden="true" />
@@ -162,11 +178,9 @@ export default function AdminShell({ title, description, showRange = false, chil
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <a href="/logout">
-                    <Eye className="mr-2 h-4 w-4 rotate-180" />
-                    <span>Sign out</span>
-                  </a>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <Eye className="mr-2 h-4 w-4 rotate-180" />
+                  <span>Sign out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
