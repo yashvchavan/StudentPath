@@ -36,6 +36,12 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+// Inside student-registration.tsx or similar file
+interface StudentRegistrationProps {
+  collegeToken: string | null;
+  collegeInfo: any;
+}
+
 // === Animated Background ===
 const AnimatedBackground = () => {
   const [particles, setParticles] = useState<
@@ -2138,4 +2144,5 @@ function RegisterPage() {
   );
 };
 
+export { StudentRegistration };
 export default RegisterPage;
