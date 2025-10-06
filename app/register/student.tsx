@@ -32,6 +32,7 @@ import {
   Users,
   Building,
   TrendingUp,
+  CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -54,7 +55,6 @@ const AnimatedBackground = () => {
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {/* Stars */}
       {particles.map((p) => (
         <div
           key={p.id}
@@ -97,7 +97,6 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'student' | 'profess
         </div>
 
         <div className="grid md:grid-cols-1 gap-8">
-          {/* Student Card */}
           <Card
             className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${
               hoveredCard === 'student' 
@@ -125,7 +124,6 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'student' | 'profess
                 Currently pursuing education and looking to build skills for future career
               </p>
               
-              
               <Button 
                 className="w-full mt-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
               >
@@ -134,8 +132,6 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'student' | 'profess
               </Button>
             </CardContent>
           </Card>
-
-          
         </div>
 
         <div className="text-center mt-12">
@@ -209,19 +205,155 @@ const RocketLaunchLoader = () => {
   );
 };
 
-// Common data
-const colleges = [
-  "IIT Delhi",
-  "IIT Bombay",
-  "IIT Madras",
-  "IIT Kanpur",
-  "IIT Kharagpur",
-  "BITS Pilani",
-  "NIT Warangal",
-  "NIT Trichy",
-  "IIIT Hyderabad",
-  "VIT Vellore",
-];
+// Academic Interest Options by Program
+const academicInterestsByProgram = {
+  "Computer Science Engineering": [
+    "Artificial Intelligence",
+    "Machine Learning",
+    "Data Science",
+    "Web Development",
+    "Mobile Development",
+    "Cybersecurity",
+    "Cloud Computing",
+    "DevOps",
+    "Blockchain",
+    "Computer Vision",
+    "Natural Language Processing",
+    "Robotics",
+  ],
+  "Information Technology": [
+    "Web Development",
+    "Mobile Development",
+    "Database Management",
+    "Network Administration",
+    "Cybersecurity",
+    "Cloud Computing",
+    "DevOps",
+    "IT Project Management",
+    "Data Analytics",
+    "UI/UX Design",
+    "System Administration",
+    "Digital Marketing",
+  ],
+  "Electronics Engineering": [
+    "Embedded Systems",
+    "IoT Development",
+    "Signal Processing",
+    "VLSI Design",
+    "Robotics",
+    "Telecommunications",
+    "Control Systems",
+    "Hardware Design",
+    "Circuit Design",
+    "Automation",
+    "RF Engineering",
+    "Power Electronics",
+  ],
+  "Mechanical Engineering": [
+    "CAD/CAM",
+    "Manufacturing",
+    "Automotive Engineering",
+    "Robotics",
+    "Thermal Engineering",
+    "Materials Science",
+    "Fluid Mechanics",
+    "Product Design",
+    "Industrial Engineering",
+    "Aerospace Engineering",
+    "Renewable Energy",
+    "Automation",
+  ],
+  "Civil Engineering": [
+    "Structural Engineering",
+    "Construction Management",
+    "Urban Planning",
+    "Environmental Engineering",
+    "Transportation Engineering",
+    "Water Resources",
+    "Geotechnical Engineering",
+    "Project Management",
+    "Sustainable Construction",
+    "Infrastructure Development",
+    "Building Information Modeling",
+    "Smart Cities",
+  ],
+  "Business Administration": [
+    "Marketing",
+    "Finance",
+    "Human Resources",
+    "Operations Management",
+    "Strategy",
+    "Entrepreneurship",
+    "Project Management",
+    "Digital Marketing",
+    "Data Analytics",
+    "International Business",
+    "Supply Chain Management",
+    "Business Intelligence",
+  ],
+  "Economics": [
+    "Financial Economics",
+    "Development Economics",
+    "International Economics",
+    "Econometrics",
+    "Behavioral Economics",
+    "Public Policy",
+    "Data Analysis",
+    "Market Research",
+    "Economic Modeling",
+    "Investment Analysis",
+    "Risk Management",
+    "Economic Consulting",
+  ],
+};
+
+// Technical Skills by Academic Interest
+const technicalSkillsByInterest = {
+  // Programming & Development
+  "Artificial Intelligence": ["Python", "TensorFlow", "PyTorch", "Scikit-learn", "Deep Learning", "Neural Networks"],
+  "Machine Learning": ["Python", "R", "Scikit-learn", "Pandas", "NumPy", "Jupyter", "Statistics"],
+  "Data Science": ["Python", "R", "SQL", "Tableau", "Power BI", "Excel", "Statistics", "Data Visualization"],
+  "Web Development": ["HTML", "CSS", "JavaScript", "React", "Node.js", "Express", "MongoDB", "Git"],
+  "Mobile Development": ["React Native", "Flutter", "Swift", "Kotlin", "Java", "Dart", "Firebase"],
+  "Cybersecurity": ["Penetration Testing", "Network Security", "Ethical Hacking", "CISSP", "Security Auditing"],
+  "Cloud Computing": ["AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "DevOps", "Terraform"],
+  "DevOps": ["Docker", "Kubernetes", "Jenkins", "Git", "CI/CD", "Linux", "Monitoring Tools"],
+  "Blockchain": ["Solidity", "Web3", "Smart Contracts", "Ethereum", "Cryptocurrency", "DApps"],
+  
+  // Engineering
+  "Embedded Systems": ["C", "C++", "Microcontrollers", "Arduino", "Raspberry Pi", "Circuit Design"],
+  "IoT Development": ["Arduino", "Raspberry Pi", "Sensors", "Wireless Communication", "Cloud Integration"],
+  "Signal Processing": ["MATLAB", "DSP", "Analog Circuits", "Digital Filters", "Signal Analysis"],
+  "VLSI Design": ["Verilog", "VHDL", "Cadence", "Synopsis", "Digital Design", "Analog Design"],
+  "Robotics": ["ROS", "Python", "C++", "Computer Vision", "Control Systems", "Sensors"],
+  
+  // Mechanical & Design
+  "CAD/CAM": ["AutoCAD", "SolidWorks", "CATIA", "Fusion 360", "3D Modeling", "Manufacturing"],
+  "Product Design": ["SolidWorks", "Fusion 360", "Prototyping", "3D Printing", "Design Thinking"],
+  
+  // Business & Analytics
+  "Digital Marketing": ["Google Analytics", "SEO", "SEM", "Social Media Marketing", "Content Marketing"],
+  "Data Analytics": ["Excel", "SQL", "Tableau", "Power BI", "Python", "R", "Statistics"],
+  "Finance": ["Excel", "Financial Modeling", "Risk Analysis", "Portfolio Management", "Bloomberg"],
+  
+  // Default for others
+  "Other": ["Communication", "Problem Solving", "Critical Thinking", "Project Management", "Teamwork"],
+};
+
+// All available academic interests (for "Other" option)
+const allAcademicInterests = [
+  ...Object.values(academicInterestsByProgram).flat(),
+  "Game Development",
+  "AR/VR Development",
+  "Quantum Computing",
+  "Bioinformatics",
+  "Green Technology",
+  "Fintech",
+  "EdTech",
+  "HealthTech",
+  "Agricultural Technology",
+  "Space Technology",
+].filter((value, index, self) => self.indexOf(value) === index).sort();
 
 const programs = [
   "Computer Science Engineering",
@@ -233,20 +365,6 @@ const programs = [
   "Economics",
 ];
 
-const academicInterestOptions = [
-  "Artificial Intelligence",
-  "Web Development",
-  "Data Science",
-  "Cybersecurity",
-  "Mobile Development",
-  "Cloud Computing",
-  "Machine Learning",
-  "Blockchain",
-  "UI/UX Design",
-  "Digital Marketing",
-  "Finance",
-  "Management",
-];
 const careerQuestions = [
   {
     id: "work_environment",
@@ -280,20 +398,15 @@ const careerQuestions = [
   },
 ];
 
-const technicalSkillsList = [
-  "Python",
-  "JavaScript",
-  "Java",
-  "C++",
-  "React",
-  "Node.js",
-  "SQL",
-  "Git",
-  "AWS",
-  "Docker",
-  "Machine Learning",
-  "Data Analysis",
-];
+// Country-specific languages
+const languagesByCountry = {
+  "India": ["English", "Hindi", "Tamil", "Telugu", "Bengali", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"],
+  "USA": ["English", "Spanish", "French", "German", "Chinese", "Japanese"],
+  "UK": ["English", "French", "German", "Spanish", "Italian"],
+  "Canada": ["English", "French", "Spanish", "German", "Chinese"],
+  "Australia": ["English", "Mandarin", "Italian", "Arabic", "Greek"],
+  "Other": ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Arabic", "Portuguese", "Russian", "Korean"],
+};
 
 const softSkillsList = [
   "Communication",
@@ -304,47 +417,10 @@ const softSkillsList = [
   "Adaptability",
   "Critical Thinking",
   "Project Management",
-];
-
-const languagesList = [
-  "English",
-  "Hindi",
-  "Tamil",
-  "Telugu",
-  "Bengali",
-  "Marathi",
-  "Gujarati",
-];
-
-const companies = [
-  "Google",
-  "Microsoft",
-  "Amazon",
-  "Apple",
-  "Meta",
-  "Netflix",
-  "Adobe",
-  "Salesforce",
-  "IBM",
-  "Oracle",
-  "Accenture",
-  "TCS",
-  "Infosys",
-  "Wipro",
-  "Other",
-];
-
-const industries = [
-  "Technology",
-  "Finance",
-  "Healthcare",
-  "Education",
-  "E-commerce",
-  "Manufacturing",
-  "Consulting",
-  "Media & Entertainment",
-  "Telecommunications",
-  "Energy",
+  "Creativity",
+  "Public Speaking",
+  "Negotiation",
+  "Emotional Intelligence",
 ];
 
 // === Student Registration Component ===
@@ -356,46 +432,56 @@ interface StudentRegistrationProps {
 const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken, collegeInfo }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const searchParams = useSearchParams();
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-      studentId: "",
-      dateOfBirth: "",
-      gender: "",
-      password: "",
-      confirmPassword: "",
-      agreeToTerms: false,
-      college: "",
-      program: "",
-      currentYear: "",
-      currentSemester: "",
-      enrollmentYear: "",
-      currentGPA: [7.5],
-      academicInterests: [] as string[],
-    firstName: "",  
+    // Basic Info (Step 1)
+    studentId: "",
+    firstName: "",
     lastName: "",
     email: "",
     phone: "",
-
+    dateOfBirth: "",
+    gender: "",
+    password: "",
+    confirmPassword: "",
+    agreeToTerms: false,
+    country: "India",
+    showAllInterests: false,
+    
+    // Academic Info (Step 2)
+    program: "",
+    currentYear: "",
+    currentSemester: "",
+    enrollmentYear: "",
+    currentGPA: [7.5],
+    academicInterests: [] as string[],
+    
+    // Career Quiz (Step 3)
     careerQuizAnswers: {} as { [key: string]: string },
-
-    technicalSkills: {},
-    softSkills: {},
-    languageSkills: {},
-
+    
+    // Skills (Step 4)
+    technicalSkills: {} as { [key: string]: number },
+    softSkills: {} as { [key: string]: number },
+    languageSkills: {} as { [key: string]: number },
+    
+    // Goals (Step 5)
     primaryGoal: "",
     secondaryGoal: "",
     timeline: "",
     locationPreference: "",
     industryFocus: [] as string[],
-
     intensityLevel: "moderate",
   });
+  
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [error, setError] = useState<string>("");
+  const router = useRouter();
+  
   const totalSteps = 6;
   const progress = (currentStep / totalSteps) * 100;
-  
-  const [error, setError] = useState<string>("")
+
   const updateFormData = (updates: any) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
@@ -408,40 +494,81 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     if (currentStep > 1) setCurrentStep((s) => s - 1);
   };
 
-  const handleSubmit = async () => {
-    setIsLoading(true)
-    setError("")
+  // Register user with basic info
+  const registerBasicInfo = async () => {
+    setIsLoading(true);
+    setError("");
 
     try {
-      // Validate required fields
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-        throw new Error("Please fill in all required fields")
+        throw new Error("Please fill in all required fields");
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match");
       }
 
       if (!formData.agreeToTerms) {
-        throw new Error("Please agree to the terms and conditions")
+        throw new Error("Please agree to the terms and conditions");
       }
 
-      // Make API call to register user
-      const response = await fetch("/api/auth/register-student", {
+      const response = await fetch("/api/auth/register-basic", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          studentId: formData.studentId,
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
-          password: formData.password,
           phone: formData.phone,
           dateOfBirth: formData.dateOfBirth,
           gender: formData.gender,
-          college: formData.college,
+          password: formData.password,
+          country: formData.country,
+          collegeToken: searchParams.get('token'),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed");
+      }
+
+      setUserId(data.userId);
+      setIsRegistered(true);
+      nextStep();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Complete profile with additional info
+  const completeProfile = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      if (!userId) {
+        throw new Error("User not registered. Please go back to step 1.");
+      }
+
+      const response = await fetch("/api/auth/complete-profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
           program: formData.program,
           currentYear: formData.currentYear,
           currentSemester: formData.currentSemester,
           enrollmentYear: formData.enrollmentYear,
-          currentGPA: formData.currentGPA[0], // Taking first value as it's stored as array
+          currentGPA: formData.currentGPA[0],
           academicInterests: formData.academicInterests,
           careerQuizAnswers: formData.careerQuizAnswers,
           technicalSkills: formData.technicalSkills,
@@ -453,24 +580,45 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
           locationPreference: formData.locationPreference,
           industryFocus: formData.industryFocus,
           intensityLevel: formData.intensityLevel,
-          // Add college token from URL
-          collegeToken: searchParams.get('token'),
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Registration failed")
+        throw new Error(data.error || "Profile completion failed");
       }
 
-      // Registration successful - redirect to dashboard
-      router.push("/dashboard")
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.")
+      setError(err instanceof Error ? err.message : "Profile completion failed. Please try again.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
+  };
+
+  // Get academic interests based on selected program
+  const getAcademicInterests = () => {
+    if (!formData.program) return [];
+    return academicInterestsByProgram[formData.program as keyof typeof academicInterestsByProgram] || [];
+  };
+
+  // Get technical skills based on selected interests
+  const getTechnicalSkills = () => {
+    if (formData.academicInterests.length === 0) return technicalSkillsByInterest["Other"];
+    
+    const allSkills = new Set<string>();
+    formData.academicInterests.forEach(interest => {
+      const skills = technicalSkillsByInterest[interest as keyof typeof technicalSkillsByInterest] || [];
+      skills.forEach(skill => allSkills.add(skill));
+    });
+    
+    return Array.from(allSkills).sort();
+  };
+
+  // Get languages based on selected country
+  const getLanguages = () => {
+    return languagesByCountry[formData.country as keyof typeof languagesByCountry] || languagesByCountry["Other"];
   };
 
   const renderStep = () => {
@@ -493,31 +641,6 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="college" className="text-white font-medium">
-                    College/University *
-                  </Label>
-                  <Select
-                    value={formData.college}
-                    onValueChange={(value) => updateFormData({ college: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select your college" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      {colleges.map((c) => (
-                        <SelectItem
-                          key={c}
-                          value={c}
-                          className="text-white hover:bg-white/10"
-                        >
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="studentId" className="text-white font-medium">
                     Student ID *
                   </Label>
@@ -525,11 +648,32 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     id="studentId"
                     placeholder="Your student ID"
                     value={formData.studentId}
-                    onChange={(e) =>
-                      updateFormData({ studentId: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ studentId: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-white font-medium">Country *</Label>
+                  <Select
+                    value={formData.country}
+                    onValueChange={(value) => updateFormData({ country: value })}
+                  >
+                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                      <SelectValue placeholder="Select your country" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-white/20">
+                      {Object.keys(languagesByCountry).map((country) => (
+                        <SelectItem
+                          key={country}
+                          value={country}
+                          className="text-white hover:bg-white/10"
+                        >
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -540,9 +684,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     id="firstName"
                     placeholder="Your first name"
                     value={formData.firstName}
-                    onChange={(e) =>
-                      updateFormData({ firstName: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ firstName: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
@@ -555,9 +697,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     id="lastName"
                     placeholder="Your last name"
                     value={formData.lastName}
-                    onChange={(e) =>
-                      updateFormData({ lastName: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ lastName: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
@@ -571,9 +711,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     type="email"
                     placeholder="your.email@college.edu"
                     value={formData.email}
-                    onChange={(e) =>
-                      updateFormData({ email: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ email: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
@@ -586,35 +724,26 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     id="phone"
                     placeholder="+91 9876543210"
                     value={formData.phone}
-                    onChange={(e) =>
-                      updateFormData({ phone: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ phone: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="dateOfBirth"
-                    className="text-white font-medium"
-                  >
+                  <Label htmlFor="dateOfBirth" className="text-white font-medium">
                     Date of Birth
                   </Label>
                   <Input
                     id="dateOfBirth"
                     type="date"
                     value={formData.dateOfBirth}
-                    onChange={(e) =>
-                      updateFormData({ dateOfBirth: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ dateOfBirth: e.target.value })}
                     className="bg-white/5 border-white/20 text-white focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">
-                    Gender (Optional)
-                  </Label>
+                  <Label className="text-white font-medium">Gender (Optional)</Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => updateFormData({ gender: value })}
@@ -623,30 +752,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      <SelectItem
-                        value="male"
-                        className="text-white hover:bg-white/10"
-                      >
-                        Male
-                      </SelectItem>
-                      <SelectItem
-                        value="female"
-                        className="text-white hover:bg-white/10"
-                      >
-                        Female
-                      </SelectItem>
-                      <SelectItem
-                        value="non-binary"
-                        className="text-white hover:bg-white/10"
-                      >
-                        Non-binary
-                      </SelectItem>
-                      <SelectItem
-                        value="prefer-not-to-say"
-                        className="text-white hover:bg-white/10"
-                      >
-                        Prefer not to say
-                      </SelectItem>
+                      <SelectItem value="male" className="text-white hover:bg-white/10">Male</SelectItem>
+                      <SelectItem value="female" className="text-white hover:bg-white/10">Female</SelectItem>
+                      <SelectItem value="non-binary" className="text-white hover:bg-white/10">Non-binary</SelectItem>
+                      <SelectItem value="prefer-not-to-say" className="text-white hover:bg-white/10">Prefer not to say</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -660,18 +769,13 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     type="password"
                     placeholder="Create a strong password"
                     value={formData.password}
-                    onChange={(e) =>
-                      updateFormData({ password: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ password: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label
-                    htmlFor="confirmPassword"
-                    className="text-white font-medium"
-                  >
+                  <Label htmlFor="confirmPassword" className="text-white font-medium">
                     Confirm Password *
                   </Label>
                   <Input
@@ -679,9 +783,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     type="password"
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
-                    onChange={(e) =>
-                      updateFormData({ confirmPassword: e.target.value })
-                    }
+                    onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
@@ -691,27 +793,45 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                 <Checkbox
                   id="terms"
                   checked={formData.agreeToTerms}
-                  onCheckedChange={(checked) =>
-                    updateFormData({ agreeToTerms: checked as boolean })
-                  }
+                  onCheckedChange={(checked) => updateFormData({ agreeToTerms: checked as boolean })}
                   className="border-white/20 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
                 />
                 <Label htmlFor="terms" className="text-sm text-gray-300">
                   I agree to the{" "}
-                  <Link
-                    href="/terms"
-                    className="text-indigo-400 hover:text-indigo-300 underline"
-                  >
+                  <Link href="/terms" className="text-indigo-400 hover:text-indigo-300 underline">
                     Terms and Conditions
                   </Link>{" "}
                   and{" "}
-                  <Link
-                    href="/privacy"
-                    className="text-indigo-400 hover:text-indigo-300 underline"
-                  >
+                  <Link href="/privacy" className="text-indigo-400 hover:text-indigo-300 underline">
                     Privacy Policy
                   </Link>
                 </Label>
+              </div>
+
+              {error && (
+                <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-300">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={registerBasicInfo}
+                  disabled={isLoading}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-8"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      Register & Continue
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </StepTransition>
@@ -722,12 +842,24 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-2xl">
+                  <CheckCircle className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
+                  Welcome {formData.firstName}! 🎉
+                </h2>
+                <p className="text-gray-400 mt-2">
+                  Your account has been created. Now let's personalize your learning journey.
+                </p>
+              </div>
+
+              <div className="text-center">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
                   <GraduationCap className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
                   Academic Information
-                </h2>
+                </h3>
                 <p className="text-gray-400 mt-2">Tell us about your academic journey</p>
               </div>
 
@@ -736,7 +868,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   <Label className="text-white font-medium">Program/Course *</Label>
                   <Select
                     value={formData.program}
-                    onValueChange={(value) => updateFormData({ program: value })}
+                    onValueChange={(value) => updateFormData({ program: value, academicInterests: [] })}
                   >
                     <SelectTrigger className="bg-white/5 border-white/20 text-white">
                       <SelectValue placeholder="Select your program" />
@@ -765,18 +897,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       <SelectValue placeholder="Select year" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      <SelectItem value="1" className="text-white hover:bg-white/10">
-                        1st Year
-                      </SelectItem>
-                      <SelectItem value="2" className="text-white hover:bg-white/10">
-                        2nd Year
-                      </SelectItem>
-                      <SelectItem value="3" className="text-white hover:bg-white/10">
-                        3rd Year
-                      </SelectItem>
-                      <SelectItem value="4" className="text-white hover:bg-white/10">
-                        4th Year
-                      </SelectItem>
+                      <SelectItem value="1" className="text-white hover:bg-white/10">1st Year</SelectItem>
+                      <SelectItem value="2" className="text-white hover:bg-white/10">2nd Year</SelectItem>
+                      <SelectItem value="3" className="text-white hover:bg-white/10">3rd Year</SelectItem>
+                      <SelectItem value="4" className="text-white hover:bg-white/10">4th Year</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -785,9 +909,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   <Label className="text-white font-medium">Current Semester</Label>
                   <Select
                     value={formData.currentSemester}
-                    onValueChange={(value) =>
-                      updateFormData({ currentSemester: value })
-                    }
+                    onValueChange={(value) => updateFormData({ currentSemester: value })}
                   >
                     <SelectTrigger className="bg-white/5 border-white/20 text-white">
                       <SelectValue placeholder="Select semester" />
@@ -810,15 +932,13 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   <Label className="text-white font-medium">Enrollment Year</Label>
                   <Select
                     value={formData.enrollmentYear}
-                    onValueChange={(value) =>
-                      updateFormData({ enrollmentYear: value })
-                    }
+                    onValueChange={(value) => updateFormData({ enrollmentYear: value })}
                   >
                     <SelectTrigger className="bg-white/5 border-white/20 text-white">
                       <SelectValue placeholder="Select year" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      {["2024", "2023", "2022", "2021"].map((year) => (
+                      {["2024", "2023", "2022", "2021", "2020"].map((year) => (
                         <SelectItem
                           key={year}
                           value={year}
@@ -839,9 +959,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     <div className="mt-4">
                       <Slider
                         value={formData.currentGPA}
-                        onValueChange={(value) =>
-                          updateFormData({ currentGPA: value })
-                        }
+                        onValueChange={(value) => updateFormData({ currentGPA: value })}
                         max={10}
                         min={0}
                         step={0.1}
@@ -863,46 +981,115 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     <Label className="text-white font-medium mb-4">
                       Academic Interests (Select multiple)
                     </Label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-                      {academicInterestOptions.map((interest) => {
-                        const checked = formData.academicInterests.includes(interest);
-                        return (
-                          <label
-                            key={interest}
-                            htmlFor={interest}
-                            className={`flex items-center gap-3 p-3 rounded-lg border transition ${
-                              checked
-                                ? "bg-indigo-500/10 border-indigo-400/40"
-                                : "bg-white/5 border-white/10 hover:bg-white/10"
-                            }`}
-                          >
-                            <Checkbox
-                              id={interest}
-                              checked={checked}
-                              onCheckedChange={(isChecked) => {
-                                if (isChecked) {
-                                  updateFormData({
-                                    academicInterests: [
-                                      ...formData.academicInterests,
-                                      interest,
-                                    ],
-                                  });
-                                } else {
-                                  updateFormData({
-                                    academicInterests:
-                                      formData.academicInterests.filter(
+                    {formData.program && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
+                        {getAcademicInterests().map((interest) => {
+                          const checked = formData.academicInterests.includes(interest);
+                          return (
+                            <label
+                              key={interest}
+                              htmlFor={interest}
+                              className={`flex items-center gap-3 p-3 rounded-lg border transition ${
+                                checked
+                                  ? "bg-indigo-500/10 border-indigo-400/40"
+                                  : "bg-white/5 border-white/10 hover:bg-white/10"
+                              } cursor-pointer`}
+                            >
+                              <Checkbox
+                                id={interest}
+                                checked={checked}
+                                onCheckedChange={(isChecked) => {
+                                  if (isChecked) {
+                                    updateFormData({
+                                      academicInterests: [
+                                        ...formData.academicInterests,
+                                        interest,
+                                      ],
+                                    });
+                                  } else {
+                                    updateFormData({
+                                      academicInterests: formData.academicInterests.filter(
                                         (i) => i !== interest
                                       ),
-                                  });
-                                }
-                              }}
-                              className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                            />
-                            <span className="text-white/90 text-sm">{interest}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                                    });
+                                  }
+                                }}
+                                className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                              />
+                              <span className="text-white/90 text-sm">{interest}</span>
+                            </label>
+                          );
+                        })}
+                        <label
+                          htmlFor="other-interests"
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-orange-500/10 border-orange-400/40 cursor-pointer"
+                        >
+                          <Checkbox
+                            id="other-interests"
+                            checked={false}
+                            onCheckedChange={() => {
+                              // Show modal or expand to show all interests
+                              updateFormData({
+                                showAllInterests: !formData.showAllInterests
+                              });
+                            }}
+                            className="border-orange-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+                          />
+                          <span className="text-orange-300 text-sm font-medium">Other Fields</span>
+                        </label>
+                      </div>
+                    )}
+                    
+                    {(formData as any).showAllInterests && (
+                      <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
+                        <h4 className="text-white font-medium mb-3">All Academic Interests</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                          {allAcademicInterests.map((interest) => {
+                            const checked = formData.academicInterests.includes(interest);
+                            return (
+                              <label
+                                key={interest}
+                                htmlFor={`all-${interest}`}
+                                className={`flex items-center gap-2 p-2 rounded border transition text-xs ${
+                                  checked
+                                    ? "bg-indigo-500/10 border-indigo-400/40"
+                                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                                } cursor-pointer`}
+                              >
+                                <Checkbox
+                                  id={`all-${interest}`}
+                                  checked={checked}
+                                  onCheckedChange={(isChecked) => {
+                                    if (isChecked) {
+                                      updateFormData({
+                                        academicInterests: [
+                                          ...formData.academicInterests,
+                                          interest,
+                                        ],
+                                      });
+                                    } else {
+                                      updateFormData({
+                                        academicInterests: formData.academicInterests.filter(
+                                          (i) => i !== interest
+                                        ),
+                                      });
+                                    }
+                                  }}
+                                  className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                                />
+                                <span className="text-white/90">{interest}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {!formData.program && (
+                      <p className="text-gray-400 mt-4 text-center">
+                        Please select your program first to see relevant academic interests
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -912,8 +1099,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
 
       case 3: {
         const currentQuestion = careerQuestions[currentQuestionIndex];
-        const quizProgress =
-          ((currentQuestionIndex + 1) / careerQuestions.length) * 100;
+        const quizProgress = ((currentQuestionIndex + 1) / careerQuestions.length) * 100;
 
         return (
           <StepTransition isActive>
@@ -956,8 +1142,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   >
                     {currentQuestion.options.map((option) => {
                       const selected =
-                        formData.careerQuizAnswers[currentQuestion.id] ===
-                        option.value;
+                        formData.careerQuizAnswers[currentQuestion.id] === option.value;
                       return (
                         <label
                           key={option.value}
@@ -999,9 +1184,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       disabled={!formData.careerQuizAnswers[currentQuestion.id]}
                       className="bg-gradient-to-r from-red-600 to-yellow-600 text-black hover:from-blue-500 hover:to-white"
                     >
-                      {currentQuestionIndex === careerQuestions.length - 1
-                        ? "Continue"
-                        : "Next"}
+                      {currentQuestionIndex === careerQuestions.length - 1 ? "Continue" : "Next"}
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>
                   </div>
@@ -1031,18 +1214,23 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   <CardContent className="p-6">
                     <h3 className="text-lg font-semibold mb-4 text-white/90">
                       Technical Skills
+                      {formData.academicInterests.length > 0 && (
+                        <span className="text-sm font-normal text-gray-400 ml-2">
+                          (Based on your interests: {formData.academicInterests.join(", ")})
+                        </span>
+                      )}
                     </h3>
                     <div className="space-y-4">
-                      {technicalSkillsList.map((skill) => (
+                      {getTechnicalSkills().map((skill) => (
                         <div key={skill} className="space-y-2">
                           <div className="flex justify-between">
                             <Label className="text-white/90">{skill}</Label>
                             <span className="text-sm text-gray-400">
-                              {(formData.technicalSkills && ((formData.technicalSkills as Record<string, number>)[skill])) ?? 0}/5
+                              {((formData.technicalSkills as Record<string, number>)[skill]) ?? 0}/5
                             </span>
                           </div>
                           <Slider
-                            value={[(formData.technicalSkills && ((formData.technicalSkills as Record<string, number>)[skill])) ?? 0]}
+                            value={[((formData.technicalSkills as Record<string, number>)[skill]) ?? 0]}
                             onValueChange={(value) =>
                               updateFormData({
                                 technicalSkills: {
@@ -1073,11 +1261,11 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                           <div className="flex justify-between">
                             <Label className="text-white/90">{skill}</Label>
                             <span className="text-sm text-gray-400">
-                              {(formData.softSkills && ((formData.softSkills as Record<string, number>)[skill])) ?? 0}/5
+                              {((formData.softSkills as Record<string, number>)[skill]) ?? 0}/5
                             </span>
                           </div>
                           <Slider
-                            value={[(formData.softSkills && ((formData.softSkills as Record<string, number>)[skill])) ?? 0]}
+                            value={[((formData.softSkills as Record<string, number>)[skill]) ?? 0]}
                             onValueChange={(value) =>
                               updateFormData({
                                 softSkills: {
@@ -1101,18 +1289,21 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   <CardContent className="p-6">
                     <h3 className="text-lg font-semibold mb-4 text-white/90">
                       Language Skills
+                      <span className="text-sm font-normal text-gray-400 ml-2">
+                        (Based on your country: {formData.country})
+                      </span>
                     </h3>
                     <div className="space-y-4">
-                      {languagesList.map((lang) => (
+                      {getLanguages().map((lang) => (
                         <div key={lang} className="space-y-2">
                           <div className="flex justify-between">
                             <Label className="text-white/90">{lang}</Label>
                             <span className="text-sm text-gray-400">
-                              {(formData.languageSkills && (formData.languageSkills as Record<string, number>)[lang]) ?? 0}/5
+                              {((formData.languageSkills as Record<string, number>)[lang]) ?? 0}/5
                             </span>
                           </div>
                           <Slider
-                            value={[(formData.languageSkills && (formData.languageSkills as Record<string, number>)[lang]) ?? 0]}
+                            value={[((formData.languageSkills as Record<string, number>)[lang]) ?? 0]}
                             onValueChange={(value) =>
                               updateFormData({
                                 languageSkills: {
@@ -1158,9 +1349,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     </h3>
                     <Select
                       value={formData.primaryGoal}
-                      onValueChange={(value) =>
-                        updateFormData({ primaryGoal: value })
-                      }
+                      onValueChange={(value) => updateFormData({ primaryGoal: value })}
                     >
                       <SelectTrigger className="bg-white/5 border-white/20 text-white">
                         <SelectValue placeholder="Select primary goal" />
@@ -1190,9 +1379,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       </h4>
                       <Select
                         value={formData.secondaryGoal}
-                        onValueChange={(value) =>
-                          updateFormData({ secondaryGoal: value })
-                        }
+                        onValueChange={(value) => updateFormData({ secondaryGoal: value })}
                       >
                         <SelectTrigger className="bg-white/5 border-white/20 text-white">
                           <SelectValue placeholder="Select secondary goal" />
@@ -1211,7 +1398,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                             Cybersecurity
                           </SelectItem>
                           <SelectItem value="ui-ux" className="text-white hover:bg-white/10">
-                            UI/UX
+                            UI/UX Designer
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1252,9 +1439,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     </h3>
                     <Select
                       value={formData.locationPreference}
-                      onValueChange={(value) =>
-                        updateFormData({ locationPreference: value })
-                      }
+                      onValueChange={(value) => updateFormData({ locationPreference: value })}
                     >
                       <SelectTrigger className="bg-white/5 border-white/20 text-white">
                         <SelectValue placeholder="Select location" />
@@ -1459,7 +1644,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   Make Adjustments
                 </Button>
                 <Button
-                  onClick={handleSubmit}
+                  onClick={completeProfile}
                   disabled={isLoading}
                   className="flex-1 bg-gradient-to-r from-red-600 to-yellow-600 hover:from-blue-500 hover:to-white text-black"
                 >
@@ -1717,7 +1902,19 @@ const ProfessionalRegistration = () => {
                       <SelectValue placeholder="Select your company" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      {companies.map((company) => (
+                      {[
+                        "Google",
+                        "Microsoft",
+                        "Amazon",
+                        "Apple",
+                        "Meta",
+                        "Netflix",
+                        "Adobe",
+                        "IBM",
+                        "Oracle",
+                        "Intel",
+                        "Other"
+                      ].map((company) => (
                         <SelectItem key={company} value={company} className="text-white hover:bg-white/10">
                           {company}
                         </SelectItem>
@@ -1749,7 +1946,18 @@ const ProfessionalRegistration = () => {
                       <SelectValue placeholder="Select your industry" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      {industries.map((industry) => (
+                      {[
+                        
+                        "Technology",
+
+                        "Finance",
+
+                        "Healthcare",
+
+                        "Education",
+
+                        "Startup",
+                      ].map((industry) => (
                         <SelectItem key={industry} value={industry} className="text-white hover:bg-white/10">
                           {industry}
                         </SelectItem>
@@ -1838,7 +2046,7 @@ const ProfessionalRegistration = () => {
                 <CardContent className="p-6">
                   <Label className="text-white font-medium mb-4">Top Skills (Select multiple)</Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-                    {academicInterestOptions.map((skill) => {
+                    {allAcademicInterests.map((skill) => {
                       const checked = formData.skills.includes(skill);
                       return (
                         <label
