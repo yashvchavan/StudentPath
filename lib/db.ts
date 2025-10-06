@@ -8,6 +8,7 @@ const dbConfig = {
   database: process.env.DB_NAME || 'studentpath',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
+  connectTimeout: 10000,
   connectionLimit: 10,
   queueLimit: 0,
 };

@@ -6,26 +6,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  Users, 
-  Search, 
-  Download,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
+import {
+  Users,
+  Search,
   UserPlus,
   Calendar,
   Mail,
   Phone,
   GraduationCap
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -47,117 +36,27 @@ interface Student {
   first_name: string
   last_name: string
   email: string
-  phone: string
-  department: string
-  college: string
-  program: string
-  current_year: number
-  current_semester: number
-  current_gpa: number
-  gender: string
-  enrollment_year: number
-  date_of_birth: string
-  location_preference: string
-  industry_focus: string
-  intensity_level: string
-  is_active: boolean
+  phone?: string
+  department?: string
+  college?: string
+  program?: string
+  current_year?: number
+  current_semester?: number
+  current_gpa?: number
+  gender?: string
+  enrollment_year?: number
+  date_of_birth?: string
+  location_preference?: string
+  industry_focus?: string
+  intensity_level?: string
+  is_active?: boolean
   created_at: string
-  updated_at: string
+  updated_at?: string
 }
-
-const FAKE_STUDENTS: Student[] = [
-  {
-    student_id: 1,
-    first_name: "Aarav",
-    last_name: "Sharma",
-    email: "aarav@example.com",
-    phone: "9876543210",
-    department: "Computer Science",
-    college: "Angel Ondricka",
-    program: "B.Tech",
-    current_year: 2,
-    current_semester: 4,
-    current_gpa: 8.5,
-    gender: "Male",
-    enrollment_year: 2022,
-    date_of_birth: "2003-05-12",
-    location_preference: "Bangalore",
-    industry_focus: "AI/ML",
-    intensity_level: "High",
-    is_active: true,
-    created_at: "2024-09-15",
-    updated_at: "2024-09-15",
-  },
-  {
-    student_id: 2,
-    first_name: "Neha",
-    last_name: "Patel",
-    email: "neha@example.com",
-    phone: "9876543211",
-    department: "Electronics",
-    college: "Angel Ondricka",
-    program: "B.Tech",
-    current_year: 3,
-    current_semester: 6,
-    current_gpa: 7.9,
-    gender: "Female",
-    enrollment_year: 2021,
-    date_of_birth: "2002-11-20",
-    location_preference: "Delhi",
-    industry_focus: "VLSI",
-    intensity_level: "Medium",
-    is_active: false,
-    created_at: "2024-08-10",
-    updated_at: "2024-08-10",
-  },
-  {
-    student_id: 3,
-    first_name: "Rohan",
-    last_name: "Verma",
-    email: "rohan@example.com",
-    phone: "9876543212",
-    department: "Mechanical",
-    college: "Angel Ondricka",
-    program: "B.E.",
-    current_year: 4,
-    current_semester: 8,
-    current_gpa: 7.2,
-    gender: "Male",
-    enrollment_year: 2020,
-    date_of_birth: "2001-01-30",
-    location_preference: "Mumbai",
-    industry_focus: "Automobile",
-    intensity_level: "Low",
-    is_active: true,
-    created_at: "2024-09-01",
-    updated_at: "2024-09-01",
-  },
-  {
-    student_id: 4,
-    first_name: "Priya",
-    last_name: "Deshmukh",
-    email: "priya@example.com",
-    phone: "9876543213",
-    department: "Civil",
-    college: "Angel Ondricka",
-    program: "B.Tech",
-    current_year: 1,
-    current_semester: 2,
-    current_gpa: 8.8,
-    gender: "Female",
-    enrollment_year: 2023,
-    date_of_birth: "2004-03-22",
-    location_preference: "Pune",
-    industry_focus: "Infrastructure",
-    intensity_level: "High",
-    is_active: true,
-    created_at: "2024-07-25",
-    updated_at: "2024-07-25",
-  },
-]
 
 export default function AdminStudentsPage() {
   const [students, setStudents] = useState<Student[]>([])
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [yearFilter, setYearFilter] = useState<string>("all")
@@ -165,15 +64,42 @@ export default function AdminStudentsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-  // Apply filters on FAKE_STUDENTS
+  // 🔹 Fetch students from API
   useEffect(() => {
-    let filtered = FAKE_STUDENTS
+    async function fetchStudents() {
+      try {
+        const res = await fetch("/api/student/list", { cache: "no-store" })
+        const data = await res.json()
+        if (data.success) {
+          // convert current_gpa to number
+          const processed: Student[] = data.students.map((s: any) => ({
+            ...s,
+            current_gpa: s.current_gpa !== null ? Number(s.current_gpa) : null,
+            current_year: s.current_year !== null ? Number(s.current_year) : undefined,
+            current_semester: s.current_semester !== null ? Number(s.current_semester) : undefined,
+            is_active: s.is_active ?? false,
+          }))
+          setStudents(processed)
+          setFilteredStudents(processed)
+        } else {
+          console.error("Error:", data.error)
+        }
+      } catch (err) {
+        console.error("Failed to fetch students:", err)
+      }
+    }
+    fetchStudents()
+  }, [])
+
+  // 🔹 Apply filters
+  useEffect(() => {
+    let filtered = [...students]
 
     if (searchTerm) {
       filtered = filtered.filter(
         s =>
-          `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          `${s.first_name ?? ""} ${s.last_name ?? ""}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (s.email ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
           s.student_id.toString().includes(searchTerm)
       )
     }
@@ -183,7 +109,7 @@ export default function AdminStudentsPage() {
     }
 
     if (yearFilter !== "all") {
-      filtered = filtered.filter(s => s.current_year.toString() === yearFilter)
+      filtered = filtered.filter(s => s.current_year?.toString() === yearFilter)
     }
 
     if (statusFilter !== "all") {
@@ -192,24 +118,24 @@ export default function AdminStudentsPage() {
       )
     }
 
-    setStudents(filtered)
-  }, [searchTerm, departmentFilter, yearFilter, statusFilter])
+    setFilteredStudents(filtered)
+    setCurrentPage(1)
+  }, [searchTerm, departmentFilter, yearFilter, statusFilter, students])
 
-  const totalPages = Math.ceil(students.length / itemsPerPage)
-  const displayedStudents = students.slice(
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
+  const displayedStudents = filteredStudents.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   )
 
-  // Get unique departments for filter
-  const departments = [...new Set(FAKE_STUDENTS.map(s => s.department))]
+  // 🔹 Get unique departments for filter
+  const departments = [...new Set(students.map(s => s.department).filter(Boolean))]
 
   return (
-    <AdminShell title="Student Management" description="Search, filter, and manage student records (demo with fake data).">
-      
+    <AdminShell title="Student Management" description="Search, filter, and manage student records.">
       <div className="mb-4">
         <Badge variant="outline" className="text-sm">
-          Managing students for: Angel Ondricka
+          Managing students for your college
         </Badge>
       </div>
 
@@ -221,7 +147,7 @@ export default function AdminStudentsPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{students.length}</div>
+            <div className="text-2xl font-bold">{filteredStudents.length}</div>
           </CardContent>
         </Card>
         <Card>
@@ -231,7 +157,7 @@ export default function AdminStudentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {students.filter(s => s.is_active).length}
+              {filteredStudents.filter(s => s.is_active).length}
             </div>
           </CardContent>
         </Card>
@@ -251,7 +177,7 @@ export default function AdminStudentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {students.filter(s => new Date(s.created_at).getMonth() === new Date().getMonth()).length}
+              {filteredStudents.filter(s => new Date(s.created_at).getMonth() === new Date().getMonth()).length}
             </div>
           </CardContent>
         </Card>
@@ -277,7 +203,9 @@ export default function AdminStudentsPage() {
             <SelectContent>
               <SelectItem value="all">All Departments</SelectItem>
               {departments.map(dept => (
-                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                <SelectItem key={dept} value={dept ?? "unknown"}>
+                  {dept ?? "Unknown"}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -355,11 +283,11 @@ export default function AdminStudentsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="space-y-1">
-                      <div className="font-medium">{student.department}</div>
+                      <div className="font-medium">{student.department ?? "N/A"}</div>
                       <div className="text-sm text-muted-foreground">
-                        Year {student.current_year} • GPA: {student.current_gpa.toFixed(2)}
+                        Year {student.current_year ?? "N/A"} • GPA: {student.current_gpa !== null && student.current_gpa !== undefined ? student.current_gpa.toFixed(2) : "N/A"}
                       </div>
-                      <div className="text-xs text-muted-foreground">{student.college}</div>
+                      <div className="text-xs text-muted-foreground">{student.college ?? "N/A"}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -382,7 +310,7 @@ export default function AdminStudentsPage() {
         <div className="flex items-center justify-between mt-4">
           <div className="text-sm text-muted-foreground">
             Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-            {Math.min(currentPage * itemsPerPage, students.length)} of {students.length} students
+            {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length} students
           </div>
           <div className="flex gap-2">
             <Button
@@ -407,4 +335,3 @@ export default function AdminStudentsPage() {
     </AdminShell>
   )
 }
-  

@@ -44,7 +44,7 @@ import {
   Loader2,
 } from "lucide-react";
 
-import StudentRegistration from "../student";
+import { StudentRegistration } from "../student";
 
 export default function StudentRegisterPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
