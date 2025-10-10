@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
-import { CollegeRow, StudentRow, StudentDataRow } from '@/lib/db-types';
+import { RowDataPacket } from 'mysql2';
 
 export async function GET(request: NextRequest) {
+  let connection;
   try {
+    // Get and validate query parameters
     const { searchParams } = new URL(request.url);
     const studentId = searchParams.get('studentId');
     const token = searchParams.get('token');
@@ -15,11 +17,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const connection = await pool.getConnection();
+    // Get database connection
+    connection = await pool.getConnection();
     
-    // First validate the token
-    const [tokenResult] = await connection.execute<CollegeRow[]>(
-      `SELECT c.id, c.college_name 
+    // Validate the token and get college information
+    const [tokenResult] = await connection.execute<RowDataPacket[]>(
+      `SELECT c.id as college_id, c.college_name, c.college_type, c.city, c.state, c.country
        FROM colleges c 
        JOIN college_tokens ct ON c.id = ct.college_id 
        WHERE ct.token = ? AND ct.is_active = TRUE`,
@@ -27,62 +30,26 @@ export async function GET(request: NextRequest) {
     );
 
     if (!tokenResult || tokenResult.length === 0) {
-      connection.release();
       return NextResponse.json(
-        { error: 'Invalid token' },
+        { error: 'Invalid or expired token' },
         { status: 401 }
       );
     }
 
-    interface ExtendedStudentRow extends StudentRow {
-      college_name: string;
-      college_type: string;
-      city: string;
-      state: string;
-      country: string;
-      academic_interests: string;
-      career_quiz_answers: string;
-      technical_skills: string;
-      soft_skills: string;
-      language_skills: string;
-      industry_focus: string;
-    }
+    const collegeInfo = tokenResult[0];
 
-    // Get student data
-    const [students] = await connection.execute<ExtendedStudentRow[]>(
+    // 1. Get basic student data
+    const [students] = await connection.execute<RowDataPacket[]>(
       `SELECT 
-        s.student_id,
-        s.first_name,
-        s.last_name,
-        s.email,
-        s.phone,
-        s.college,
-        s.program,
-        s.current_year,
-        s.current_semester,
-        s.current_gpa,
-        s.academic_interests,
-        s.career_quiz_answers,
-        s.technical_skills,
-        s.soft_skills,
-        s.language_skills,
-        s.primary_goal,
-        s.secondary_goal,
-        s.timeline,
-        s.location_preference,
-        s.industry_focus,
-        c.college_name,
-        c.college_type,
-        c.city,
-        c.state,
-        c.country
-       FROM Students s
-       JOIN colleges c ON s.college_id = c.id
-       WHERE s.student_id = ? AND s.is_active = TRUE`,
+        student_id,
+        first_name,
+        last_name,
+        email,
+        phone
+       FROM Students
+       WHERE student_id = ?`,
       [studentId]
     );
-
-    connection.release();
 
     if (!students || students.length === 0) {
       return NextResponse.json(
@@ -93,27 +60,142 @@ export async function GET(request: NextRequest) {
 
     const student = students[0];
 
-    // Parse JSON strings back to objects
-    const studentData = {
-      ...student,
-      academic_interests: JSON.parse(student.academic_interests || '[]'),
-      career_quiz_answers: JSON.parse(student.career_quiz_answers || '{}'),
-      technical_skills: JSON.parse(student.technical_skills || '{}'),
-      soft_skills: JSON.parse(student.soft_skills || '{}'),
-      language_skills: JSON.parse(student.language_skills || '{}'),
-      industry_focus: JSON.parse(student.industry_focus || '[]')
+    // 2. Get academic profile
+    const [academicProfiles] = await connection.execute<RowDataPacket[]>(
+      `SELECT program, currentYear, currentSemester, enrollmentYear, currentGPA
+       FROM academic_profiles
+       WHERE student_id = ?`,
+      [studentId]
+    );
+
+    const academicProfile = (academicProfiles && academicProfiles[0]) || {};
+
+    // 3. Get academic interests
+    const [academicInterests] = await connection.execute<RowDataPacket[]>(
+      `SELECT interest FROM academic_interests WHERE student_id = ?`,
+      [studentId]
+    );
+
+    // 4. Get career quiz answers
+    const [careerQuizAnswers] = await connection.execute<RowDataPacket[]>(
+      `SELECT questionId, answer FROM career_quiz_answers WHERE student_id = ?`,
+      [studentId]
+    );
+
+    const quizAnswersObj = (careerQuizAnswers || []).reduce((acc: any, row: any) => {
+      acc[row.questionId] = row.answer;
+      return acc;
+    }, {});
+
+    // 5. Get skills (technical, soft, language)
+    const [skills] = await connection.execute<RowDataPacket[]>(
+      `SELECT skillType, skillName, proficiencyLevel 
+       FROM skills 
+       WHERE student_id = ?`,
+      [studentId]
+    );
+
+    const technicalSkills: any = {};
+    const softSkills: any = {};
+    const languageSkills: any = {};
+
+    if (skills && Array.isArray(skills)) {
+      skills.forEach((skill: any) => {
+        if (skill.skillType === 'technical') {
+          technicalSkills[skill.skillName] = skill.proficiencyLevel;
+        } else if (skill.skillType === 'soft') {
+          softSkills[skill.skillName] = skill.proficiencyLevel;
+        } else if (skill.skillType === 'language') {
+          languageSkills[skill.skillName] = skill.proficiencyLevel;
+        }
+      });
+    }
+
+    // 6. Get career goals
+    const [careerGoals] = await connection.execute<RowDataPacket[]>(
+      `SELECT primaryGoal, secondaryGoal, timeline, locationPreference, intensityLevel
+       FROM career_goals
+       WHERE student_id = ?`,
+      [studentId]
+    );
+
+    const careerGoal = (careerGoals && careerGoals[0]) || {};
+
+    // 7. Get industry focus
+    const [industryFocus] = await connection.execute<RowDataPacket[]>(
+      `SELECT industry FROM industry_focus WHERE student_id = ?`,
+      [studentId]
+    );
+
+    // Combine all data
+    const processedData = {
+      // Basic student info
+      student_id: student.student_id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      email: student.email,
+      phone: student.phone,
+      
+      // College info from token
+      college_id: collegeInfo.college_id,
+      college_name: collegeInfo.college_name,
+      college_type: collegeInfo.college_type,
+      city: collegeInfo.city,
+      state: collegeInfo.state,
+      country: collegeInfo.country,
+      
+      // Academic profile
+      program: academicProfile.program || null,
+      current_year: academicProfile.currentYear || null,
+      current_semester: academicProfile.currentSemester || null,
+      enrollment_year: academicProfile.enrollmentYear || null,
+      current_gpa: academicProfile.currentGPA || null,
+      
+      // Academic interests (array of strings)
+      academic_interests: (academicInterests || []).map((item: any) => item.interest),
+      
+      // Career quiz answers (object)
+      career_quiz_answers: quizAnswersObj,
+      
+      // Skills (objects) - always return objects, even if empty
+      technical_skills: technicalSkills || {},
+      soft_skills: softSkills || {},
+      language_skills: languageSkills || {},
+      
+      // Career goals
+      primary_goal: careerGoal.primaryGoal || null,
+      secondary_goal: careerGoal.secondaryGoal || null,
+      timeline: careerGoal.timeline || null,
+      location_preference: careerGoal.locationPreference || null,
+      intensity_level: careerGoal.intensityLevel || null,
+      
+      // Industry focus (array of strings)
+      industry_focus: (industryFocus || []).map((item: any) => item.industry)
     };
 
+    // Return successful response
     return NextResponse.json({
       success: true,
-      student: studentData
+      data: processedData
     });
 
   } catch (error) {
     console.error('Error fetching student data:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
       { status: 500 }
     );
+  } finally {
+    // Always release the connection
+    if (connection) {
+      try {
+        connection.release();
+      } catch (releaseError) {
+        console.error('Error releasing connection:', releaseError);
+      }
+    }
   }
 }

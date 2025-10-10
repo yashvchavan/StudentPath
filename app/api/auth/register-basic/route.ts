@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     try {
       // Check if user already exists
       const [existingUsers] = await connection.execute(
-        'SELECT * FROM students WHERE email = ?',
+        'SELECT * FROM Students WHERE email = ?',
         [email]
       );
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
       // Create student
       const [result] = await connection.execute(
-        `INSERT INTO students (
+        `INSERT INTO Students (
           first_name,
           last_name,
           email,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
           college_token,
           role,
           status
-        FROM students 
+        FROM Students 
         WHERE student_id = LAST_INSERT_ID()`
       );
       

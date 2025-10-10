@@ -2,195 +2,145 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 export async function POST(request: Request) {
-  try {
-    const {
-      userId,
-      program,
-      currentYear,
-      currentSemester,
-      enrollmentYear,
-      currentGPA,
-      academicInterests,
-      careerQuizAnswers,
-      technicalSkills,
-      softSkills,
-      languageSkills,
-      primaryGoal,
-      secondaryGoal,
-      timeline,
-      locationPreference,
-      industryFocus,
-      intensityLevel,
-    } = await request.json();
+  const payload = await request.json();
 
-    // Basic validation
-    if (!userId || !program || !currentYear) {
-      return NextResponse.json(
-        { error: "Please provide all required fields" },
-        { status: 400 }
-      );
-    }
+  const {
+    student_id,
+    program,
+    currentYear,
+    currentSemester,
+    enrollmentYear,
+    currentGPA,
+    academicInterests,
+    careerQuizAnswers,
+    technicalSkills,
+    softSkills,
+    languageSkills,
+    primaryGoal,
+    secondaryGoal,
+    timeline,
+    locationPreference,
+    industryFocus,
+    intensityLevel,
+  } = payload;
 
-    // Create database connection
-    const connection = await pool.getConnection();
-
-    try {
-      // First, check if the student exists
-      const [students] = await connection.execute(
-        'SELECT student_id FROM Students WHERE student_id = ?',
-        [userId]
-      );
-
-      if (!Array.isArray(students) || students.length === 0) {
-        connection.release();
-        return NextResponse.json(
-          { error: "Student not found" },
-          { status: 404 }
-        );
-      }
-
-      // Update academic profile
-      await connection.execute(
-        `INSERT INTO academic_profiles (
-          userId,
-          program,
-          currentYear,
-          currentSemester,
-          enrollmentYear,
-          currentGPA
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-          program = VALUES(program),
-          currentYear = VALUES(currentYear),
-          currentSemester = VALUES(currentSemester),
-          enrollmentYear = VALUES(enrollmentYear),
-          currentGPA = VALUES(currentGPA)`,
-        [
-          userId,
-          program,
-          currentYear,
-          currentSemester,
-          enrollmentYear,
-          currentGPA
-        ]
-      );
-
-      // Store academic interests
-      if (academicInterests && academicInterests.length > 0) {
-        // First delete existing interests
-        await connection.execute(
-          'DELETE FROM academic_interests WHERE userId = ?',
-          [userId]
-        );
-
-        // Insert new interests
-        const interestValues = academicInterests.map((interest: string) => [userId, interest]);
-        await connection.execute(
-          'INSERT INTO academic_interests (userId, interest) VALUES ?',
-          [interestValues]
-        );
-      }
-
-      // Store career quiz answers
-      if (careerQuizAnswers && Object.keys(careerQuizAnswers).length > 0) {
-        await connection.execute(
-          'DELETE FROM career_quiz_answers WHERE userId = ?',
-          [userId]
-        );
-
-        const quizAnswers = Object.entries(careerQuizAnswers).map(
-          ([questionId, answer]) => [userId, questionId, answer]
-        );
-        await connection.execute(
-          'INSERT INTO career_quiz_answers (userId, questionId, answer) VALUES ?',
-          [quizAnswers]
-        );
-      }
-
-      // Store skills
-      const skillTypes = {
-        technical: technicalSkills,
-        soft: softSkills,
-        language: languageSkills
-      };
-
-      for (const [type, skills] of Object.entries(skillTypes)) {
-        if (skills && Object.keys(skills).length > 0) {
-          // Delete existing skills of this type
-          await connection.execute(
-            'DELETE FROM skills WHERE userId = ? AND skillType = ?',
-            [userId, type]
-          );
-
-          // Insert new skills
-          const skillValues = Object.entries(skills).map(
-            ([name, level]) => [userId, type, name, level]
-          );
-          await connection.execute(
-            'INSERT INTO skills (userId, skillType, skillName, proficiencyLevel) VALUES ?',
-            [skillValues]
-          );
-        }
-      }
-
-      // Store career goals
-      await connection.execute(
-        `INSERT INTO career_goals (
-          userId,
-          primaryGoal,
-          secondaryGoal,
-          timeline,
-          locationPreference,
-          intensityLevel,
-          updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-          primaryGoal = VALUES(primaryGoal),
-          secondaryGoal = VALUES(secondaryGoal),
-          timeline = VALUES(timeline),
-          locationPreference = VALUES(locationPreference),
-          intensityLevel = VALUES(intensityLevel),
-          updatedAt = NOW()`,
-        [
-          userId,
-          primaryGoal,
-          secondaryGoal,
-          timeline,
-          locationPreference,
-          intensityLevel
-        ]
-      );
-
-      // Store industry focus
-      if (industryFocus && industryFocus.length > 0) {
-        await connection.execute(
-          'DELETE FROM industry_focus WHERE userId = ?',
-          [userId]
-        );
-
-        const industryValues = industryFocus.map((industry: string) => [userId, industry]);
-        await connection.execute(
-          'INSERT INTO industry_focus (userId, industry) VALUES ?',
-          [industryValues]
-        );
-      }
-
-      connection.release();
-
-      return NextResponse.json({
-        message: "Profile completed successfully",
-        success: true
-      });
-      
-    } catch (dbError) {
-      connection.release();
-      throw dbError;
-    }
-    
-  } catch (error) {
-    console.error('Profile completion error:', error);
+  // Required fields check
+  if (!student_id || !program || !currentYear) {
     return NextResponse.json(
-      { error: "Something went wrong while completing the profile" },
+      { error: 'Please provide all required fields: student_id, program, currentYear' },
+      { status: 400 }
+    );
+  }
+
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+
+    // 1️⃣ Check student exists
+    const [students] = await connection.execute(
+      'SELECT student_id FROM Students WHERE student_id = ?',
+      [student_id]
+    );
+    if (!Array.isArray(students) || (students as any).length === 0) {
+      await connection.rollback();
+      connection.release();
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    }
+
+    // 2️⃣ Upsert academic_profiles
+    await connection.execute(
+      `INSERT INTO academic_profiles (
+        student_id, program, currentYear, currentSemester, enrollmentYear, currentGPA
+      ) VALUES (?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        program = VALUES(program),
+        currentYear = VALUES(currentYear),
+        currentSemester = VALUES(currentSemester),
+        enrollmentYear = VALUES(enrollmentYear),
+        currentGPA = VALUES(currentGPA)`,
+      [student_id, program, currentYear, currentSemester, enrollmentYear, currentGPA]
+    );
+
+    // 3️⃣ Academic Interests (bulk)
+    if (Array.isArray(academicInterests) && academicInterests.length > 0) {
+      await connection.execute('DELETE FROM academic_interests WHERE student_id = ?', [student_id]);
+      const interestRows = academicInterests.map((interest: string) => [student_id, interest]);
+      await connection.query('INSERT INTO academic_interests (student_id, interest) VALUES ?', [interestRows]);
+    }
+
+    // 4️⃣ Career Quiz Answers (bulk)
+    if (careerQuizAnswers && Object.keys(careerQuizAnswers).length > 0) {
+      await connection.execute('DELETE FROM career_quiz_answers WHERE student_id = ?', [student_id]);
+      const quizRows = Object.entries(careerQuizAnswers).map(([questionId, answer]) => [
+        student_id,
+        questionId,
+        answer,
+      ]);
+      await connection.query(
+        'INSERT INTO career_quiz_answers (student_id, questionId, answer) VALUES ?',
+        [quizRows]
+      );
+    }
+
+    // 5️⃣ Skills (technical, soft, language)
+    const skillTypes: Record<string, any> = {
+      technical: technicalSkills,
+      soft: softSkills,
+      language: languageSkills,
+    };
+
+    for (const [type, skills] of Object.entries(skillTypes)) {
+      if (skills && Object.keys(skills).length > 0) {
+        await connection.execute('DELETE FROM skills WHERE student_id = ? AND skillType = ?', [
+          student_id,
+          type,
+        ]);
+        const skillRows = Object.entries(skills).map(([name, level]) => [student_id, type, name, level]);
+        await connection.query(
+          'INSERT INTO skills (student_id, skillType, skillName, proficiencyLevel) VALUES ?',
+          [skillRows]
+        );
+      }
+    }
+
+    // 6️⃣ Career Goals (single row upsert)
+    await connection.execute(
+      `INSERT INTO career_goals (
+        student_id, primaryGoal, secondaryGoal, timeline, locationPreference, intensityLevel, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        primaryGoal = VALUES(primaryGoal),
+        secondaryGoal = VALUES(secondaryGoal),
+        timeline = VALUES(timeline),
+        locationPreference = VALUES(locationPreference),
+        intensityLevel = VALUES(intensityLevel),
+        updatedAt = NOW()`,
+      [student_id, primaryGoal, secondaryGoal, timeline, locationPreference, intensityLevel]
+    );
+
+    // 7️⃣ Industry Focus (bulk)
+    if (Array.isArray(industryFocus) && industryFocus.length > 0) {
+      await connection.execute('DELETE FROM industry_focus WHERE student_id = ?', [student_id]);
+      const industryRows = industryFocus.map((industry: string) => [student_id, industry]);
+      await connection.query('INSERT INTO industry_focus (student_id, industry) VALUES ?', [industryRows]);
+    }
+
+    // Commit transaction
+    await connection.commit();
+    connection.release();
+
+    return NextResponse.json({ message: 'Profile completed successfully', success: true });
+  } catch (dbError: any) {
+    try {
+      await connection.rollback();
+    } catch (e) {
+      /* ignore rollback errors */
+    }
+    connection.release();
+    console.error('DB Error:', dbError?.message, dbError?.sql);
+
+    return NextResponse.json(
+      { error: dbError?.message || 'Something went wrong while completing the profile' },
       { status: 500 }
     );
   }

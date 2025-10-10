@@ -563,13 +563,15 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
         throw new Error("User not registered. Please go back to step 1.");
       }
 
+      const token = collegeToken || searchParams.get('token');
       const response = await fetch("/api/auth/complete-profile", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: userId,
+          student_id: userId,
+          collegeToken: token, // Include the token in the request
           program: formData.program,
           currentYear: formData.currentYear,
           currentSemester: formData.currentSemester,
@@ -595,8 +597,22 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
         throw new Error(data.error || "Profile completion failed");
       }
 
-      router.push("/dashboard");
+      // Store student data in cookies like the login page does
+      const redirectToken = collegeToken || searchParams.get('token');
+      if (!redirectToken) {
+        throw new Error('No token available for redirection');
+      }
+
+      // Store student data in cookies (similar to login page)
+      document.cookie = `studentData=${JSON.stringify({
+        ...data.student,
+        collegeToken: redirectToken // Store the college token with student data
+      })}; path=/; max-age=86400`; // 24 hours expiry
+      console.log('token', redirectToken);
+      // Redirect to dashboard with token
+      window.location.href = `/login?token=${redirectToken}`;
     } catch (err) {
+      console.error('Profile completion error:', err);
       setError(err instanceof Error ? err.message : "Profile completion failed. Please try again.");
     } finally {
       setIsLoading(false);

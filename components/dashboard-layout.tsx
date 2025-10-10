@@ -33,38 +33,38 @@ import {
   LogOut,
 } from "lucide-react"
 import Link from "next/link"
+import { useStudentData } from "../app/contexts/StudentDataContext"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
   currentPage?: string
-  userData?: {
-    first_name: string
-    last_name: string
-    email: string
-    college_name: string
-    program: string
-    current_semester: string
-    current_gpa: number
-    avatar?: string
-  }
 }
 
-export default function DashboardLayout({ children, currentPage = "dashboard", userData }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, currentPage = "dashboard" }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchFocused, setSearchFocused] = useState(false)
+  
+  // Use the context to get student data
+  const { studentData, isLoading } = useStudentData()
 
   const sidebarItems = [
     { icon: Home, label: "Dashboard", href: "/dashboard", key: "dashboard" },
-    { icon: BookOpen, label: "My Courses", href: "/courses", key: "courses" },
-    { icon: Target, label: "Career Goals", href: "/goals", key: "goals" },
-    { icon: Award, label: "Skills Tracker", href: "/skills", key: "skills" },
-    { icon: Lightbulb, label: "Recommendations", href: "/recommendations", key: "recommendations" },
-    { icon: TrendingUp, label: "Progress Reports", href: "/reports", key: "reports" },
-    { icon: Bot, label: "AI Assistant", href: "/assistant", key: "assistant" },
-    { icon: Bell, label: "Notifications", href: "/notifications", key: "notifications" },
-    { icon: Settings, label: "Settings", href: "/settings", key: "settings" },
+    { icon: BookOpen, label: "My Courses", href: "/dashboard/courses", key: "courses" },
+    { icon: Target, label: "Career Goals", href: "/dashboard/goals", key: "goals" },
+    { icon: Award, label: "Skills Tracker", href: "/dashboard/skills", key: "skills" },
+    { icon: Lightbulb, label: "Recommendations", href: "/dashboard/recommendations", key: "recommendations" },
+    { icon: TrendingUp, label: "Progress Reports", href: "/dashboard/reports", key: "reports" },
+    { icon: Bot, label: "AI Assistant", href: "/dashboard/assistant", key: "assistant" },
+    { icon: Bell, label: "Notifications", href: "/dashboard/notifications", key: "notifications" },
+    { icon: Settings, label: "Settings", href: "/dashboard/settings", key: "settings" },
   ]
+
+  const getInitials = (firstName?: string, lastName?: string): string => {
+    const first = firstName?.[0] || "";
+    const last = lastName?.[0] || "";
+    return (first + last).toUpperCase() || "U";
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,14 +84,12 @@ export default function DashboardLayout({ children, currentPage = "dashboard", u
               </div>
             </Button>
             <div className="flex items-center gap-3">
-              
               <div className="hidden sm:block">
                 <img
                   src="/logo.png"
                   alt="StudentPath Logo"
                   className="h-15 w-auto"
-                  />
-                {/* <p className="text-xs text-muted-foreground">{mockUser.college}</p> */}
+                />
               </div>
             </div>
           </div>
@@ -136,20 +134,33 @@ export default function DashboardLayout({ children, currentPage = "dashboard", u
                   className="flex items-center gap-3 hover:bg-muted/80 transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   <Avatar className="w-8 h-8 transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-primary/20">
-                    <AvatarImage src={userData?.avatar || "/placeholder.svg"} alt={userData ? `${userData.first_name} ${userData.last_name}` : "User"} />
-                    <AvatarFallback>{userData ? `${userData.first_name[0]}${userData.last_name[0]}` : "U"}</AvatarFallback>
+                    <AvatarImage 
+                      src="/placeholder.svg" 
+                      alt={studentData ? `${studentData.first_name} ${studentData.last_name}` : "User"} 
+                    />
+                    <AvatarFallback>
+                      {getInitials(studentData?.first_name, studentData?.last_name)}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-foreground">{userData ? `${userData.first_name} ${userData.last_name}` : "Loading..."}</p>
-                    <p className="text-xs text-muted-foreground">Semester {userData?.current_semester || "-"}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {isLoading ? "Loading..." : studentData ? `${studentData.first_name} ${studentData.last_name}` : "Loading..."}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Semester {studentData?.current_semester || "-"}
+                    </p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userData ? `${userData.first_name} ${userData.last_name}` : "Loading..."}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{userData?.email || "Loading..."}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {isLoading ? "Loading..." : studentData ? `${studentData.first_name} ${studentData.last_name}` : "Loading..."}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {studentData?.email || "Loading..."}
+                    </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -195,16 +206,23 @@ export default function DashboardLayout({ children, currentPage = "dashboard", u
             <div className="p-4 border-b hover:bg-muted/30 transition-colors duration-200">
               <div className="flex items-center gap-3">
                 <Avatar className="w-12 h-12 transition-all duration-200 hover:scale-105 hover:ring-2 hover:ring-primary/20">
-                  <AvatarImage src={userData?.avatar || "/placeholder.svg"} alt={userData ? `${userData.first_name} ${userData.last_name}` : "User"} />
-                  <AvatarFallback>{userData ? `${userData.first_name[0]}${userData.last_name[0]}` : "U"}</AvatarFallback>
+                  <AvatarImage 
+                    src="/placeholder.svg" 
+                    alt={studentData ? `${studentData.first_name} ${studentData.last_name}` : "User"} 
+                  />
+                  <AvatarFallback>
+                    {getInitials(studentData?.first_name, studentData?.last_name)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {userData ? `${userData.first_name} ${userData.last_name}` : "Loading..."}
+                    {isLoading ? "Loading..." : studentData ? `${studentData.first_name} ${studentData.last_name}` : "Loading..."}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">{userData?.program || "Loading..."}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {studentData?.program || "Loading..."}
+                  </p>
                   <p className="text-xs font-medium text-primary transition-colors duration-200">
-                    CGPA: {userData ? Number(userData.current_gpa).toFixed(2) : "-"}
+                    CGPA: {studentData?.current_gpa ? Number(studentData.current_gpa).toFixed(2) : "-"}
                   </p>
                 </div>
               </div>

@@ -38,50 +38,90 @@ interface StudentData {
 }
 
 export default function DashboardContent() {
-  const searchParams = useSearchParams();
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStudentData = async () => {
-      try {
-        const studentDataCookie = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("studentData="));
-
-        if (!studentDataCookie) {
-          throw new Error("No student data found");
-        }
-
-        const cookieData = JSON.parse(studentDataCookie.split("=")[1]);
-        const token = searchParams.get("token");
-
-        const response = await fetch(
-          `/api/student/data?studentId=${cookieData.student_id}&token=${token}`
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to fetch student data");
-        }
-
-        setStudentData(data.student);
-      } catch (error) {
-        console.error("Error fetching student data:", error);
-      } finally {
-        setIsLoading(false);
+  const fetchStudentData = async () => {
+    try {
+      // Get data from cookie
+      const cookie = document.cookie
+        .split("; ")
+        .find(row => row.startsWith("studentData="));
+      
+      if (!cookie) {
+        throw new Error("No student data found");
       }
-    };
 
-    fetchStudentData();
-  }, [searchParams]);
+      const studentDataFromCookie = JSON.parse(decodeURIComponent(cookie.split("=")[1]));
+      
+      // Fetch detailed student data from API
+      const apiResponse = await fetch(
+        `/api/student/data?studentId=${studentDataFromCookie.student_id}&token=${encodeURIComponent(studentDataFromCookie.token)}`,
+        {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        }
+      );
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json();
+        throw new Error(errorData.error || "Failed to fetch student data");
+      }
+
+      const apiData = await apiResponse.json();
+      
+      // FIX: Set studentData to apiData.data, not apiData
+      if (apiData.success && apiData.data) {
+        // Add safe defaults for empty fields
+        const safeData = {
+          ...apiData.data,
+          first_name: apiData.data.first_name || 'Student',
+          last_name: apiData.data.last_name || '',
+          technical_skills: apiData.data.technical_skills || {},
+          soft_skills: apiData.data.soft_skills || {},
+          language_skills: apiData.data.language_skills || {},
+          academic_interests: apiData.data.academic_interests || [],
+          industry_focus: apiData.data.industry_focus || [],
+          career_quiz_answers: apiData.data.career_quiz_answers || {}
+        };
+        
+        setStudentData(safeData);
+        console.log("Fetched student data:", safeData);
+      } else {
+        throw new Error("Invalid API response");
+      }
+
+      // Verify authentication
+      if (!studentDataFromCookie.isAuthenticated || !studentDataFromCookie.timestamp) {
+        throw new Error("Invalid authentication data");
+      }
+
+      // Check if cookie is not too old (24 hours)
+      const cookieAge = Date.now() - studentDataFromCookie.timestamp;
+      if (cookieAge > 24 * 60 * 60 * 1000) {
+        throw new Error("Authentication expired");
+      }
+
+    } catch (error) {
+      console.error('Error:', error);
+      // Optionally redirect to login on error
+      // window.location.replace('/login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchStudentData();
+}, []);
 
   if (isLoading) {
     return (
       <DashboardLayout currentPage="dashboard">
         <div className="flex items-center justify-center min-h-screen">
-          <p>Loading your dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
         </div>
       </DashboardLayout>
     );
@@ -91,11 +131,20 @@ export default function DashboardContent() {
     return (
       <DashboardLayout currentPage="dashboard">
         <div className="flex items-center justify-center min-h-screen">
-          <p className="text-red-500">Failed to load student data.</p>
+          <Card className="p-6">
+            <p>Unable to load dashboard. Please try logging in again.</p>
+            <Button 
+              onClick={() => window.location.href = '/login'}
+              className="mt-4"
+            >
+              Return to Login
+            </Button>
+          </Card>
         </div>
       </DashboardLayout>
     );
   }
+
 
   return (
       <DashboardLayout 
@@ -209,27 +258,35 @@ export default function DashboardContent() {
                     <div>
                       <p className="text-sm font-medium mb-2">Technical Skills</p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(studentData.technical_skills)
-                          .sort(([, a], [, b]) => b - a)
-                          .slice(0, 3)
-                          .map(([skill, level]) => (
-                            <Badge key={skill} variant="secondary">
-                              {skill} - L{level}
-                            </Badge>
-                          ))}
+                        {studentData?.technical_skills && Object.keys(studentData.technical_skills).length > 0 ? (
+                          Object.entries(studentData.technical_skills)
+                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                            .slice(0, 3)
+                            .map(([skill, level]) => (
+                              <span key={skill} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                {skill}
+                              </span>
+                            ))
+                        ) : (
+                          <p className="text-sm text-gray-500">No skills added yet</p>
+                        )}
                       </div>
                     </div>
                     <div>
                       <p className="text-sm font-medium mb-2">Soft Skills</p>
                       <div className="flex flex-wrap gap-2">
-                        {Object.entries(studentData.soft_skills)
-                          .sort(([, a], [, b]) => b - a)
-                          .slice(0, 3)
-                          .map(([skill, level]) => (
-                            <Badge key={skill} variant="outline">
-                              {skill} - L{level}
-                            </Badge>
-                          ))}
+                       {studentData?.soft_skills && Object.keys(studentData.soft_skills).length > 0 ? (
+                          Object.entries(studentData.soft_skills)
+                            .sort(([, a], [, b]) => (b as number) - (a as number))
+                            .slice(0, 3)
+                            .map(([skill, level]) => (
+                              <Badge key={skill} variant="outline">
+                                {skill} - L{level}
+                              </Badge>
+                            ))
+                        ) : (
+                          <p className="text-sm text-gray-500">No soft skills added yet</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -260,11 +317,15 @@ export default function DashboardContent() {
                     <div>
                       <p className="text-sm text-muted-foreground">Academic Interests</p>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {studentData.academic_interests.map((interest) => (
-                          <Badge key={interest} variant="secondary">
-                            {interest}
-                          </Badge>
-                        ))}
+                        {studentData?.academic_interests && studentData.academic_interests.length > 0 ? (
+                          studentData.academic_interests.map((interest) => (
+                            <Badge key={interest} variant="secondary">
+                              {interest}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500">No academic interests added yet</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -281,7 +342,8 @@ export default function DashboardContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(studentData.technical_skills)
+                    {studentData?.technical_skills && Object.keys(studentData.technical_skills).length > 0 ? (
+                      Object.entries(studentData.technical_skills)
                       .sort(([, a], [, b]) => b - a)
                       .map(([skill, level]) => (
                         <div key={skill} className="flex items-center justify-between">
@@ -291,7 +353,10 @@ export default function DashboardContent() {
                             <span className="text-xs text-muted-foreground">{level}/5</span>
                           </div>
                         </div>
-                      ))}
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No technical skills added yet</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -309,11 +374,15 @@ export default function DashboardContent() {
                     <div>
                       <p className="text-sm text-muted-foreground mb-2">Industries of Interest</p>
                       <div className="flex flex-wrap gap-2">
-                        {studentData.industry_focus.map((industry) => (
-                          <Badge key={industry} variant="outline">
-                            {industry}
-                          </Badge>
-                        ))}
+                        {studentData?.industry_focus && studentData.industry_focus.length > 0 ? (
+                          studentData.industry_focus.map((industry) => (
+                            <Badge key={industry} variant="secondary">
+                              {industry}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500">No industry focus added yet</p>
+                        )}
                       </div>
                     </div>
                     <div>
@@ -341,7 +410,8 @@ export default function DashboardContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(studentData.soft_skills)
+                    {studentData?.career_quiz_answers && Object.keys(studentData.career_quiz_answers).length > 0 ? (
+                      Object.entries(studentData.soft_skills)
                       .sort(([, a], [, b]) => b - a)
                       .map(([skill, level]) => (
                         <div key={skill} className="flex items-center justify-between">
@@ -351,7 +421,11 @@ export default function DashboardContent() {
                             <span className="text-xs text-muted-foreground">{level}/5</span>
                           </div>
                         </div>
-                      ))}
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No quiz answers yet</p>
+                    )}
+                    
                   </div>
                 </CardContent>
               </Card>
@@ -366,12 +440,16 @@ export default function DashboardContent() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(studentData.language_skills).map(([language, proficiency]) => (
+                    {studentData?.language_skills && Object.keys(studentData.language_skills).length > 0 ? (
+                      Object.entries(studentData.language_skills).map(([language, proficiency]) => (
                       <div key={language} className="flex items-center justify-between">
                         <span className="text-sm">{language}</span>
                         <Badge variant="outline">{proficiency}</Badge>
                       </div>
-                    ))}
+                    ))
+                    ) : (
+                      <p className="text-sm text-gray-500">No language skills added yet</p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

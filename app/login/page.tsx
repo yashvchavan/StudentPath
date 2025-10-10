@@ -157,6 +157,26 @@ export default function LoginPage() {
   const [collegeToken, setCollegeToken] = useState<string | null>(null);
   const [collegeInfo, setCollegeInfo] = useState<any>(null);
 
+  // Handle token validation
+  useEffect(() => {
+    const validateToken = async () => {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        
+        if (tokenFromUrl) {
+          setCollegeToken(tokenFromUrl);
+          await validateCollegeToken(tokenFromUrl);
+        } else if (!isAdminLogin) {
+          setShowInvalidTokenDialog(true);
+        }
+      }
+    };
+    
+    validateToken();
+  }, [isAdminLogin]);
+
+  // Handle mouse movement
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
@@ -168,22 +188,6 @@ export default function LoginPage() {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
-
-  // Check for college token in URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    
-    if (token) {
-      setCollegeToken(token);
-      validateCollegeToken(token);
-    } else {
-      // If no token and this is student login, show invalid URL dialog
-      if (!isAdminLogin) {
-        setShowInvalidTokenDialog(true);
-      }
-    }
-  }, [isAdminLogin]);
 
   const validateCollegeToken = async (token: string) => {
     try {
@@ -233,17 +237,33 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
+
         const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || 'Login failed');
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Admin login failed');
         }
 
-        // Store admin data
-        localStorage.setItem('adminData', JSON.stringify(data.admin));
+        // Store admin data in cookie with secure settings
+        const adminData = {
+          ...data.admin,
+          token: data.token,
+          isAuthenticated: true,
+          isAdmin: true,
+          timestamp: Date.now() // Add timestamp to prevent stale cookies
+        };
+
+        // Clear any existing cookies first
+        document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
         
-        // Redirect to admin dashboard using window.location for full page reload
-        window.location.href = '/admin';
+        // Set the new cookie
+        document.cookie = `studentData=${encodeURIComponent(JSON.stringify(adminData))}; path=/; max-age=86400; SameSite=Strict`;
+
+        // Give a small delay to ensure cookie is set
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Force a full page reload to ensure proper cookie handling
+        window.location.replace('/dashboard');
       } else {
         // Student login
         const response = await fetch('/api/auth/login', {
@@ -252,23 +272,37 @@ export default function LoginPage() {
           body: JSON.stringify({ 
             email, 
             password,
-            collegeToken // Include the college token from URL
+            collegeToken
           })
         });
+
         const data = await response.json();
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Login failed');
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Student login failed');
         }
 
-        // Store student data in cookies
-        document.cookie = `studentData=${JSON.stringify({
+        // Store student data in cookie with secure settings
+        const studentData = {
           ...data.student,
-          collegeToken // Store the college token with student data
-        })}; path=/; max-age=86400`; // 24 hours expiry
+          token: data.token || collegeToken,
+          isAuthenticated: true,
+          isAdmin: false,
+          timestamp: Date.now() // Add timestamp to prevent stale cookies
+        };
         
-        // Redirect to student dashboard with token
-        window.location.href = `/dashboard?token=${collegeToken}`;
+        // Clear any existing cookies first
+        document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+        
+        // Set the new cookie
+        document.cookie = `studentData=${encodeURIComponent(JSON.stringify(studentData))}; path=/; max-age=86400; SameSite=Strict`;
+
+        // Give a small delay to ensure cookie is set
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Redirect to dashboard with token
+        const token = studentData.token || collegeToken;
+        window.location.replace(`/dashboard?token=${encodeURIComponent(token)}`);
       }
     } catch (err) {
       setErrors({
@@ -279,6 +313,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   const handleLoginTypeSwitch = (adminLogin: boolean) => {
     if (adminLogin === isAdminLogin) return;
@@ -474,7 +509,7 @@ export default function LoginPage() {
                   <GraduationCap className="w-4 h-4" />
                   Student Login
                 </button>
-                <button
+                {/* <button
                   onClick={() => handleLoginTypeSwitch(true)}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
                     isAdminLogin 
@@ -484,12 +519,12 @@ export default function LoginPage() {
                 >
                   <Shield className="w-4 h-4" />
                   Admin Login
-                </button>
+                </button> */}
               </div>
             </div>
 
             {/* Login Card */}
-            <Card className={`border-0 shadow-2xl backdrop-blur-xl border transition-all duration-500 ${
+            <Card className={`shadow-2xl backdrop-blur-xl border transition-all duration-500 ${
               isTransitioning 
                 ? 'opacity-0 transform scale-95' 
                 : 'opacity-100 transform scale-100'
@@ -746,7 +781,7 @@ export default function LoginPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction 
-              onClick={() => window.location.href = '/'}
+              onClick={() => router.push('/')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               Go to Homepage
