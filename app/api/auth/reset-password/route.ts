@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
           break;
         case 'professional':
           await connection.execute(
-            'UPDATE Professionals SET password_hash = ?, updated_at = NOW() WHERE id = ?',
+            'UPDATE professionals SET password_hash = ?, updated_at = NOW() WHERE id = ?',
             [hashedPassword, resetData.user_id]
           );
           break;

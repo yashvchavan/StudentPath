@@ -92,7 +92,7 @@ export default function ProfessionalLoginPage() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("/api/professionals/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, userType: "professional" }),
