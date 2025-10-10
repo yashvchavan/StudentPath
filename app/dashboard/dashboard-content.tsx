@@ -149,7 +149,6 @@ export default function DashboardContent() {
   return (
       <DashboardLayout 
         currentPage="dashboard"
-        userData={studentData}
       >
           {/* Main Content */}
           <main className="flex-1 p-6 lg:p-8">

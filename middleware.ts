@@ -207,7 +207,7 @@ export function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error);
     // On error, clear cookies and redirect to login
-    return clearCookiesResponse('/login');
+    return ('/login');
   }
 }
 
