@@ -1,168 +1,352 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import AdminShell from "@/components/admin-shell";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Filter, Edit, Trash2, CheckCircle2, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
+import { useEffect, useState } from "react"
+import AdminShell from "@/components/admin-shell"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Plus, Trash, X, ExternalLink, Download, BookOpen } from "lucide-react"
 
 interface Course {
-  id: number;
-  name: string;
-  department: string;
-  credits: number;
-  is_active: boolean;
+  id: number
+  course_name: string
+  year: string
+  syllab_doc: string
 }
 
 export default function AdminCoursesPage() {
-  // Fake courses
-  const [courses, setCourses] = useState<Course[]>([
-    { id: 1, name: "Computer Networks", department: "CSE", credits: 3, is_active: true },
-    { id: 2, name: "Digital Electronics", department: "ECE", credits: 4, is_active: false },
-    { id: 3, name: "Thermodynamics", department: "ME", credits: 3, is_active: true },
-    { id: 4, name: "Database Systems", department: "CSE", credits: 4, is_active: true },
-    { id: 5, name: "Control Systems", department: "ECE", credits: 3, is_active: false },
-    { id: 6, name: "Fluid Mechanics", department: "ME", credits: 4, is_active: true },
-  ]);
+  const [courses, setCourses] = useState<Course[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [extracting, setExtracting] = useState<number | null>(null)
+  const [userInfo, setUserInfo] = useState<string>("")
 
-  const [search, setSearch] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
-  const [creditsFilter, setCreditsFilter] = useState("all");
+  const [courseName, setCourseName] = useState("")
+  const [year, setYear] = useState<Date | undefined>()
+  const [file, setFile] = useState<File | null>(null)
+  const [loading, setLoading] = useState(false)
+  
+  // Year and semester for extraction
+  const [extractYear, setExtractYear] = useState("")
+  const [extractSemester, setExtractSemester] = useState("")
 
-  // Filtered courses
-  const filteredCourses = courses.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-    const matchesDepartment = departmentFilter === "all" || c.department === departmentFilter;
-    const matchesCredits = creditsFilter === "all" || c.credits === Number(creditsFilter);
-    return matchesSearch && matchesDepartment && matchesCredits;
-  });
-
-  // Toggle course active status
-  const toggleStatus = (id: number) => {
-    setCourses((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, is_active: !c.is_active } : c
-      )
-    );
-  };
-
-  // Delete course
-  const deleteCourse = (id: number) => {
-    if (confirm("Are you sure you want to delete this course?")) {
-      setCourses((prev) => prev.filter((c) => c.id !== id));
+  // 🔹 Fetch all courses for tenant
+  const fetchCourses = async () => {
+    try {
+      const res = await fetch("/api/courses", { credentials: "include" })
+      const data = await res.json()
+      if (data.courses) setCourses(data.courses)
+    } catch (err) {
+      console.error("Error fetching courses:", err)
     }
-  };
+  }
+
+  // 🔹 Extract syllabus using Flask
+  const handleExtractSyllabus = async (courseId: number) => {
+    if (!extractYear || !extractSemester) {
+      alert("Please select both year and semester for extraction")
+      return
+    }
+
+    setExtracting(courseId)
+    try {
+      const res = await fetch("/api/extract-syllabus", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          course_id: courseId,
+          year: extractYear,
+          semester: extractSemester,
+        }),
+        credentials: "include",
+      })
+
+      const data = await res.json()
+      
+      if (res.ok && data.success) {
+        setUserInfo(data.user_info)
+        alert(`✅ Syllabus extracted successfully!\n\nSubjects found: ${data.subjects_till_semester?.length || 0}\nSemesters parsed: ${data.total_semesters_parsed}`)
+      } else {
+        alert(`Error: ${data.error || "Failed to extract syllabus"}`)
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Failed to extract syllabus. Make sure Flask server is running.")
+    } finally {
+      setExtracting(null)
+    }
+  }
+
+  // 🔹 Fetch existing user info
+  const fetchUserInfo = async () => {
+    try {
+      const res = await fetch("/api/extract-syllabus", {
+        method: "GET",
+        credentials: "include",
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          setUserInfo(data.user_info)
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching user info:", err)
+    }
+  }
+
+  useEffect(() => {
+    fetchCourses()
+    fetchUserInfo()
+  }, [])
+
+  // 🔹 Submit new syllabus
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!courseName || !year || !file) {
+      alert("All fields are required")
+      return
+    }
+
+    const formData = new FormData()
+    formData.append("course", courseName)
+    formData.append("year", year.getFullYear().toString())
+    formData.append("file", file)
+
+    setLoading(true)
+    try {
+      const res = await fetch("/api/courses", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert("Course uploaded successfully!")
+        setShowForm(false)
+        fetchCourses()
+        setCourseName("")
+        setYear(undefined)
+        setFile(null)
+      } else {
+        alert(data.error || "Something went wrong")
+      }
+    } catch (err) {
+      console.error(err)
+      alert("Upload failed")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 🔹 Delete syllabus
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this syllabus?")) return
+
+    try {
+      const res = await fetch(`/api/courses?id=${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+      const data = await res.json()
+      if (res.ok) fetchCourses()
+      else alert(data.error || "Delete failed")
+    } catch (err) {
+      console.error(err)
+      alert("Delete request failed")
+    }
+  }
+
+  // 🔹 Helper to open/download PDF via proxy route
+  const handleViewSyllabus = (url: string, courseName: string, year: string) => {
+    // Create a proper filename
+    const filename = `${courseName}_${year}_Syllabus.pdf`
+    // Use our proxy route to serve the PDF with proper headers and filename
+    const proxyUrl = `/api/view-pdf?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`
+    window.open(proxyUrl, "_blank", "noopener,noreferrer")
+  }
+
+  // 🔹 Helper to download PDF
+  const handleDownloadSyllabus = (url: string, courseName: string, year: string) => {
+    const filename = `${courseName}_${year}_Syllabus.pdf`
+    const proxyUrl = `/api/view-pdf?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}&download=true`
+    window.open(proxyUrl, "_blank", "noopener,noreferrer")
+  }
 
   return (
-    <AdminShell title="Course Catalog" description="Create, edit, and organize courses.">
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Input
-          placeholder="Search courses"
-          className="max-w-md"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+    <AdminShell title="Course Catalog" description="Manage your syllabuses.">
+      {/* User Info Display */}
+      {userInfo && (
+        <div className="mb-4 p-4 bg-gray-100 border border-gray-200 rounded">
+          <h3 className="font-semibold text-sm mb-2 text-gray-900">📚 Current User Info:</h3>
+          <p className="text-sm text-gray-900">{userInfo}</p>
+        </div>
+      )}
 
-        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="Department" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="CSE">CSE</SelectItem>
-            <SelectItem value="ECE">ECE</SelectItem>
-            <SelectItem value="ME">ME</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={creditsFilter} onValueChange={setCreditsFilter}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue placeholder="Credits" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Credits</SelectItem>
-            <SelectItem value="3">3</SelectItem>
-            <SelectItem value="4">4</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold">Uploaded Syllabuses</h2>
+        <Button onClick={() => setShowForm(!showForm)}>
           <Plus className="w-4 h-4 mr-2" />
-          New Course
+          Upload New Syllabus
         </Button>
       </div>
 
-      {/* Courses Table */}
-      <div className="rounded-lg border p-4">
-        {filteredCourses.length === 0 ? (
-          <p className="text-gray-500 text-center py-6">No courses found.</p>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Course Name</TableHead>
-                <TableHead>Department</TableHead>
-                <TableHead>Credits</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCourses.map((course) => (
-                <TableRow key={course.id}>
-                  <TableCell>{course.id}</TableCell>
-                  <TableCell>{course.name}</TableCell>
-                  <TableCell>{course.department}</TableCell>
-                  <TableCell>{course.credits}</TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`${
-                        course.is_active
-                          ? "bg-green-100 text-green-700 border border-green-300"
-                          : "bg-red-100 text-red-700 border border-red-300"
-                      } cursor-pointer`}
-                      onClick={() => toggleStatus(course.id)}
-                    >
-                      {course.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button size="sm" variant="outline">
-                      <Edit className="w-4 h-4 mr-1" /> Edit
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600"
-                      onClick={() => deleteCourse(course.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" /> Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+      {/* 🔹 Upload Form Dropdown */}
+      {showForm && (
+        <div className="border rounded p-4 mb-6 relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-2 right-2"
+            onClick={() => setShowForm(false)}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Course Dropdown */}
+            <div>
+              <label className="block text-sm mb-1">Course</label>
+              <Select onValueChange={setCourseName}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Select course" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Mechanical">Mechanical</SelectItem>
+                  <SelectItem value="Electrical">Electrical</SelectItem>
+                  <SelectItem value="Computer">Computer</SelectItem>
+                  <SelectItem value="IT">IT</SelectItem>
+                  <SelectItem value="ENTC">ENTC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Year Selector */}
+            <div>
+              <label className="block text-sm mb-1">Year</label>
+              <Select onValueChange={(val) => setYear(new Date(parseInt(val), 0, 1))}>
+                <SelectTrigger className="w-[250px]">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 26 }, (_, i) => 2000 + i).map((yr) => (
+                    <SelectItem key={yr} value={yr.toString()}>
+                      {yr}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm mb-1">Upload Syllabus (PDF/Doc/JSON)</label>
+              <Input
+                type="file"
+                accept=".pdf,.doc,.docx,.json"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
+            <Button type="submit" disabled={loading}>
+              <Plus className="w-4 h-4 mr-2" />
+              {loading ? "Uploading..." : "Upload"}
+            </Button>
+          </form>
+        </div>
+      )}
+
+      {/* 🔹 Uploaded Courses List */}
+      {courses.length === 0 ? (
+        <p className="text-sm text-gray-500">No syllabus uploaded yet.</p>
+      ) : (
+        <>
+          {/* Extraction Controls */}
+          <div className="mb-4 p-4 border rounded bg-gray-100 border-gray-200">
+            <h3 className="font-semibold mb-3 text-gray-900">Extract Syllabus Data</h3>
+            <div className="flex gap-4 items-end">
+              <div>
+                <label className="block text-sm mb-1 text-gray-700">Student Year</label>
+                <Select onValueChange={setExtractYear}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="First">First Year</SelectItem>
+                    <SelectItem value="Second">Second Year</SelectItem>
+                    <SelectItem value="Third">Third Year</SelectItem>
+                    <SelectItem value="Fourth">Fourth Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm mb-1 text-gray-700">Current Semester</label>
+                <Select onValueChange={setExtractSemester}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Select semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["I", "II", "III", "IV", "V", "VI", "VII", "VIII"].map((sem) => (
+                      <SelectItem key={sem} value={sem}>
+                        Semester {sem}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-gray-700 flex-1">
+                ℹ️ Select student's current year and semester to extract relevant subjects
+              </p>
+            </div>
+          </div>
+
+          <ul className="space-y-3">
+          {courses.map((c) => (
+            <li key={c.id} className="flex items-center justify-between border rounded p-3">
+              <div className="flex-1">
+                <p className="font-medium">{c.course_name} ({c.year})</p>
+                <div className="flex gap-3 mt-1">
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-blue-600 underline text-sm"
+                    onClick={() => handleViewSyllabus(c.syllab_doc, c.course_name, c.year)}
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View Syllabus
+                  </Button>
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto text-green-600 underline text-sm"
+                    onClick={() => handleDownloadSyllabus(c.syllab_doc, c.course_name, c.year)}
+                  >
+                    <Download className="w-3 h-3 mr-1" />
+                    Download PDF
+                  </Button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleExtractSyllabus(c.id)}
+                  disabled={extracting === c.id || !extractYear || !extractSemester}
+                >
+                  <BookOpen className="w-4 h-4 mr-1" />
+                  {extracting === c.id ? "Extracting..." : "Extract Syllabus"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(c.id)}
+                >
+                  <Trash className="w-4 h-4 mr-1" /> Delete
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        </>
+      )}
     </AdminShell>
-  );
+  )
 }
