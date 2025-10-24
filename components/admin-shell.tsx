@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type PropsWithChildren } from "react"
+import { useState, useEffect, type PropsWithChildren } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import {
   BarChart3,
@@ -60,9 +60,35 @@ const adminNav = [
 export default function AdminShell({ title, description, showRange = false, children }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [adminProfile, setAdminProfile] = useState<{
+    id?: number | string
+    name?: string | null
+    email?: string | null
+    token?: string | null
+  } | null>(null)
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
   const pathname = usePathname()
   const router = useRouter()
+
+  // Fetch server-side college/admin profile (reads httpOnly cookie server-side)
+  useEffect(() => {
+    let mounted = true
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/auth/me')
+        if (!res.ok) return
+        const data = await res.json()
+        if (mounted && data?.success && data.college) {
+          setAdminProfile(data.college)
+        }
+      } catch (err) {
+        console.error('Failed to fetch admin profile:', err)
+      }
+    }
+
+    fetchProfile()
+    return () => { mounted = false }
+  }, [])
 
   // 🔹 Logout function
   const handleLogout = async () => {
@@ -94,7 +120,7 @@ export default function AdminShell({ title, description, showRange = false, chil
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">IIT Delhi</h1>
+                <h1 className="text-lg font-bold text-foreground">{adminProfile?.name ?? 'IIT Delhi'}</h1>
                 <p className="text-xs text-muted-foreground">Admin Portal</p>
               </div>
             </div>
@@ -140,20 +166,39 @@ export default function AdminShell({ title, description, showRange = false, chil
                   aria-label="Open profile menu"
                 >
                   <Avatar className="w-8 h-8">
-                    <AvatarImage src="/admin-avatar.png" alt="Admin" />
-                    <AvatarFallback>AD</AvatarFallback>
+                    {/* keep image optional; fall back to initials */}
+                    <AvatarImage src="/admin-avatar.png" alt={adminProfile?.name ?? 'Admin'} />
+                    <AvatarFallback>
+                      {adminProfile?.name
+                        ? adminProfile.name
+                            .split(' ')
+                            .map((s) => s[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase()
+                        : 'AD'}
+                    </AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel className="flex items-center gap-3">
                   <Avatar className="w-10 h-10">
-                    <AvatarImage src="/admin-avatar.png" alt="Admin" />
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarImage src="/admin-avatar.png" alt={adminProfile?.name ?? 'Admin'} />
+                    <AvatarFallback>
+                      {adminProfile?.name
+                        ? adminProfile.name
+                            .split(' ')
+                            .map((s) => s[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase()
+                        : 'AD'}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="font-medium truncate">Dr. Admin</p>
-                    <p className="text-xs text-muted-foreground truncate">admin@iitdelhi.ac.in</p>
+                    <p className="font-medium truncate">{adminProfile?.name ?? 'Dr. Admin'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{adminProfile?.email ?? 'admin@iitdelhi.ac.in'}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

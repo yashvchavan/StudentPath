@@ -5,7 +5,7 @@ import pool from "@/lib/db"
 import FormData from "form-data"
 import axios from "axios"
 
-const FLASK_API_URL = "http://127.0.0.1:8000" // Your Flask server URL
+const FLASK_API_URL = "https://studentpath-flask.onrender.com" // Your Flask server URL
 
 export async function POST(req: NextRequest) {
   try {
