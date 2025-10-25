@@ -19,6 +19,13 @@ export async function POST() {
       secure: false,
     });
 
+    response.cookies.set("studentData", "", {
+      path: "/",
+      maxAge: 0,
+      sameSite: "strict",
+      secure: false,
+    });
+
     return response;
   } catch (error) {
     return NextResponse.json({ success: false, error: "Logout failed" }, { status: 500 });

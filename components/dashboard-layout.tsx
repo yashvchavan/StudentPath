@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
+import { useRouter } from "next/navigation"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -47,7 +48,8 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   
   // Use the context to get student data
   const { studentData, isLoading } = useStudentData()
-
+  const router = useRouter()
+  
   const sidebarItems = [
     { icon: Home, label: "Dashboard", href: "/dashboard", key: "dashboard" },
     { icon: BookOpen, label: "My Courses", href: "/dashboard/courses", key: "courses" },
@@ -65,6 +67,21 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     const last = lastName?.[0] || "";
     return (first + last).toUpperCase() || "U";
   };
+
+  // 🔹 Logout function
+  const handleLogout = async () => {
+    try {
+      const res = await fetch("/api/auth/logout", { method: "POST" })
+      const data = await res.json()
+      if (data.success) {
+        router.replace("/college-login")
+      } else {
+        console.error("Logout failed:", data.error)
+      }
+    } catch (err) {
+      console.error("Error logging out:", err)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -183,7 +200,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950">
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
