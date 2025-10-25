@@ -61,7 +61,16 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications", key: "notifications" },
     { icon: Settings, label: "Settings", href: "/dashboard/settings", key: "settings" },
   ]
+  const cookie = document.cookie
+    .split("; ")
+    .find(row => row.startsWith("studentData="));
+  
+  if (!cookie) {
+    throw new Error("No student data found");
+  }
 
+  const studentDataFromCookie = JSON.parse(decodeURIComponent(cookie.split("=")[1]));
+      
   const getInitials = (firstName?: string, lastName?: string): string => {
     const first = firstName?.[0] || "";
     const last = lastName?.[0] || "";
@@ -74,7 +83,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
       const res = await fetch("/api/auth/logout", { method: "POST" })
       const data = await res.json()
       if (data.success) {
-        router.replace("/college-login")
+        window.location.href = `/login?token=${studentDataFromCookie?.token || ""}`;
       } else {
         console.error("Logout failed:", data.error)
       }
