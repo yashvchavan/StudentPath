@@ -15,37 +15,43 @@ export default function DashboardLayoutContent({
   const { studentData, isLoading: isDataLoading } = useStudentData();
 
   useEffect(() => {
+    let cookieData: any = null;
+    
     const validateAccess = async () => {
       try {
-        // Get student data from cookie
-        const studentDataCookie = document.cookie
+        // Get user data from cookie (works for both students and professionals)
+        const userDataCookie = document.cookie
           .split("; ")
-          .find((row) => row.startsWith("studentData="));
+          .find((row) => row.startsWith("studentData=")); // Note: We keep studentData as cookie name for compatibility
 
-        if (!studentDataCookie) {
-          console.error("No studentData cookie found");
-          throw new Error("No student data found");
+        if (!userDataCookie) {
+          console.error("No user data cookie found");
+          throw new Error("No user data found");
         }
 
         let cookieData;
         try {
-          cookieData = JSON.parse(decodeURIComponent(studentDataCookie.split("=")[1]));
-          console.log("Parsed student data:", { 
+          cookieData = JSON.parse(decodeURIComponent(userDataCookie.split("=")[1]));
+          console.log("Parsed user data:", { 
             hasToken: !!cookieData.token,
             hasCollegeToken: !!cookieData.token,
+            isProfessional: !!cookieData.isProfessional,
             isAuthenticated: cookieData.isAuthenticated
           });
         } catch (parseError) {
-          console.error("Failed to parse student data:", parseError);
-          throw new Error("Invalid student data format");
+          console.error("Failed to parse user data:", parseError);
+          throw new Error("Invalid user data format");
         }
 
         if (!cookieData.isAuthenticated) {
-          console.error("Student data not marked as authenticated");
+          console.error("User not marked as authenticated");
           throw new Error("Not authenticated");
         }
 
-        const token = searchParams.get("token") || cookieData.token || cookieData.collegeToken;
+        // For professionals, we just need the main token
+        const token = cookieData.isProfessional ? 
+          cookieData.token : 
+          (searchParams.get("token") || cookieData.token || cookieData.collegeToken);
         if (!token) {
           console.error("No token available");
           throw new Error("No token found");
@@ -100,8 +106,10 @@ export default function DashboardLayoutContent({
         console.error("Access validation error:", error);
         const errorMessage = error instanceof Error ? error.message : "Authentication failed";
         console.log("Redirecting to login due to error:", errorMessage);
-        // Uncomment to enable redirect
-        // window.location.href = "/login?error=" + encodeURIComponent(errorMessage); 
+        // Redirect to appropriate login page
+        window.location.href = cookieData?.isProfessional ? 
+          "/professional-login?error=" + encodeURIComponent(errorMessage) : 
+          "/login?error=" + encodeURIComponent(errorMessage);
       }
     };
 

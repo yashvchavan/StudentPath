@@ -21,7 +21,7 @@ import {
 
 const navItems = [
   { name: "Dashboard", href: "/professional-dashboard", icon: LayoutDashboard },
-  { name: "AI Assistant", href: "/professional-dashboard/ai", icon: Brain },
+  { name: "AI Assistant", href: "/professional-dashboard/assistant", icon: Brain },
   { name: "Projects", href: "/professional-dashboard/projects", icon: Briefcase },
   { name: "Network", href: "/professional-dashboard/network", icon: Users },
   { name: "Learning", href: "/professional-dashboard/learning", icon: GraduationCap },

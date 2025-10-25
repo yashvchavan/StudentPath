@@ -109,7 +109,7 @@ function buildUserContextString(user: any, userType: "student" | "professional")
 
 export async function POST(req: NextRequest) {
     try {
-        const { message, conversationId, userId, userType, syllabusContext } = await req.json();
+    const { message, conversationId, userId, userType, syllabusContext, userContext } = await req.json();
 
         console.log("=== CHAT API REQUEST ===");
         console.log("Message:", message);
@@ -163,8 +163,8 @@ export async function POST(req: NextRequest) {
         console.log(buildUserContextString(user, userType));
         console.log("====================");
         
-        // Add syllabus context if available
-        if (syllabusContext && syllabusContext.trim()) {
+    // Add syllabus context if available
+    if (syllabusContext && syllabusContext.trim()) {
             console.log("=== ADDING SYLLABUS CONTEXT ===");
             console.log("Syllabus Context Length:", syllabusContext.length);
             console.log("Syllabus Context Preview:", syllabusContext.substring(0, 200) + "...");
@@ -177,6 +177,18 @@ If they ask for help with specific subjects, reference their syllabus context to
         } else {
             console.log("⚠️ No syllabus context provided");
         }
+
+            // Add any user-provided context (used for professionals or ad-hoc inputs)
+            if (userContext && typeof userContext === 'string' && userContext.trim()) {
+                console.log('=== ADDING USER PROVIDED CONTEXT ===');
+                console.log('User Context Length:', userContext.length);
+                console.log('User Context Preview:', userContext.substring(0, 200) + '...');
+                console.log('====================================');
+
+                contextualPrompt += `\n\n**User Provided Context**:\n${userContext}\n\n**IMPORTANT**: Use this context when generating personalized recommendations and responses.`;
+            } else {
+                console.log('⚠️ No user-provided context included in request');
+            }
 
         console.log("=== FINAL CONTEXTUAL PROMPT LENGTH ===");
         console.log("Total prompt length:", contextualPrompt.length);
