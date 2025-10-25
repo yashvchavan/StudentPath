@@ -167,13 +167,21 @@ export default function StudentRegisterPageContent() {
                 </p>
               </div>
             </div>
+            <div className="flex items-center gap-4"><Button
+              variant="outline"
+              onClick={() => (window.location.href = `/login?token=${collegeToken}`)}
+              className="border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            >
+              Login
+            </Button>
             <Button
               variant="outline"
               onClick={() => (window.location.href = "/")}
               className="border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               Back to Home
-            </Button>
+            </Button></div>
+            
           </div>
         </div>
       </div>
