@@ -106,8 +106,26 @@ export default function ProfessionalLoginPage() {
         return;
       }
 
-      // Successful login
-      console.log("Professional login successful:", data.user);
+      // Successful login - set cookie similar to student login so other pages (chat) can read session
+      const prof = data.professional || data.user || data;
+
+      const professionalData = {
+        id: prof.id,
+        first_name: prof.firstName || prof.first_name || "",
+        last_name: prof.lastName || prof.last_name || "",
+        email: prof.email || "",
+        isAuthenticated: true,
+        isAdmin: false,
+        timestamp: Date.now(),
+      };
+
+      // Clear existing studentData cookie and set new one (keeps client-side session shape consistent)
+      document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie = `studentData=${encodeURIComponent(JSON.stringify(professionalData))}; path=/; max-age=86400; SameSite=Strict`;
+
+      // small delay to ensure cookie is set before redirect
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       router.push("/professional-dashboard");
     } catch (err) {
       console.error("Login error:", err);
