@@ -193,19 +193,73 @@ const StepTransition = ({
 );
 
 // === Rocket Launch Loader ===
+// === Rocket Launch Loader with Dynamic Messages ===
 const RocketLaunchLoader = () => {
+  const [messageIndex, setMessageIndex] = useState(0);
+  
+  const loadingMessages = [
+    { text: "Analyzing your profile...", icon: "📊" },
+    { text: "Parsing your interests...", icon: "🔍" },
+    { text: "Building your career path...", icon: "🛤️" },
+    { text: "Matching skills with opportunities...", icon: "🎯" },
+    { text: "Personalizing your roadmap...", icon: "🗺️" },
+    { text: "Creating your success journey...", icon: "✨" },
+    { text: "Almost there...", icon: "🚀" },
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+    }, 2500); // Change message every 2.5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center py-12">
       <div className="relative mb-8">
         <div className="animate-bounce" style={{ animationDuration: "2s" }}>
           <Rocket className="w-24 h-24 text-indigo-500" />
         </div>
+        {/* Sparkle effects */}
+        <div className="absolute -top-2 -right-2 animate-ping">
+          <span className="text-2xl">✨</span>
+        </div>
+        <div className="absolute -bottom-2 -left-2 animate-ping" style={{ animationDelay: "0.5s" }}>
+          <span className="text-2xl">⭐</span>
+        </div>
       </div>
-      <div className="text-center space-y-2">
-        <h3 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-yellow-400 bg-clip-text text-transparent">
-          Launching Your Journey...
-        </h3>
-        <p className="text-gray-400 animate-pulse">Creating your personalized path</p>
+      
+      <div className="text-center space-y-3 min-h-[80px]">
+        <div className="flex items-center justify-center gap-3">
+          <span className="text-3xl animate-bounce" style={{ animationDelay: "0.1s" }}>
+            {loadingMessages[messageIndex].icon}
+          </span>
+          <h3 
+            key={messageIndex}
+            className="text-2xl font-bold bg-gradient-to-r from-red-400 to-yellow-400 bg-clip-text text-transparent animate-fade-in"
+          >
+            {loadingMessages[messageIndex].text}
+          </h3>
+        </div>
+        
+        {/* Progress dots */}
+        <div className="flex justify-center gap-2 mt-4">
+          {loadingMessages.map((_, idx) => (
+            <div
+              key={idx}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                idx === messageIndex 
+                  ? 'bg-indigo-500 w-8' 
+                  : 'bg-white/20'
+              }`}
+            />
+          ))}
+        </div>
+        
+        <p className="text-gray-400 animate-pulse text-sm">
+          This won't take long...
+        </p>
       </div>
     </div>
   );
@@ -960,7 +1014,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       <SelectValue placeholder="Select year" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      {["2024", "2023", "2022", "2021", "2020"].map((year) => (
+                      {["2029","2028","2027","2026","2025", "2024", "2023", "2022", "2021", "2020"].map((year) => (
                         <SelectItem
                           key={year}
                           value={year}
