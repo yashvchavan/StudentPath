@@ -39,6 +39,31 @@ const SYSTEM_PROMPT = `You are an AI Learning Assistant for StudentPath, a perso
 
 7. **Academic Support**: Answer questions about programming concepts, data structures, algorithms, web development, and other technical topics.
 
+**CRITICAL RESTRICTIONS**:
+⚠️ **YOU MUST ONLY RESPOND TO EDUCATIONAL AND LEARNING-RELATED QUERIES**
+
+**REFUSE to answer questions about**:
+- Politics, political figures, elections, or political opinions
+- Current events, news, or controversial social topics
+- Personal opinions on non-educational matters
+- Entertainment, sports, or celebrity gossip
+- Religion or religious debates
+- Dating, relationships (unless career/professional networking)
+- Medical advice or diagnoses
+- Legal advice
+- Financial investment advice (career salary info is OK)
+- Any topic unrelated to education, learning, career development, or academic growth
+
+**If asked an off-topic question, respond with**:
+"I'm an educational learning assistant focused on helping you with your academic and career goals. I can help with:
+- Study planning and learning roadmaps
+- Course and resource recommendations
+- Career guidance and skill development
+- Technical topics and programming concepts
+- Academic support and project guidance
+
+How can I assist you with your learning journey today?"
+
 **Response Format Guidelines**:
 - Be concise but comprehensive
 - Use bullet points and structured formatting
@@ -68,7 +93,7 @@ const SYSTEM_PROMPT = `You are an AI Learning Assistant for StudentPath, a perso
 
 **Next Steps**: [immediate action items]"
 
-Remember: You're a supportive mentor focused on helping students achieve their goals efficiently.`;
+Remember: You're a supportive mentor focused EXCLUSIVELY on helping students achieve their educational and career goals efficiently. Stay strictly within your educational domain.`;
 
 // Helper: validate user exists
 async function validateUser(userId: number, userType: "student" | "professional") {
@@ -107,9 +132,61 @@ function buildUserContextString(user: any, userType: "student" | "professional")
     }
 }
 
+// Helper: Check if query is educational/on-topic
+function isEducationalQuery(message: string): boolean {
+    const message_lower = message.toLowerCase();
+    
+    // Off-topic keywords that should be rejected
+    const offTopicKeywords = [
+        'trump', 'biden', 'election', 'president', 'politician',
+        'democrat', 'republican', 'political party', 'vote',
+        'war', 'military conflict', 'terrorism',
+        'religion', 'religious', 'god', 'allah', 'jesus',
+        'dating', 'relationship advice', 'breakup',
+        'celebrity', 'movie review', 'sports match',
+        'stock market', 'crypto investment', 'buy stocks'
+    ];
+    
+    // Check for off-topic keywords
+    for (const keyword of offTopicKeywords) {
+        if (message_lower.includes(keyword)) {
+            return false;
+        }
+    }
+    
+    // If message is very generic/casual (like "hi", "hello"), allow it
+    const genericGreetings = ['hi', 'hello', 'hey', 'good morning', 'good evening'];
+    if (genericGreetings.some(greeting => message_lower.trim() === greeting)) {
+        return true;
+    }
+    
+    // Educational keywords that should be allowed
+    const educationalKeywords = [
+        'learn', 'study', 'course', 'career', 'skill', 'tutorial',
+        'programming', 'code', 'algorithm', 'project', 'roadmap',
+        'development', 'engineer', 'design', 'data', 'software',
+        'web', 'mobile', 'app', 'database', 'api', 'framework',
+        'college', 'university', 'degree', 'exam', 'assignment',
+        'job', 'interview', 'resume', 'portfolio', 'internship'
+    ];
+    
+    // If it contains educational keywords, it's likely on-topic
+    const hasEducationalKeyword = educationalKeywords.some(keyword => 
+        message_lower.includes(keyword)
+    );
+    
+    if (hasEducationalKeyword) {
+        return true;
+    }
+    
+    // For ambiguous queries, allow them and let the AI handle the filtering
+    // This prevents false positives
+    return true;
+}
+
 export async function POST(req: NextRequest) {
     try {
-    const { message, conversationId, userId, userType, syllabusContext, userContext } = await req.json();
+        const { message, conversationId, userId, userType, syllabusContext, userContext } = await req.json();
 
         console.log("=== CHAT API REQUEST ===");
         console.log("Message:", message);
@@ -124,6 +201,16 @@ export async function POST(req: NextRequest) {
         }
         if (!userId || !userType) {
             return NextResponse.json({ error: "UserId and userType are required" }, { status: 400 });
+        }
+
+        // Check if query is educational/on-topic (basic filter)
+        if (!isEducationalQuery(message)) {
+            console.log("⚠️ Off-topic query detected:", message);
+            return NextResponse.json({ 
+                message: "I'm an educational learning assistant focused on helping you with your academic and career goals. I can help with study planning, course recommendations, career guidance, and technical topics. How can I assist you with your learning journey today?",
+                conversationId: conversationId,
+                filtered: true
+            });
         }
 
         // Validate user
@@ -163,8 +250,8 @@ export async function POST(req: NextRequest) {
         console.log(buildUserContextString(user, userType));
         console.log("====================");
         
-    // Add syllabus context if available
-    if (syllabusContext && syllabusContext.trim()) {
+        // Add syllabus context if available
+        if (syllabusContext && syllabusContext.trim()) {
             console.log("=== ADDING SYLLABUS CONTEXT ===");
             console.log("Syllabus Context Length:", syllabusContext.length);
             console.log("Syllabus Context Preview:", syllabusContext.substring(0, 200) + "...");
@@ -178,17 +265,17 @@ If they ask for help with specific subjects, reference their syllabus context to
             console.log("⚠️ No syllabus context provided");
         }
 
-            // Add any user-provided context (used for professionals or ad-hoc inputs)
-            if (userContext && typeof userContext === 'string' && userContext.trim()) {
-                console.log('=== ADDING USER PROVIDED CONTEXT ===');
-                console.log('User Context Length:', userContext.length);
-                console.log('User Context Preview:', userContext.substring(0, 200) + '...');
-                console.log('====================================');
+        // Add any user-provided context (used for professionals or ad-hoc inputs)
+        if (userContext && typeof userContext === 'string' && userContext.trim()) {
+            console.log('=== ADDING USER PROVIDED CONTEXT ===');
+            console.log('User Context Length:', userContext.length);
+            console.log('User Context Preview:', userContext.substring(0, 200) + '...');
+            console.log('====================================');
 
-                contextualPrompt += `\n\n**User Provided Context**:\n${userContext}\n\n**IMPORTANT**: Use this context when generating personalized recommendations and responses.`;
-            } else {
-                console.log('⚠️ No user-provided context included in request');
-            }
+            contextualPrompt += `\n\n**User Provided Context**:\n${userContext}\n\n**IMPORTANT**: Use this context when generating personalized recommendations and responses.`;
+        } else {
+            console.log('⚠️ No user-provided context included in request');
+        }
 
         console.log("=== FINAL CONTEXTUAL PROMPT LENGTH ===");
         console.log("Total prompt length:", contextualPrompt.length);
