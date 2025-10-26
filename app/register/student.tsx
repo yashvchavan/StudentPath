@@ -1050,7 +1050,6 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                             id="other-interests"
                             checked={false}
                             onCheckedChange={() => {
-                              // Show modal or expand to show all interests
                               updateFormData({
                                 showAllInterests: !formData.showAllInterests
                               });
