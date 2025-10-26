@@ -149,6 +149,7 @@ export default function AIAssistantPage() {
   }
 
   // Fetch existing syllabus info
+  // Fetch existing syllabus info - UPDATED VERSION
   const fetchSyllabusInfo = async () => {
     try {
       const res = await fetch("/api/extract-syllabus", {
@@ -156,14 +157,28 @@ export default function AIAssistantPage() {
         credentials: "include",
       })
 
+      const data = await res.json()
+
+      // Handle the new response structure
       if (res.ok) {
-        const data = await res.json()
-        if (data.success && data.user_info) {
+        if (data.hasData && data.user_info) {
+          // Syllabus exists - set the info
           setSyllabusInfo(data.user_info)
+          console.log("✅ Syllabus info loaded:", data.user_info)
+        } else {
+          // No syllabus uploaded yet - this is normal, not an error
+          console.log("ℹ️ No syllabus uploaded yet")
+          setSyllabusInfo("")
+          // Optionally show the panel automatically for first-time users
+          // setShowSyllabusPanel(true)
         }
+      } else {
+        // Only log actual errors (500, etc)
+        console.error("❌ Error fetching syllabus:", data.message || data.error)
       }
     } catch (err) {
-      console.error("Error fetching syllabus info:", err)
+      console.error("❌ Error fetching syllabus info:", err)
+      // Don't show error to user - syllabus is optional
     }
   }
 
@@ -658,8 +673,8 @@ export default function AIAssistantPage() {
                       >
                         <div
                           className={`max-w-[90%] p-6 rounded-2xl shadow-md backdrop-blur-sm ${msg.role === "user"
-                              ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
-                              : "bg-gradient-to-br from-muted to-muted/80"
+                            ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
+                            : "bg-gradient-to-br from-muted to-muted/80"
                             }`}
                         >
                           <div className="whitespace-pre-wrap break-words text-base leading-7">
@@ -667,8 +682,8 @@ export default function AIAssistantPage() {
                           </div>
                           <p
                             className={`text-sm mt-3 ${msg.role === "user"
-                                ? "text-primary-foreground/80"
-                                : "text-muted-foreground"
+                              ? "text-primary-foreground/80"
+                              : "text-muted-foreground"
                               }`}
                           >
                             {msg.created_at}
