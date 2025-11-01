@@ -29,6 +29,19 @@ interface ProfessionalData {
   isAuthenticated?: boolean
 }
 
+interface ProfessionalProfile {
+  id: number
+  first_name?: string
+  last_name?: string
+  email?: string
+  company?: string
+  designation?: string
+  industry?: string
+  experience?: string
+  skills?: string[]
+  career_goals?: string
+}
+
 function getProfessionalDataFromCookie(): ProfessionalData | null {
   if (typeof window === 'undefined') return null
   const cookies = document.cookie.split(';')
@@ -60,6 +73,7 @@ export default function ProfessionalAssistantPage() {
   // Professional-specific context
   const [professionalContext, setProfessionalContext] = useState<string>("")
   const [contextLoaded, setContextLoaded] = useState(false)
+  const [professionalProfile, setProfessionalProfile] = useState<ProfessionalProfile | null>(null)
 
   useEffect(() => {
     const d = getProfessionalDataFromCookie()
@@ -80,6 +94,7 @@ export default function ProfessionalAssistantPage() {
     if (userId) {
       loadConversations()
       fetchSavedContext()
+      fetchProfessionalProfile()
 
       if (messages.length === 0) {
         setMessages([{
@@ -99,10 +114,41 @@ export default function ProfessionalAssistantPage() {
         const data = await res.json()
         if (data.context) {
           setProfessionalContext(data.context)
+          setContextLoaded(true)
+          return
         }
+        // if no saved context, we will wait for profile fetch to build summary
       }
     } catch (e) {
       console.error('Failed to fetch saved context', e)
+    } finally {
+      // leave contextLoaded to be set after profile fetch if needed
+    }
+  }
+
+  const fetchProfessionalProfile = async () => {
+    try {
+      const res = await fetch(`/api/professionals/profile?professionalId=${userId}`)
+      if (!res.ok) throw new Error('Failed to fetch profile')
+      const data = await res.json()
+      if (data && data.success && data.data) {
+        setProfessionalProfile(data.data)
+        // if there's no saved context, build a summary automatically
+        if (!professionalContext || professionalContext.trim() === '') {
+          const p = data.data as ProfessionalProfile
+          const skills = Array.isArray(p.skills) ? p.skills.join(', ') : (p.skills ? String(p.skills) : '')
+          const parts = []
+          if (p.designation) parts.push(`${p.designation}`)
+          if (p.company) parts.push(`at ${p.company}`)
+          if (p.experience) parts.push(`Experience: ${p.experience}`)
+          if (skills) parts.push(`Skills: ${skills}`)
+          if (p.career_goals) parts.push(`Goals: ${p.career_goals}`)
+          const summary = `${p.first_name || ''} ${p.last_name || ''}`.trim() + (parts.length ? ' — ' + parts.join(' • ') : '')
+          setProfessionalContext(summary)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch professional profile', e)
     } finally {
       setContextLoaded(true)
     }
@@ -249,11 +295,26 @@ export default function ProfessionalAssistantPage() {
               <CardTitle>Your Professional Context</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">Provide a short description of your role, skills, industry and goals. This helps the assistant give tailored career advice.</p>
-              <textarea className="w-full p-3 rounded-md bg-background border" value={professionalContext} onChange={(e) => setProfessionalContext(e.target.value)} rows={4} />
+              <p className="text-sm text-muted-foreground mb-2">Professional summary (automatically pulled from your profile). This will be used as context for the assistant.</p>
+              {professionalProfile ? (
+                <div className="p-3 rounded-md bg-muted">
+                  <div className="font-medium">{professionalProfile.first_name} {professionalProfile.last_name}</div>
+                  <div className="text-sm text-gray-300">{professionalProfile.designation ?? '—'} {professionalProfile.company ? `• ${professionalProfile.company}` : ''}</div>
+                  {professionalProfile.industry && <div className="text-sm text-gray-400 mt-1">Industry: {professionalProfile.industry}</div>}
+                  {professionalProfile.experience && <div className="text-sm text-gray-400 mt-1">Experience: {professionalProfile.experience}</div>}
+                  {professionalProfile.skills && professionalProfile.skills.length > 0 && (
+                    <div className="text-sm text-gray-300 mt-2">Skills: {professionalProfile.skills.join(', ')}</div>
+                  )}
+                  {professionalProfile.career_goals && <div className="text-sm text-gray-300 mt-2">Goals: {professionalProfile.career_goals}</div>}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Loading profile summary...</div>
+              )}
+
               <div className="flex gap-2 mt-3">
-                <Button onClick={saveContext}>Save Context</Button>
-                <Button variant="ghost" onClick={() => setProfessionalContext('')}>Clear</Button>
+                <Button onClick={saveContext}>Use & Save as Context</Button>
+                <Button variant="ghost" onClick={() => { setProfessionalContext(''); alert('Context cleared — assistant will use default prompts.'); }}>Clear</Button>
+                <Button variant="link" onClick={() => window.location.href = '/professional-dashboard/settings'}>Edit profile</Button>
               </div>
             </CardContent>
           </Card>
