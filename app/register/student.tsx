@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -717,7 +718,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="studentId" className="text-white font-medium">
+                  <Label htmlFor="studentId" className="text-gray-900 dark:text-white font-medium">
                     Student ID *
                   </Label>
                   <Input
@@ -725,25 +726,25 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     placeholder="Your student ID"
                     value={formData.studentId}
                     onChange={(e) => updateFormData({ studentId: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Country *</Label>
+                  <Label className="text-gray-900 dark:text-white font-medium">Country *</Label>
                   <Select
                     value={formData.country}
                     onValueChange={(value) => updateFormData({ country: value })}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                    <SelectTrigger className="bg-white/5 border-white/20 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select your country" />
                     </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
+                    <SelectContent className="bg-gray-50 dark:bg-gray-900 border-white/20">
                       {Object.keys(languagesByCountry).map((country) => (
                         <SelectItem
                           key={country}
                           value={country}
-                          className="text-white hover:bg-white/10"
+                          className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
                         >
                           {country}
                         </SelectItem>
@@ -753,7 +754,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-white font-medium">
+                  <Label htmlFor="firstName" className="text-gray-900 dark:text-white font-medium">
                     First Name *
                   </Label>
                   <Input
@@ -761,12 +762,12 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     placeholder="Your first name"
                     value={formData.firstName}
                     onChange={(e) => updateFormData({ firstName: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-white font-medium">
+                  <Label htmlFor="lastName" className="text-gray-900 dark:text-white font-medium">
                     Last Name *
                   </Label>
                   <Input
@@ -774,12 +775,12 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     placeholder="Your last name"
                     value={formData.lastName}
                     onChange={(e) => updateFormData({ lastName: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-medium">
+                  <Label htmlFor="email" className="text-gray-900 dark:text-white font-medium">
                     Email Address *
                   </Label>
                   <Input
@@ -788,12 +789,12 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     placeholder="your.email@college.edu"
                     value={formData.email}
                     onChange={(e) => updateFormData({ email: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-white font-medium">
+                  <Label htmlFor="phone" className="text-gray-900 dark:text-white font-medium">
                     Phone Number
                   </Label>
                   <Input
@@ -801,12 +802,12 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     placeholder="+91 9876543210"
                     value={formData.phone}
                     onChange={(e) => updateFormData({ phone: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth" className="text-white font-medium">
+                  <Label htmlFor="dateOfBirth" className="text-gray-900 dark:text-white font-medium">
                     Date of Birth
                   </Label>
                   <Input
@@ -814,24 +815,25 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                     type="date"
                     value={formData.dateOfBirth}
                     onChange={(e) => updateFormData({ dateOfBirth: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white focus:border-indigo-400"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Gender (Optional)</Label>
+                  
+                  <Label className="text-gray-900 dark:text-white font-medium">Gender (Optional)</Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => updateFormData({ gender: value })}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                    <SelectTrigger className="bg-white/5 border-white/20 text-gray-900 dark:text-white">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      <SelectItem value="male" className="text-white hover:bg-white/10">Male</SelectItem>
-                      <SelectItem value="female" className="text-white hover:bg-white/10">Female</SelectItem>
-                      <SelectItem value="non-binary" className="text-white hover:bg-white/10">Non-binary</SelectItem>
-                      <SelectItem value="prefer-not-to-say" className="text-white hover:bg-white/10">Prefer not to say</SelectItem>
+                    <SelectContent className="bg-gray-50 dark:bg-gray-900 border-white/20">
+                      <SelectItem value="male" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Male</SelectItem>
+                      <SelectItem value="female" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Female</SelectItem>
+                      <SelectItem value="non-binary" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Non-binary</SelectItem>
+                      <SelectItem value="prefer-not-to-say" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Prefer not to say</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2326,8 +2328,9 @@ function RegisterPage() {
 
   if (!userType) {
     return (
+      // Force dark mode for the initial selection screen as well
       <div
-        className="dark min-h-screen relative text-white"
+        className="dark min-h-screen relative text-gray-900 dark:text-white"
         style={{
           background:
             "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
@@ -2342,8 +2345,9 @@ function RegisterPage() {
   const currentProgress = isStudent ? 50 : 33; // Simplified progress for demo
 
   return (
+    // Force dark mode for the full registration page
     <div
-      className="dark min-h-screen relative text-white"
+      className="dark min-h-screen relative text-gray-900 dark:text-white"
       style={{
         background:
           "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
@@ -2380,6 +2384,7 @@ function RegisterPage() {
                 />
               </div>
               <div className="flex items-center gap-3">
+                <ThemeToggle />
                 <div className={`px-3 py-1 rounded-full text-sm font-medium ${
                   isStudent 
                     ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
