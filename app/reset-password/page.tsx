@@ -23,10 +23,14 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
-  const [token, setToken] = useState('');
   const [userType, setUserType] = useState<'student' | 'college' | 'professional'>('student');
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
-
+  const [token, setToken] = useState<string | null>(null);
+  
+    // useEffect(() => {
+    //   const storedToken = localStorage.getItem('login_token');
+    //   setToken(storedToken);
+    // }, []);
   useEffect(() => {
     // Get token and type from URL parameters
     const urlParams = new URLSearchParams(window.location.search);
@@ -170,7 +174,13 @@ export default function ResetPasswordPage() {
                 </p>
               </div>
               <Link
-                href={userType === 'college' ? '/college-login' : '/login'}
+                href={
+                  userType === 'college'
+                    ? '/college-login'
+                    : userType === 'professional'
+                    ? '/professional-login'
+                    : `/login?token=${token || ''}`
+                }
                 className="block w-full"
               >
                 <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">

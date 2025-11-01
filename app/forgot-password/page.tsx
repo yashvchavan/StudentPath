@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,13 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('login_token');
+    setToken(storedToken);
+  }, []);
+
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -124,7 +131,7 @@ export default function ForgotPasswordPage() {
                     ? '/college-login'
                     : userType === 'professional'
                     ? '/professional-login'
-                    : '/login'
+                    : `/login?token=${token || ''}`
                 }
                 className="block w-full"
               >
@@ -258,7 +265,7 @@ export default function ForgotPasswordPage() {
                     ? '/college-login'
                     : userType === 'professional'
                     ? '/professional-login'
-                    : '/login'
+                    : `/login?token=${token || ''}`
                 }
                 className="inline-flex items-center text-sm text-green-400 hover:text-green-300 font-medium transition-colors"
               >

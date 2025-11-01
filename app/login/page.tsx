@@ -163,7 +163,7 @@ export default function LoginPage() {
       if (typeof window !== 'undefined') {
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
-        
+        localStorage.setItem('login_token', tokenFromUrl || '');
         if (tokenFromUrl) {
           setCollegeToken(tokenFromUrl);
           await validateCollegeToken(tokenFromUrl);
@@ -175,6 +175,8 @@ export default function LoginPage() {
     
     validateToken();
   }, [isAdminLogin]);
+
+
 
   // Handle mouse movement
   useEffect(() => {
