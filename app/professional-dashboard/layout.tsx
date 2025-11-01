@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Brain,
@@ -18,6 +18,13 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const navItems = [
   { name: "Dashboard", href: "/professional-dashboard", icon: LayoutDashboard },
@@ -40,6 +47,40 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [initials, setInitials] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const cookie = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('studentData='));
+      if (!cookie) return;
+      const data = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+      const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.email || null;
+      setDisplayName(name);
+      if (name) {
+        const parts = name.split(' ');
+        const ivals = parts.length === 1 ? parts[0].substring(0, 1) : (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1));
+        setInitials(ivals.toUpperCase());
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.error('Logout error', e);
+    } finally {
+      // Clear client cookie as well and redirect
+      document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      router.push('/professional-login');
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-black text-white">
@@ -92,12 +133,32 @@ export default function DashboardLayout({
       <main className="flex-1 p-6 overflow-y-auto">
         {/* Topbar */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Welcome Back</h2>
+          <div>
+            <h2 className="text-2xl font-bold">{displayName ? `Welcome, ${displayName}` : 'Welcome Back'}</h2>
+            <p className="text-sm text-gray-400">Professional dashboard</p>
+          </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400">Hello, Professional</span>
-            <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center font-bold text-black">
-              P
+            <div className="text-right hidden sm:block">
+              <div className="text-gray-400 text-sm">Signed in as</div>
+              <div className="font-medium">{displayName ?? 'Professional'}</div>
             </div>
+
+            {/* Profile dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center gap-3">
+                  <Avatar>
+                    {/* If portfolio contains an image url we display it via AvatarImage in profile page fetch flow; here use initials fallback */}
+                    <AvatarFallback className="bg-yellow-500 text-black font-bold">{initials ?? 'P'}</AvatarFallback>
+                  </Avatar>
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onSelect={() => (window.location.href = '/professional-dashboard/profile')}>Profile</DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleLogout} data-variant="destructive">Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
