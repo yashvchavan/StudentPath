@@ -799,7 +799,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   </Label>
                   <Input
                     id="phone"
-                    placeholder="+91 9876543210"
+                    placeholder="+91 0123456789"
                     value={formData.phone}
                     onChange={(e) => updateFormData({ phone: e.target.value })}
                     className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
