@@ -13,7 +13,7 @@ export function ThemeToggle() {
   useEffect(() => {
     setMounted(true)
   }, [])
-
+//TODO: Remove console logs after debugging
   const handleThemeChange = (newTheme: string) => {
     console.log("[v0] Theme changing from", theme, "to", newTheme)
     setTheme(newTheme)
