@@ -60,6 +60,7 @@ const adminNav = [
 export default function AdminShell({ title, description, showRange = false, children }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchFocused, setSearchFocused] = useState(false); // ✅ Add this state
   const [adminProfile, setAdminProfile] = useState<{
     id?: number | string
     name?: string | null
@@ -72,38 +73,53 @@ export default function AdminShell({ title, description, showRange = false, chil
 
   // Fetch server-side college/admin profile (reads httpOnly cookie server-side)
   useEffect(() => {
-    let mounted = true
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch('/api/auth/me')
-        if (!res.ok) return
-        const data = await res.json()
-        if (mounted && data?.success && data.college) {
-          setAdminProfile(data.college)
-        }
-      } catch (err) {
-        console.error('Failed to fetch admin profile:', err)
-      }
+    let mounted = true;
+
+    const storedProfile = sessionStorage.getItem("adminProfile");
+    if (storedProfile) {
+      const parsed = JSON.parse(storedProfile);
+      setAdminProfile(parsed);
+
+      // ✅ Skip re-fetch if profile already valid
+      if (parsed?.id) return;
     }
 
-    fetchProfile()
-    return () => { mounted = false }
-  }, [])
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted && data?.success && data.college) {
+          setAdminProfile(data.college);
+          sessionStorage.setItem("adminProfile", JSON.stringify(data.college));
+        }
+      } catch (err) {
+        console.error("Failed to fetch admin profile:", err);
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
 
   // 🔹 Logout function
   const handleLogout = async () => {
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST" })
-      const data = await res.json()
+      const res = await fetch("/api/auth/logout", { method: "POST" });
+      const data = await res.json();
       if (data.success) {
-        router.replace("/college-login")
+        sessionStorage.removeItem("adminProfile"); // 🧹 clear cached profile
+        router.replace("/college-login");
       } else {
-        console.error("Logout failed:", data.error)
+        console.error("Logout failed:", data.error);
       }
     } catch (err) {
-      console.error("Error logging out:", err)
+      console.error("Error logging out:", err);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -120,44 +136,67 @@ export default function AdminShell({ title, description, showRange = false, chil
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">{adminProfile?.name ?? 'IIT Delhi'}</h1>
-                <p className="text-xs text-muted-foreground">Admin Portal</p>
+                {adminProfile ? (
+                  <>
+                    <h1 className="text-lg font-bold text-foreground">{adminProfile.name}</h1>
+                    <p className="text-xs text-muted-foreground">Admin Portal</p>
+                  </>
+                ) : (
+                  // 👇 Simple shimmer or placeholder while loading
+                  <div className="animate-pulse">
+                    <div className="h-4 w-24 bg-muted rounded mb-1" />
+                    <div className="h-3 w-16 bg-muted rounded" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Center */}
           <div className="flex-1 max-w-md mx-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <div
+              className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""
+                }`}
+            >
+              <Search
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-primary" : "text-muted-foreground"
+                  }`}
+              />
               <Input
                 placeholder="Search students, courses, reports..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
+                className={`pl-10 bg-background text-foreground border rounded-xl transition-all duration-200
+        ${searchFocused
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/40"
+                  }`}
               />
             </div>
           </div>
 
+
           {/* Right */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden sm:flex items-center gap-2">
+            {/* <div className="hidden sm:flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full" aria-hidden="true" />
               <span className="text-sm text-muted-foreground">System Healthy</span>
-            </div>
-            <Button variant="ghost" size="sm" className="relative" aria-label="Notifications">
+            </div> */}
+            {/* <Button variant="ghost" size="sm" className="relative" aria-label="Notifications">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
                 5
               </span>
-            </Button>
+            </Button> */}
 
-            <ThemeToggle />
+            {/* <ThemeToggle /> */}
 
-            <Button variant="outline" size="sm" className="hidden md:inline-flex bg-transparent">
+            {/* <Button variant="outline" size="sm" className="hidden md:inline-flex bg-transparent">
               <Download className="w-4 h-4 mr-2" />
               Export
-            </Button>
+            </Button> */}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -171,11 +210,11 @@ export default function AdminShell({ title, description, showRange = false, chil
                     <AvatarFallback>
                       {adminProfile?.name
                         ? adminProfile.name
-                            .split(' ')
-                            .map((s) => s[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase()
+                          .split(' ')
+                          .map((s) => s[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()
                         : 'AD'}
                     </AvatarFallback>
                   </Avatar>
@@ -188,11 +227,11 @@ export default function AdminShell({ title, description, showRange = false, chil
                     <AvatarFallback>
                       {adminProfile?.name
                         ? adminProfile.name
-                            .split(' ')
-                            .map((s) => s[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase()
+                          .split(' ')
+                          .map((s) => s[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()
                         : 'AD'}
                     </AvatarFallback>
                   </Avatar>
@@ -202,7 +241,7 @@ export default function AdminShell({ title, description, showRange = false, chil
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuGroup>
+                {/* <DropdownMenuGroup>
                   <DropdownMenuItem asChild>
                     <a href="/admin/users">
                       <UserCheck className="mr-2 h-4 w-4" />
@@ -221,7 +260,7 @@ export default function AdminShell({ title, description, showRange = false, chil
                       <span>Help & Support</span>
                     </a>
                   </DropdownMenuItem>
-                </DropdownMenuGroup>
+                </DropdownMenuGroup> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <Eye className="mr-2 h-4 w-4 rotate-180" />
@@ -236,9 +275,8 @@ export default function AdminShell({ title, description, showRange = false, chil
       <div className="flex">
         {/* Sidebar */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-          }`}
+          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+            }`}
         >
           <nav className="p-4">
             <ul className="space-y-2">
@@ -248,11 +286,10 @@ export default function AdminShell({ title, description, showRange = false, chil
                   <li key={item.href}>
                     <a
                       href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-300 ${
-                        active
-                          ? "bg-blue-500 text-white"
-                          : "text-muted-foreground hover:bg-blue-100 hover:text-blue-700"
-                      }`}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-300 ${active
+                        ? "bg-blue-500 text-white"
+                        : "text-muted-foreground hover:bg-blue-100 hover:text-blue-700"
+                        }`}
                     >
                       <item.icon className="w-4 h-4 transition-colors duration-300" />
                       {item.label}

@@ -18,6 +18,7 @@ interface AuthData {
   timestamp?: number;
   student_id?: string;
   college_id?: string;
+  id?: number;
 }
 
 // Helper function to validate student data
@@ -52,23 +53,24 @@ function validateStudentData(data: string | undefined): boolean {
 function validateCollegeData(data: string | undefined): boolean {
   if (!data) return false;
   try {
-    const parsed = safeJsonParse(decodeURIComponent(data)) as AuthData;
+    const parsed = safeJsonParse(data) as AuthData;
     console.log('Validating college data:', parsed);
     
     if (!parsed) return false;
 
     // Check required fields for college access
-    if (!parsed.token || parsed.type !== 'college' || !parsed.timestamp) return false;
+    // College data should have either token or id
+    if (!parsed.token && !parsed.id) return false;
+    if (parsed.type && parsed.type !== 'college') return false;
     
-    // Check if the authentication is not expired (24 hours)
-    const isExpired = Date.now() - (parsed.timestamp || 0) > 24 * 60 * 60 * 1000;
-    if (isExpired) {
-      console.log('College authentication expired');
-      return false;
+    // If timestamp exists, check expiration
+    if (parsed.timestamp) {
+      const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000;
+      if (isExpired) {
+        console.log('College authentication expired');
+        return false;
+      }
     }
-
-    // Verify college-specific data
-    if (!parsed.college_id) return false;
     
     return true;
   } catch (error) {
@@ -96,7 +98,9 @@ export function middleware(request: NextRequest) {
     const studentData = request.cookies.get('studentData')?.value;
     const collegeData = request.cookies.get('collegeData')?.value;
     
-   
+    console.log('Path:', path);
+    console.log('Has studentData:', !!studentData);
+    console.log('Has collegeData:', !!collegeData);
 
     // Create response for clearing invalid cookies
     const clearCookiesResponse = (redirectUrl: string) => {
@@ -114,24 +118,45 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
       }
 
-      // Protect admin/college endpoints
-      if (path.startsWith('/api/admin') || path.startsWith('/api/college')) {
+      // Protect admin/college endpoints - INCLUDING student list and college-data endpoints
+      if (path.startsWith('/api/admin') || 
+          path.startsWith('/api/college') ||
+          path === '/api/student/list') {  // CRITICAL FIX: student list is a college endpoint
+        console.log('Validating college access for:', path);
         if (!validateCollegeData(collegeData)) {
+          console.log('College validation failed');
           return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
           });
         }
+        console.log('College validation passed');
       }
 
-      // Protect student endpoints
-      if (path.startsWith('/api/student')) {
+      // Protect student profile endpoints (but NOT student/list)
+      if (path.startsWith('/api/student') && !path.startsWith('/api/student/list')) {
+        console.log('Validating student access for:', path);
         if (!validateStudentData(studentData)) {
+          console.log('Student validation failed');
           return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
           });
         }
+        console.log('Student validation passed');
+      }
+
+      // Protect settings endpoints
+      if (path.startsWith('/api/settings')) {
+        console.log('Validating student access for settings:', path);
+        if (!validateStudentData(studentData)) {
+          console.log('Student validation failed for settings');
+          return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        console.log('Student validation passed for settings');
       }
     }
 
@@ -158,24 +183,23 @@ export function middleware(request: NextRequest) {
       }
     }
 
-    // Handle admin access
     // Handle admin routes
-  if (path.startsWith('/admin')) {
-    // If no college data, redirect to college login
-    if (!collegeData) {
-      return NextResponse.redirect(new URL('/college-login', request.url));
-    }
-    
-    // Verify college data
-    try {
-      const college = JSON.parse(collegeData);
-      if (!college.token || college.type !== 'college') {
+    if (path.startsWith('/admin')) {
+      console.log('Admin route access check');
+      // If no college data, redirect to college login
+      if (!collegeData) {
+        console.log('No college data found, redirecting to login');
         return NextResponse.redirect(new URL('/college-login', request.url));
       }
-    } catch (error) {
-      return NextResponse.redirect(new URL('/college-login', request.url));
+      
+      // Verify college data
+      if (!validateCollegeData(collegeData)) {
+        console.log('Invalid college data, redirecting to login');
+        return NextResponse.redirect(new URL('/college-login', request.url));
+      }
+      
+      console.log('Admin access granted');
     }
-  }
 
     // Prevent authenticated users from accessing public paths
     if (isPublicPath && !path.startsWith('/api/')) {
@@ -194,7 +218,7 @@ export function middleware(request: NextRequest) {
 
     // Prevent cross-role access
     if (isCollegeLoginPath && validateCollegeData(collegeData)) {
-      console.log('College user attempting to access student login');
+      console.log('College user attempting to access college login page');
       return NextResponse.redirect(new URL('/admin', request.url));
     }
     
@@ -207,8 +231,23 @@ export function middleware(request: NextRequest) {
   } catch (error) {
     console.error('Middleware error:', error);
     // On error, clear cookies and redirect to login
-    return ('/login');
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    response.cookies.delete('studentData');
+    response.cookies.delete('collegeData');
+    return response;
   }
 }
 
-
+// Configure which routes use this middleware
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public).*)',
+  ],
+}

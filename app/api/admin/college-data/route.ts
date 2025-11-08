@@ -1,174 +1,172 @@
-import { NextRequest, NextResponse } from 'next/server';
-import pool from '@/lib/db';
-import { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+// app/api/admin/college-data/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import pool from '@/lib/db'
+import { RowDataPacket } from 'mysql2'
 
-interface CollegeRow extends RowDataPacket {
-  id: number;
-  college_name: string;
-  email: string;
-  college_token: string;
-  is_active: boolean;
-  created_at: Date;
+interface StudentRow extends RowDataPacket {
+  student_id: number
+  first_name: string
+  last_name: string
+  email: string
+  program?: string
+  is_active?: number
+  created_at: string
 }
 
-interface StudentCountRow extends RowDataPacket {
-  total: number;
-  active: number;
+interface StatsRow extends RowDataPacket {
+  total_students: number
+  active_students: number
 }
 
-interface StudentRegistrationRow extends RowDataPacket {
-  student_name: string;
-  email: string;
-  created_at: Date;
+interface ProgramRow extends RowDataPacket {
+  program: string
 }
 
-export async function GET(request: NextRequest) {
-  console.log('🔍 College Data API Called');
-  let connection;
+interface TokenUsageRow extends RowDataPacket {
+  usage_count: number
+}
 
+interface DepartmentRow extends RowDataPacket {
+  program: string
+  count: number
+}
+
+export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const collegeId = searchParams.get('collegeId');
-
-    if (!collegeId) {
-      console.log('❌ No college ID provided');
-      return NextResponse.json(
-        { error: 'College ID is required' },
-        { status: 400 }
-      );
+    // Get college data from cookies
+    const cookieStore = req.cookies
+    const collegeData = cookieStore.get('collegeData')?.value
+    
+    console.log('API: College cookie exists:', !!collegeData)
+    
+    if (!collegeData) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Unauthorized - College authentication required' 
+      }, { status: 401 })
     }
 
-    console.log('📊 Fetching data for college ID:', collegeId);
+    const college = JSON.parse(collegeData)
+    console.log('API: Parsed college data:', { id: college.id, type: college.type })
+    
+    const collegeToken = college.token
 
-    connection = await pool.getConnection();
-    
-    
-    
-    
-    // Get college basic info (using your actual table structure)
-    const [collegeResult] = await connection.execute<CollegeRow[]>(
-      `SELECT id, college_name, email, college_token, is_active, created_at 
-       FROM colleges 
-       WHERE id = ?`,
-      [collegeId]
-    );
-
-    if (!collegeResult || collegeResult.length === 0) {
-      console.log('❌ College not found');
-      connection.release();
-      return NextResponse.json(
-        { error: 'College not found' },
-        { status: 404 }
-      );
+    if (!collegeToken) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'Invalid college ID' 
+      }, { status: 400 })
     }
 
-    const college = collegeResult[0];
-    console.log('✅ College found:', college.college_name);
+    // 1. Get total and active students count
+    const [statsRows] = await pool.query<StatsRow[]>(
+      `SELECT 
+        COUNT(*) as total_students,
+        SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_students
+      FROM Students
+      WHERE college_token = ?`,
+      [collegeToken]
+    )
+    
+    const stats = statsRows[0]
 
-    // Initialize default values
-    let totalStudents = 0;
-    let activeStudents = 0;
-    let recentRegistrations: any[] = [];
+    // 2. Get unique programs (departments) from academic_profiles
+    const [programRows] = await pool.query<ProgramRow[]>(
+      `SELECT DISTINCT ap.program 
+      FROM academic_profiles ap
+      INNER JOIN Students s ON ap.student_id = s.student_id
+      WHERE s.college_token = ? AND ap.program IS NOT NULL AND ap.program != ''
+      ORDER BY ap.program`,
+      [collegeToken]
+    )
+    
+    const programs = programRows.map(row => row.program)
 
-    try {
-      // Try to get student counts (handle case where students table might not exist)
-      const [studentCountResult] = await connection.execute<StudentCountRow[]>(
-        `SELECT 
-           COUNT(*) as total,
-           SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active
-         FROM students 
-         WHERE college_id = ?`,
-        [collegeId]
-      );
+    // 3. Get recent registrations (last 10 students) with program from academic_profiles
+    const [recentRows] = await pool.query<StudentRow[]>(
+      `SELECT 
+        s.student_id,
+        s.first_name,
+        s.last_name,
+        s.email,
+        ap.program,
+        s.created_at
+      FROM Students s
+      LEFT JOIN academic_profiles ap ON s.student_id = ap.student_id
+      WHERE s.college_token = ?
+      ORDER BY s.created_at DESC
+      LIMIT 10`,
+      [collegeToken]
+    )
 
-      if (studentCountResult && studentCountResult.length > 0) {
-        totalStudents = parseInt(studentCountResult[0].total.toString()) || 0;
-        activeStudents = parseInt(studentCountResult[0].active?.toString() || '0') || 0;
-      }
+    const recentRegistrations = recentRows.map(student => ({
+      id: student.student_id,
+      name: `${student.first_name} ${student.last_name}`,
+      email: student.email,
+      program: student.program || 'Not Set',
+      created_at: student.created_at,
+      date: new Date(student.created_at).toLocaleDateString()
+    }))
 
-      console.log('📈 Student counts - Total:', totalStudents, 'Active:', activeStudents);
+    // 4. Get token usage for current month
+    const [tokenUsageRows] = await pool.query<TokenUsageRow[]>(
+      `SELECT COUNT(*) as usage_count
+      FROM Students
+      WHERE college_token = ? 
+      AND MONTH(created_at) = MONTH(CURRENT_DATE())
+      AND YEAR(created_at) = YEAR(CURRENT_DATE())`,
+      [collegeToken]
+    )
 
-      // Get recent registrations
-      const [recentResult] = await connection.execute<StudentRegistrationRow[]>(
-        `SELECT CONCAT(first_name, ' ', last_name) as student_name, email, created_at 
-FROM Students 
-WHERE college = ? 
-         ORDER BY created_at DESC 
-         LIMIT 10`,
-        [collegeId]
-      );
-
-      recentRegistrations = recentResult.map(reg => ({
-        name: reg.student_name,
-        program: 'Student', // Default since we don't have program field yet
-        email: reg.email,
-        date: new Date(reg.created_at).toISOString().split('T')[0]
-      }));
-
-      console.log('📝 Recent registrations found:', recentRegistrations.length);
-
-    } catch (studentError) {
-      console.warn('⚠️ Students table query failed (table might not exist):', studentError);
-      // Continue with default values (0 students, empty array)
-    }
-
-    // Mock programs data (can be enhanced later with actual programs table)
-    const programs = [
-      'Computer Science',
-      'Engineering', 
-      'Business Administration',
-      'Arts & Sciences'
-    ];
-
-    // Calculate token usage
     const tokenUsage = {
-      usageCount: totalStudents,
-      maxUsage: 1000,
-      remaining: Math.max(0, 1000 - totalStudents),
-      isActive: college.is_active
-    };
+      usageCount: tokenUsageRows[0]?.usage_count || 0,
+      maxUsage: 1000, // You can make this dynamic if stored in database
+      remaining: 1000 - (tokenUsageRows[0]?.usage_count || 0),
+      isActive: true
+    }
 
-    const responseData = {
+    // 5. Get department distribution from academic_profiles
+    const [deptRows] = await pool.query<DepartmentRow[]>(
+      `SELECT 
+        ap.program,
+        COUNT(*) as count
+      FROM academic_profiles ap
+      INNER JOIN Students s ON ap.student_id = s.student_id
+      WHERE s.college_token = ? AND ap.program IS NOT NULL AND ap.program != ''
+      GROUP BY ap.program
+      ORDER BY count DESC`,
+      [collegeToken]
+    )
+
+    const departmentStats = deptRows.map(row => ({
+      department: row.program,
+      count: row.count
+    }))
+
+    console.log('API: Successfully fetched college data')
+
+    return NextResponse.json({ 
       success: true,
-      college: {
-        id: college.id,
-        name: college.college_name,
-        email: college.email,
-        token: college.college_token,
-        isActive: college.is_active,
-        createdAt: college.created_at
-      },
-      totalStudents,
-      activeStudents,
+      totalStudents: Number(stats.total_students),
+      activeStudents: Number(stats.active_students),
       programs,
       recentRegistrations,
-      tokenUsage
-    };
-
-    console.log('✅ College data response prepared');
-    connection.release();
-
-    return NextResponse.json(responseData);
+      tokenUsage,
+      departmentStats,
+      collegeInfo: {
+        id: college.id,
+        name: college.name,
+        email: college.email,
+        token: college.token
+      }
+    })
 
   } catch (error) {
-    console.error('❌ College data API error:', error);
-    
-    if (connection) {
-      try {
-        connection.release();
-      } catch (releaseError) {
-        console.error('❌ Failed to release connection:', releaseError);
-      }
-    }
-    
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch college data',
-        details: process.env.NODE_ENV === 'development' ? 
-          (error instanceof Error ? error.message : 'Unknown error') : 
-          undefined
-      },
-      { status: 500 }
-    );
+    console.error('Error fetching college data:', error)
+    return NextResponse.json({ 
+      success: false,
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 })
   }
 }

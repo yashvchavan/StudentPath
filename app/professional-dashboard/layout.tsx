@@ -86,9 +86,8 @@ export default function DashboardLayout({
     <div className="flex min-h-screen bg-black text-white">
       {/* Sidebar */}
       <aside
-        className={`${
-          collapsed ? "w-20" : "w-64"
-        } bg-zinc-900 p-4 flex flex-col transition-all duration-300`}
+        className={`${collapsed ? "w-20" : "w-64"
+          } bg-zinc-900 p-4 flex flex-col transition-all duration-300`}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -115,11 +114,10 @@ export default function DashboardLayout({
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-                  isActive
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive
                     ? "bg-yellow-500 text-black font-semibold"
                     : "text-gray-300 hover:bg-zinc-800 hover:text-white"
-                }`}
+                  }`}
               >
                 <item.icon className="w-5 h-5" />
                 {!collapsed && <span>{item.name}</span>}
@@ -155,7 +153,7 @@ export default function DashboardLayout({
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onSelect={() => (window.location.href = '/professional-dashboard/profile')}>Profile</DropdownMenuItem>
+                {/* <DropdownMenuItem onSelect={() => (window.location.href = '/professional-dashboard/profile')}>Profile</DropdownMenuItem> */}
                 <DropdownMenuItem onSelect={handleLogout} data-variant="destructive">Logout</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

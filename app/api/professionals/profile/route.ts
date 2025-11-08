@@ -12,9 +12,16 @@ export async function GET(req: NextRequest) {
 
     const connection = await pool.getConnection();
 
-    // Fetch professional row
+    // Fetch professional row - ADDED profile_picture_base64 and profile_picture_mime
     const [rows] = await connection.execute(
-      'SELECT id, first_name, last_name, email, phone, company, designation, industry, experience, current_salary, expected_salary, linkedin, github, portfolio, skills, certifications, career_goals, preferred_learning_style, is_active, created_at, updated_at FROM professionals WHERE id = ? AND is_active = 1',
+      `SELECT 
+        id, first_name, last_name, email, phone, company, designation, 
+        industry, experience, current_salary, expected_salary, linkedin, 
+        github, portfolio, profile_picture_base64, profile_picture_mime,
+        skills, certifications, career_goals, preferred_learning_style, 
+        is_active, created_at, updated_at 
+      FROM professionals 
+      WHERE id = ? AND is_active = 1`,
       [professionalId]
     );
 
@@ -78,6 +85,8 @@ export async function GET(req: NextRequest) {
         linkedin: prof.linkedin,
         github: prof.github,
         portfolio: prof.portfolio,
+        profile_picture_base64: prof.profile_picture_base64 || '',
+        profile_picture_mime: prof.profile_picture_mime || '',
         skills,
         certifications: prof.certifications,
         career_goals: prof.career_goals,

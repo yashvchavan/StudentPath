@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ThemeToggle } from "@/components/theme-toggle"
+//import { ThemeToggle } from "@/components/theme-toggle"
 import {
   Bell,
   Search,
@@ -41,15 +41,31 @@ interface DashboardLayoutProps {
   currentPage?: string
 }
 
+interface StudentProfile {
+  student_id: number
+  first_name: string
+  last_name: string
+  email: string
+  phone?: string
+  college?: string
+  program?: string
+  current_semester?: number
+  current_gpa?: number
+  profile_picture?: string | null
+  bio?: string
+}
+
 export default function DashboardLayout({ children, currentPage = "dashboard" }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchFocused, setSearchFocused] = useState(false)
-  
+  const [profileData, setProfileData] = useState<StudentProfile | null>(null)
+  const [loadingProfile, setLoadingProfile] = useState(true)
+
   // Use the context to get student data
   const { studentData, isLoading } = useStudentData()
   const router = useRouter()
-  
+
   const sidebarItems = [
     { icon: Home, label: "Dashboard", href: "/dashboard", key: "dashboard" },
     { icon: BookOpen, label: "My Courses", href: "/dashboard/courses", key: "courses" },
@@ -61,21 +77,77 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications", key: "notifications" },
     { icon: Settings, label: "Settings", href: "/dashboard/settings", key: "settings" },
   ]
-  const cookie = document.cookie
-    .split("; ")
-    .find(row => row.startsWith("studentData="));
-  
-  if (!cookie) {
-    throw new Error("No student data found");
+
+  // Fetch profile data with profile picture
+  useEffect(() => {
+    fetchProfile()
+  }, [])
+
+  const fetchProfile = async () => {
+    try {
+      setLoadingProfile(true)
+      const response = await fetch("/api/settings", {
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        console.error("Failed to fetch profile")
+        return
+      }
+
+      const data = await response.json()
+
+      if (data.success && data.profile) {
+        setProfileData(data.profile)
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error)
+    } finally {
+      setLoadingProfile(false)
+    }
   }
 
-  const studentDataFromCookie = JSON.parse(decodeURIComponent(cookie.split("=")[1]));
-      
+  // Get student data from cookie as fallback
+  const getStudentDataFromCookie = () => {
+    if (typeof document === 'undefined') return null
+
+    const cookie = document.cookie
+      .split("; ")
+      .find(row => row.startsWith("studentData="))
+
+    if (!cookie) return null
+
+    try {
+      return JSON.parse(decodeURIComponent(cookie.split("=")[1]))
+    } catch {
+      return null
+    }
+  }
+
+  const studentDataFromCookie = getStudentDataFromCookie()
+
   const getInitials = (firstName?: string, lastName?: string): string => {
-    const first = firstName?.[0] || "";
-    const last = lastName?.[0] || "";
-    return (first + last).toUpperCase() || "U";
-  };
+    const first = firstName?.[0] || ""
+    const last = lastName?.[0] || ""
+    return (first + last).toUpperCase() || "U"
+  }
+
+  // Use profile data if available, otherwise fall back to context data
+  const displayName = profileData
+    ? `${profileData.first_name} ${profileData.last_name}`
+    : studentData
+      ? `${studentData.first_name} ${studentData.last_name}`
+      : "Loading..."
+
+  const displayEmail = profileData?.email || studentData?.email || "Loading..."
+  const displayProgram = profileData?.program || studentData?.program || "Loading..."
+  const displaySemester = profileData?.current_semester || studentData?.current_semester || "-"
+  const displayGPA = profileData?.current_gpa || studentData?.current_gpa || null
+  const displayInitials = getInitials(
+    profileData?.first_name || studentData?.first_name,
+    profileData?.last_name || studentData?.last_name
+  )
+  const profilePicture = profileData?.profile_picture
 
   // 🔹 Logout function
   const handleLogout = async () => {
@@ -83,7 +155,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
       const res = await fetch("/api/auth/logout", { method: "POST" })
       const data = await res.json()
       if (data.success) {
-        window.location.href = `/login?token=${studentDataFromCookie?.token || ""}`;
+        window.location.href = `/login?token=${studentDataFromCookie?.token || ""}`
       } else {
         console.error("Logout failed:", data.error)
       }
@@ -122,9 +194,13 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
 
           {/* Center: Search */}
           <div className="flex-1 max-w-md mx-4">
-            <div className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""}`}>
+            <div
+              className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""
+                }`}
+            >
               <Search
-                className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-primary" : "text-muted-foreground"}`}
+                className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-primary" : "text-muted-foreground"
+                  }`}
               />
               <Input
                 placeholder="Search courses, skills, resources..."
@@ -132,7 +208,11 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                className={`pl-10 transition-all duration-200 ${searchFocused ? "ring-2 ring-primary/20 border-primary/50" : ""}`}
+                className={`pl-10 bg-background text-foreground border transition-all duration-200
+        ${searchFocused
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-muted-foreground/40"
+                  } rounded-xl`}
               />
             </div>
           </div>
@@ -140,9 +220,9 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
           {/* Right: Theme Toggle, Notifications and User */}
           <div className="flex items-center gap-3">
             {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* <ThemeToggle />
             {/* Notifications */}
-            <Button
+            {/* <Button
               variant="ghost"
               size="sm"
               className="relative hover:bg-muted/80 transition-all duration-200 hover:scale-105 active:scale-95"
@@ -151,7 +231,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
               <span className="absolute -top-1 -right-1 w-5 h-5 bg-secondary text-secondary-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
                 3
               </span>
-            </Button>
+            </Button> */}
             {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -160,20 +240,20 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                   className="flex items-center gap-3 hover:bg-muted/80 transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   <Avatar className="w-8 h-8 transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-primary/20">
-                    <AvatarImage 
-                      src="/placeholder.svg" 
-                      alt={studentData ? `${studentData.first_name} ${studentData.last_name}` : "User"} 
+                    <AvatarImage
+                      src={profilePicture || "/placeholder.svg"}
+                      alt={displayName}
                     />
                     <AvatarFallback>
-                      {getInitials(studentData?.first_name, studentData?.last_name)}
+                      {displayInitials}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-medium text-foreground">
-                      {isLoading ? "Loading..." : studentData ? `${studentData.first_name} ${studentData.last_name}` : "Loading..."}
+                      {loadingProfile || isLoading ? "Loading..." : displayName}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Semester {studentData?.current_semester || "-"}
+                      Semester {displaySemester}
                     </p>
                   </div>
                 </Button>
@@ -182,32 +262,32 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {isLoading ? "Loading..." : studentData ? `${studentData.first_name} ${studentData.last_name}` : "Loading..."}
+                      {loadingProfile || isLoading ? "Loading..." : displayName}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {studentData?.email || "Loading..."}
+                      {displayEmail}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center">
+                  <Link href="/dashboard" className="flex items-center">
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/settings" className="flex items-center">
+                  <Link href="/dashboard/settings" className="flex items-center">
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
+                {/* <DropdownMenuItem asChild>
                   <Link href="/help" className="flex items-center">
                     <HelpCircle className="mr-2 h-4 w-4" />
                     <span>Help & Support</span>
                   </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950">
                   <LogOut className="mr-2 h-4 w-4" />
@@ -232,23 +312,23 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
             <div className="p-4 border-b hover:bg-muted/30 transition-colors duration-200">
               <div className="flex items-center gap-3">
                 <Avatar className="w-12 h-12 transition-all duration-200 hover:scale-105 hover:ring-2 hover:ring-primary/20">
-                  <AvatarImage 
-                    src="/placeholder.svg" 
-                    alt={studentData ? `${studentData.first_name} ${studentData.last_name}` : "User"} 
+                  <AvatarImage
+                    src={profilePicture || "/placeholder.svg"}
+                    alt={displayName}
                   />
                   <AvatarFallback>
-                    {getInitials(studentData?.first_name, studentData?.last_name)}
+                    {displayInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {isLoading ? "Loading..." : studentData ? `${studentData.first_name} ${studentData.last_name}` : "Loading..."}
+                    {loadingProfile || isLoading ? "Loading..." : displayName}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {studentData?.program || "Loading..."}
+                    {displayProgram}
                   </p>
                   <p className="text-xs font-medium text-primary transition-colors duration-200">
-                    CGPA: {studentData?.current_gpa ? Number(studentData.current_gpa).toFixed(2) : "-"}
+                    CGPA: {displayGPA ? Number(displayGPA).toFixed(2) : "-"}
                   </p>
                 </div>
               </div>
@@ -263,10 +343,9 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                       href={item.href}
                       className={`
                         group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative overflow-hidden
-                        ${
-                          item.key === currentPage
-                            ? "bg-primary text-primary-foreground shadow-md"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:translate-x-1"
+                        ${item.key === currentPage
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:translate-x-1"
                         }
                       `}
                     >

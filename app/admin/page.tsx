@@ -223,63 +223,63 @@ export default function AdminDashboard() {
   return (
     <AdminShell title="Dashboard" description={`Welcome back, ${collegeData.name}`}>
       {/* Combined College Info + Token Card */}
-<Card className="mb-8 border border-green-200 dark:border-green-700 shadow-md hover:shadow-lg transition-shadow duration-300 bg-green-50 dark:bg-green-950/20">
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-green-800 dark:text-green-200">
-      <Building className="w-6 h-6" />
-      College Information & Registration Token
-    </CardTitle>
-    <CardDescription className="text-green-600 dark:text-green-300 text-sm">
-      Details about your college account and the student registration token
-    </CardDescription>
-  </CardHeader>
-  <CardContent>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <div className="flex flex-col">
-        <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1">College Name</span>
-        <span className="font-medium text-green-900 dark:text-green-100">{collegeData.name}</span>
-      </div>
-      <div className="flex flex-col">
-        <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1">Email</span>
-        <span className="font-medium text-green-900 dark:text-green-100">{collegeData.email}</span>
-      </div>
-      <div className="flex flex-col sm:col-span-2">
-        <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1">College ID / Token</span>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 bg-white dark:bg-green-900 border border-green-200 dark:border-green-800 px-3 py-2 rounded text-green-900 dark:text-green-100 font-mono text-sm break-all">
-            {collegeData.token}
-          </code>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-900/20"
-            onClick={copyTokenOnly}
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          </Button>
-        </div>
-      </div>
-    </div>
+      <Card className="mb-8 border border-green-200 dark:border-green-700 shadow-md hover:shadow-lg transition-shadow duration-300 bg-green-50 dark:bg-green-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold text-green-800 dark:text-green-200">
+            <Building className="w-6 h-6" />
+            College Information & Registration Token
+          </CardTitle>
+          <CardDescription className="text-green-600 dark:text-green-300 text-sm">
+            Details about your college account and the student registration token
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="flex flex-col">
+              <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1">College Name</span>
+              <span className="font-medium text-green-900 dark:text-green-100">{collegeData.name}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1">Email</span>
+              <span className="font-medium text-green-900 dark:text-green-100">{collegeData.email}</span>
+            </div>
+            <div className="flex flex-col sm:col-span-2">
+              <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1">College ID / Token</span>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-white dark:bg-green-900 border border-green-200 dark:border-green-800 px-3 py-2 rounded text-green-900 dark:text-green-100 font-mono text-sm break-all">
+                  {collegeData.token}
+                </code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-900/20"
+                  onClick={copyTokenOnly}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
 
-    {/* Student Registration URL */}
-    <div>
-      <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1 block">Registration URL</span>
-      <div className="flex items-center gap-2">
-        <code className="flex-1 bg-white dark:bg-green-900 border border-green-200 dark:border-green-800 px-3 py-2 rounded text-green-900 dark:text-green-100 font-mono text-xs break-all">
-          {`${typeof window !== 'undefined' ? window.location.origin : 'localhost:3000'}/register/student?token=${collegeData.token}`}
-        </code>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={copyTokenToClipboard}
-          className="border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-900/20"
-        >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-        </Button>
-      </div>
-    </div>
-  </CardContent>
-</Card>
+          {/* Student Registration URL */}
+          <div>
+            <span className="text-xs text-green-700 dark:text-green-300 uppercase mb-1 block">Registration URL</span>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 bg-white dark:bg-green-900 border border-green-200 dark:border-green-800 px-3 py-2 rounded text-green-900 dark:text-green-100 font-mono text-xs break-all">
+                {`${typeof window !== 'undefined' ? window.location.origin : 'localhost:3000'}/register/student?token=${collegeData.token}`}
+              </code>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={copyTokenToClipboard}
+                className="border-green-200 dark:border-green-800 text-green-800 dark:text-green-200 hover:bg-green-100 dark:hover:bg-green-900/20"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
 
       {/* Main Content */}
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Token Usage</p>
+                  <p className="text-sm text-muted-foreground">This Month</p>
                   <p className="text-3xl font-bold">{tokenUsage.usageCount}</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
@@ -428,36 +428,43 @@ export default function AdminDashboard() {
 
         {/* Quick Actions */}
         <div className="mt-8">
-          <Card>
+          <Card className="border border-green-200 dark:border-green-800 shadow-sm">
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Common administrative tasks
-              </CardDescription>
+              <CardTitle className="text-green-800 dark:text-green-200">Quick Actions</CardTitle>
             </CardHeader>
+
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Manage Students */}
                 <Button
                   variant="outline"
-                  className="h-20 flex flex-col items-center justify-center gap-2"
+                  className="h-20 flex flex-col items-center justify-center gap-2 border-green-300 dark:border-green-700 
+          text-green-800 dark:text-green-200 transition-all duration-300
+          hover:bg-green-100 dark:hover:bg-green-900/20 hover:border-green-500 hover:shadow-md hover:scale-[1.03]"
                   onClick={() => router.push('/admin/students')}
                 >
                   <UserPlus className="w-6 h-6" />
                   <span>Manage Students</span>
                 </Button>
 
+                {/* Manage Programs */}
                 <Button
                   variant="outline"
-                  className="h-20 flex flex-col items-center justify-center gap-2"
+                  className="h-20 flex flex-col items-center justify-center gap-2 border-green-300 dark:border-green-700 
+          text-green-800 dark:text-green-200 transition-all duration-300
+          hover:bg-green-100 dark:hover:bg-green-900/20 hover:border-green-500 hover:shadow-md hover:scale-[1.03]"
                   onClick={() => router.push('/admin/programs')}
                 >
                   <BookOpen className="w-6 h-6" />
                   <span>Manage Programs</span>
                 </Button>
 
+                {/* View Reports */}
                 <Button
                   variant="outline"
-                  className="h-20 flex flex-col items-center justify-center gap-2"
+                  className="h-20 flex flex-col items-center justify-center gap-2 border-green-300 dark:border-green-700 
+          text-green-800 dark:text-green-200 transition-all duration-300
+          hover:bg-green-100 dark:hover:bg-green-900/20 hover:border-green-500 hover:shadow-md hover:scale-[1.03]"
                   onClick={() => router.push('/admin/analytics')}
                 >
                   <BarChart3 className="w-6 h-6" />
@@ -467,6 +474,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
       </div>
     </AdminShell>
   );

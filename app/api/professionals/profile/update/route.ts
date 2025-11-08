@@ -1,87 +1,146 @@
-import { NextResponse, NextRequest } from 'next/server';
-import pool from '@/lib/db';
+// app/api/professionals/profile/update/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import pool from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const cookieStore = await cookies()
+    const studentCookie = cookieStore.get('studentData')?.value
 
-    // Allow sending professionalId or read from cookie
-    let professionalId = body.professionalId || body.id;
-    if (!professionalId) {
-      const cookieHeader = req.headers.get('cookie') || '';
-      const match = cookieHeader.split('; ').find((c) => c.startsWith('studentData='));
-      if (match) {
-        try {
-          const session = JSON.parse(decodeURIComponent(match.split('=')[1]));
-          professionalId = session.id;
-        } catch {
-          // ignore cookie parse errors
-        }
-      }
+    if (!studentCookie) {
+      return NextResponse.json({
+        success: false,
+        error: 'Not authenticated'
+      }, { status: 401 })
     }
+
+    const studentData = JSON.parse(studentCookie)
+    const professionalId = studentData.id
 
     if (!professionalId) {
-      return NextResponse.json({ success: false, error: 'professionalId required' }, { status: 400 });
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid professional ID'
+      }, { status: 400 })
     }
 
-    const updates: string[] = [];
-    const params: any[] = [];
+    const body = await req.json()
+    const {
+      firstName,
+      lastName,
+      phone,
+      company,
+      designation,
+      linkedin,
+      github,
+      portfolio,
+      skills,
+      certifications,
+      career_goals,
+      preferred_learning_style,
+      profile_picture, // Cloudinary URL
+    } = body
 
-    // Utility to safely add string fields (trims and converts non-string values)
-    const safePush = (column: string, value: any) => {
-      if (value !== undefined && value !== null) {
-        let strValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-        // Optional: limit max size to avoid 1406 if schema is still smaller
-        if (strValue.length > 65000) {
-          strValue = strValue.slice(0, 65000);
-        }
-        updates.push(`${column} = ?`);
-        params.push(strValue.trim());
-      }
-    };
+    // Build update query
+    const updates: string[] = []
+    const values: any[] = []
 
-    safePush('first_name', body.firstName);
-    safePush('last_name', body.lastName);
-    safePush('phone', body.phone);
-    safePush('company', body.company);
-    safePush('designation', body.designation);
-    safePush('linkedin', body.linkedin);
-    safePush('github', body.github);
-    safePush('portfolio', body.portfolio); // now safely handles any type
-    safePush('certifications', body.certifications);
-    safePush('career_goals', body.career_goals);
-    safePush('preferred_learning_style', body.preferred_learning_style);
-
-    // Handle skills (always JSON)
-    if (body.skills !== undefined) {
-      updates.push('skills = ?');
-      params.push(JSON.stringify(Array.isArray(body.skills) ? body.skills : []));
+    if (firstName !== undefined) {
+      updates.push('first_name = ?')
+      values.push(firstName)
+    }
+    if (lastName !== undefined) {
+      updates.push('last_name = ?')
+      values.push(lastName)
+    }
+    if (phone !== undefined) {
+      updates.push('phone = ?')
+      values.push(phone)
+    }
+    if (company !== undefined) {
+      updates.push('company = ?')
+      values.push(company)
+    }
+    if (designation !== undefined) {
+      updates.push('designation = ?')
+      values.push(designation)
+    }
+    if (linkedin !== undefined) {
+      updates.push('linkedin = ?')
+      values.push(linkedin)
+    }
+    if (github !== undefined) {
+      updates.push('github = ?')
+      values.push(github)
+    }
+    if (portfolio !== undefined) {
+      updates.push('portfolio = ?')
+      values.push(portfolio)
+    }
+    if (skills !== undefined) {
+      updates.push('skills = ?')
+      values.push(JSON.stringify(skills))
+    }
+    if (certifications !== undefined) {
+      updates.push('certifications = ?')
+      values.push(certifications)
+    }
+    if (career_goals !== undefined) {
+      updates.push('career_goals = ?')
+      values.push(career_goals)
+    }
+    if (preferred_learning_style !== undefined) {
+      updates.push('preferred_learning_style = ?')
+      values.push(preferred_learning_style)
+    }
+    if (profile_picture !== undefined) {
+      // Store Cloudinary URL in profile_picture_base64 field
+      updates.push('profile_picture_base64 = ?')
+      values.push(profile_picture)
+      // Set mime to indicate it's a URL
+      updates.push('profile_picture_mime = ?')
+      values.push('image/url')
     }
 
-    if (updates.length === 0) {
-      return NextResponse.json({ success: false, error: 'No updatable fields provided' }, { status: 400 });
+    // Always update the updated_at timestamp
+    updates.push('updated_at = NOW()')
+
+    if (updates.length === 1) { // Only updated_at
+      return NextResponse.json({
+        success: false,
+        error: 'No fields to update'
+      }, { status: 400 })
     }
 
-    const connection = await pool.getConnection();
-    try {
-      const sql = `UPDATE professionals SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ?`;
-      params.push(professionalId);
+    // Add professional id to values (table uses 'id', not 'professional_id')
+    values.push(professionalId)
 
-      // Debug log (can remove later)
-      console.log('🧩 SQL:', sql);
-      console.log('🧩 Params:', params.map(p => (p?.length ? `${typeof p}(${p.length})` : p)));
+    const query = `
+      UPDATE Professionals 
+      SET ${updates.join(', ')}
+      WHERE id = ?
+    `
 
-      const [result] = await connection.execute(sql, params);
-      connection.release();
+    console.log('🔄 Updating professional profile:', { professionalId, updates: updates.length - 1 })
 
-      return NextResponse.json({ success: true, message: 'Profile updated' });
-    } catch (err: any) {
-      connection.release();
-      console.error('Profile update error', err);
-      return NextResponse.json({ success: false, error: err.sqlMessage || 'Update failed' }, { status: 500 });
-    }
-  } catch (error) {
-    console.error('Profile update route error', error);
-    return NextResponse.json({ success: false, error: 'Invalid request' }, { status: 400 });
+    const connection = await pool.getConnection()
+    await connection.execute(query, values)
+    connection.release()
+
+    console.log('✅ Professional profile updated successfully')
+
+    return NextResponse.json({
+      success: true,
+      message: 'Profile updated successfully'
+    })
+
+  } catch (error: any) {
+    console.error('❌ Error updating professional profile:', error)
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to update profile',
+      details: error.message
+    }, { status: 500 })
   }
-}
+} 

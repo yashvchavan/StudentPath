@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 
 export default function AdminAIConfigPage() {
   return (
-    <AdminShell title="AI Configuration" description="Manage AI models, prompts, and safety settings.">
+    
       <div className="grid gap-4 max-w-2xl">
         <label className="grid gap-2">
           <span className="text-sm font-medium">Provider API Key</span>
@@ -28,6 +28,5 @@ export default function AdminAIConfigPage() {
           </Button>
         </div>
       </div>
-    </AdminShell>
   )
 }

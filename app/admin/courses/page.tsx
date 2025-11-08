@@ -24,7 +24,7 @@ export default function AdminCoursesPage() {
   const [year, setYear] = useState<Date | undefined>()
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
-  
+
   // Year and semester for extraction
   const [extractYear, setExtractYear] = useState("")
   const [extractSemester, setExtractSemester] = useState("")
@@ -61,7 +61,7 @@ export default function AdminCoursesPage() {
       })
 
       const data = await res.json()
-      
+
       if (res.ok && data.success) {
         setUserInfo(data.user_info)
         alert(`✅ Syllabus extracted successfully!\n\nSubjects found: ${data.subjects_till_semester?.length || 0}\nSemesters parsed: ${data.total_semesters_parsed}`)
@@ -83,7 +83,7 @@ export default function AdminCoursesPage() {
         method: "GET",
         credentials: "include",
       })
-      
+
       if (res.ok) {
         const data = await res.json()
         if (data.success) {
@@ -174,7 +174,7 @@ export default function AdminCoursesPage() {
   }
 
   return (
-    <AdminShell title="Course Catalog" description="Manage your syllabuses.">
+    <>
       {/* User Info Display */}
       {userInfo && (
         <div className="mb-4 p-4 bg-gray-100 border border-gray-200 rounded">
@@ -301,52 +301,52 @@ export default function AdminCoursesPage() {
           </div>
 
           <ul className="space-y-3">
-          {courses.map((c) => (
-            <li key={c.id} className="flex items-center justify-between border rounded p-3">
-              <div className="flex-1">
-                <p className="font-medium">{c.course_name} ({c.year})</p>
-                <div className="flex gap-3 mt-1">
+            {courses.map((c) => (
+              <li key={c.id} className="flex items-center justify-between border rounded p-3">
+                <div className="flex-1">
+                  <p className="font-medium">{c.course_name} ({c.year})</p>
+                  <div className="flex gap-3 mt-1">
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-blue-600 underline text-sm"
+                      onClick={() => handleViewSyllabus(c.syllab_doc, c.course_name, c.year)}
+                    >
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      View Syllabus
+                    </Button>
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-green-600 underline text-sm"
+                      onClick={() => handleDownloadSyllabus(c.syllab_doc, c.course_name, c.year)}
+                    >
+                      <Download className="w-3 h-3 mr-1" />
+                      Download PDF
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
                   <Button
-                    variant="link"
-                    className="p-0 h-auto text-blue-600 underline text-sm"
-                    onClick={() => handleViewSyllabus(c.syllab_doc, c.course_name, c.year)}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExtractSyllabus(c.id)}
+                    disabled={extracting === c.id || !extractYear || !extractSemester}
                   >
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    View Syllabus
+                    <BookOpen className="w-4 h-4 mr-1" />
+                    {extracting === c.id ? "Extracting..." : "Extract Syllabus"}
                   </Button>
                   <Button
-                    variant="link"
-                    className="p-0 h-auto text-green-600 underline text-sm"
-                    onClick={() => handleDownloadSyllabus(c.syllab_doc, c.course_name, c.year)}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDelete(c.id)}
                   >
-                    <Download className="w-3 h-3 mr-1" />
-                    Download PDF
+                    <Trash className="w-4 h-4 mr-1" /> Delete
                   </Button>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExtractSyllabus(c.id)}
-                  disabled={extracting === c.id || !extractYear || !extractSemester}
-                >
-                  <BookOpen className="w-4 h-4 mr-1" />
-                  {extracting === c.id ? "Extracting..." : "Extract Syllabus"}
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(c.id)}
-                >
-                  <Trash className="w-4 h-4 mr-1" /> Delete
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
         </>
       )}
-    </AdminShell>
+    </>
   )
 }

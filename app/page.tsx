@@ -3,27 +3,32 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  Target, 
-  Award, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Target,
+  Award,
   ArrowRight,
   GraduationCap,
   Brain,
   Rocket,
   Stars,
   Zap,
-  ChevronDown
+  ChevronDown,
+  Mail,
+  MapPin,
+  Phone,
+  Send,
+  Loader2
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const FloatingParticles = () => {
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
+  const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, delay: number }>>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({length: 50}, (_, i) => ({
+    const newParticles = Array.from({ length: 50 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -72,14 +77,13 @@ const CursorFollowImage = () => {
       setImagePosition(prev => {
         const newX = prev.x + (mousePosition.x - prev.x) * 0.05;
         const newY = prev.y + (mousePosition.y - prev.y) * 0.05;
-        
-        // Calculate rotation based on cursor position relative to image center
+
         const deltaX = mousePosition.x - newX;
         const deltaY = mousePosition.y - newY;
         const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
-        
+
         setRotation(angle);
-        
+
         return { x: newX, y: newY };
       });
     };
@@ -89,7 +93,7 @@ const CursorFollowImage = () => {
   }, [mousePosition, imagePosition]);
 
   return (
-    <div 
+    <div
       className="fixed pointer-events-none z-30 transition-transform duration-100"
       style={{
         left: imagePosition.x - 96,
@@ -132,6 +136,141 @@ const AnimatedCounter = ({ target, suffix = "" }: { target: number; suffix?: str
   return <span>{Math.floor(count).toLocaleString()}{suffix}</span>;
 };
 
+const ContactForm = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: ""
+  });
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setStatus("success");
+        setFormData({ name: "", email: "", message: "" });
+        setTimeout(() => setStatus("idle"), 5000);
+      } else {
+        setStatus("error");
+        setErrorMessage(data.error || "Failed to send message");
+      }
+    } catch (error) {
+      setStatus("error");
+      setErrorMessage("Network error. Please try again.");
+    }
+  };
+
+  return (
+    <Card className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-xl">
+      <CardHeader className="p-8">
+        <CardTitle className="text-2xl font-bold text-white mb-6">
+          Send us a Message
+        </CardTitle>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="John Doe"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              placeholder="john@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Message
+            </label>
+            <textarea
+              name="message"
+              value={formData.message}
+              onChange={handleChange}
+              required
+              rows={5}
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              placeholder="Tell us how we can help you..."
+            />
+          </div>
+
+          {status === "success" && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <p className="text-green-400 text-sm">
+                ✓ Message sent successfully! We'll get back to you soon.
+              </p>
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+              <p className="text-red-400 text-sm">
+                ✗ {errorMessage}
+              </p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={status === "loading"}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {status === "loading" ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                Send Message
+                <Send className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
+              </>
+            )}
+          </Button>
+        </form>
+      </CardHeader>
+    </Card>
+  );
+};
+
 export default function HomePage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -157,16 +296,22 @@ export default function HomePage() {
     };
   }, []);
 
+  const scrollToSection = (sectionId: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    const section = document.getElementById(sectionId);
+    section?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* Cursor Following Image - Only visible in hero section */}
+      {/* Cursor Following Image */}
       <div className="fixed inset-0 z-30 pointer-events-none">
         <CursorFollowImage />
       </div>
 
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
-        <div 
+        <div
           className="absolute inset-0 opacity-20"
           style={{
             background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.2) 25%, transparent 50%)`,
@@ -175,7 +320,7 @@ export default function HomePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-br from-black via-blue-900/20 to-blue-900/20 animate-pulse" />
         <FloatingParticles />
-        
+
         {/* Animated Grid */}
         <div className="absolute inset-0 opacity-10">
           <div className="h-full w-full" style={{
@@ -190,33 +335,43 @@ export default function HomePage() {
       </div>
 
       {/* Navigation */}
-      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-black/80 backdrop-blur-xl border-b border-white/10 shadow-2xl' 
+      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${isScrolled
+          ? 'bg-black/80 backdrop-blur-xl border-b border-white/10 shadow-2xl'
           : 'bg-transparent'
-      }`}>
+        }`}>
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <img
               src="/logo.png"
               alt="StudentPath Logo"
               className="h-15 w-auto"
-              />
-            
+            />
+
             <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/features" className="text-gray-300 hover:text-white transition-colors duration-300">
+              <a
+                href="#features-section"
+                onClick={scrollToSection('features-section')}
+                className="text-gray-300 hover:text-white transition-colors duration-300 cursor-pointer"
+              >
                 Features
-              </Link>
-              <Link href="/about" className="text-gray-300 hover:text-white transition-colors duration-300">
+              </a>
+              <a
+                href="#about-section"
+                onClick={scrollToSection('about-section')}
+                className="text-gray-300 hover:text-white transition-colors duration-300 cursor-pointer"
+              >
                 About
-              </Link>
-              <Link href="/contact" className="text-gray-300 hover:text-white transition-colors duration-300">
+              </a>
+              <a
+                href="#contact-section"
+                onClick={scrollToSection('contact-section')}
+                className="text-gray-300 hover:text-white transition-colors duration-300 cursor-pointer"
+              >
                 Contact
-              </Link>
+              </a>
             </nav>
 
             <div className="flex items-center gap-4">
-              
               <Link href="/register-other">
                 <Button className="bg-gradient-to-r from-gray-600 to-white hover:from-blue-700 hover:to-white-700 text-black font-semibold px-6 py-2 rounded-full transform hover:scale-105 transition-all duration-300 shadow-2xl">
                   Get Started
@@ -231,7 +386,7 @@ export default function HomePage() {
       <section className="relative min-h-screen flex items-center justify-center px-6">
         {/* Space Shuttle Background */}
         <div className="absolute inset-0 z-10">
-          <div 
+          <div
             className="absolute inset-0 opacity-100"
             style={{
               backgroundImage: `url('/hero-bg.png')`,
@@ -239,55 +394,41 @@ export default function HomePage() {
               backgroundPosition: 'center',
             }}
           />
-          {/* Overlay to maintain text readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
         </div>
 
         <div className="max-w-7xl mx-auto text-center relative z-20">
-          <div className="animate-fadeInUp">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 px-4 py-2 rounded-full border border-white/10 mb-8 backdrop-blur-sm">
-              <Zap className="w-4 h-4 text-indigo-400" />
-              <span className="text-sm text-gray-300">AI-Powered Career Guidance</span>
-            </div>
+          <div className="animate-fadeInUp">  
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-6">
-            <h1 className="text-4xl md:text-6xl lg:text-7xl text-left font-black leading-tight">
-              Where{" "}
-              <br/>
-              <span className="bg-gradient-to-r from-blue-400 via-blue-600 to-black bg-clip-text text-transparent">
-                Knowledge
-              </span>
-            </h1>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl text-right font-black mr-20 leading-tight">
-              <br/><br/>
-              Meets{" "}
-              <br/>
-              <span className="bg-gradient-to-r from-black via-blue-600 to-blue-200 bg-clip-text text-transparent">
-                Success
-              </span>
-            </h1>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl text-left font-black leading-tight">
+                Where{" "}
+                <br />
+                <span className="bg-gradient-to-r from-blue-400 via-blue-600 to-black bg-clip-text text-transparent">
+                  Knowledge
+                </span>
+              </h1>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl text-right font-black mr-20 leading-tight">
+                <br /><br />
+                Meets{" "}
+                <br />
+                <span className="bg-gradient-to-r from-black via-blue-600 to-blue-200 bg-clip-text text-transparent">
+                  Success
+                </span>
+              </h1>
             </div>
             <p className="text-xl md:text-md text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
-              Unlock your potential with personalized learning paths, AI-driven insights, 
+              Unlock your potential with personalized learning paths, AI-driven insights,
               and expert guidance. Join thousands of students transforming their academic journey.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               <Link href="/register-other">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="bg-gradient-to-r from-gray-600 to-white hover:from-blue-700 hover:to-white-700 text-black font-bold px-8 py-4 rounded-full transform hover:scale-105 transition-all duration-300 shadow-2xl text-lg group"
                 >
                   Start Your Journey
                   <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-                </Button>
-              </Link>
-              <Link href="/demo">
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className=" text-white hover:border-white/20 hover:text-white px-8 py-4 rounded-full transition-all duration-300 text-lg backdrop-blur-sm"
-                >
-                  Watch Demo
                 </Button>
               </Link>
             </div>
@@ -301,7 +442,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="py-32 px-6 relative">
+      <section id="features-section" className="py-32 px-6 relative">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 px-4 py-2 rounded-full border border-white/10 mb-6 backdrop-blur-sm">
@@ -312,7 +453,7 @@ export default function HomePage() {
               Empower Your Future
             </h2>
             <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
-              Our comprehensive platform provides cutting-edge tools and personalized guidance 
+              Our comprehensive platform provides cutting-edge tools and personalized guidance
               to accelerate your academic and professional success.
             </p>
           </div>
@@ -356,7 +497,7 @@ export default function HomePage() {
                 gradient: "from-violet-500 to-purple-500"
               }
             ].map((feature, index) => (
-              <Card 
+              <Card
                 key={index}
                 className="group bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-xl hover:border-white/20 transition-all duration-500 transform hover:scale-105 hover:-translate-y-2"
                 style={{ animationDelay: `${index * 0.1}s` }}
@@ -374,6 +515,64 @@ export default function HomePage() {
                 </CardHeader>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section id="about-section" className="py-32 px-6 relative bg-gradient-to-br from-indigo-900/10 to-purple-900/10">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 px-4 py-2 rounded-full border border-white/10 mb-6 backdrop-blur-sm">
+              <GraduationCap className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm text-gray-300">About StudentPath</span>
+            </div>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Our Mission
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-6">
+              <h3 className="text-3xl font-bold text-white mb-4">
+                Transforming Education Through Innovation
+              </h3>
+              <p className="text-lg text-gray-300 leading-relaxed">
+                StudentPath was founded with a simple yet powerful vision: to democratize access to quality career guidance and make personalized education accessible to every student, regardless of their background or location.
+              </p>
+              <p className="text-lg text-gray-300 leading-relaxed">
+                We believe that every student has unique potential waiting to be unlocked. Our AI-powered platform combines cutting-edge technology with human expertise to provide personalized guidance that adapts to each student's individual needs, aspirations, and learning style.
+              </p>
+              <p className="text-lg text-gray-300 leading-relaxed">
+                With a team of educators, technologists, and career counselors, we're building the future of education—one student at a time.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              {[
+                { icon: <Target className="w-8 h-8" />, title: "Personalized Approach", desc: "Tailored guidance for every student" },
+                { icon: <Brain className="w-8 h-8" />, title: "AI-Powered Insights", desc: "Smart recommendations based on data" },
+                { icon: <Users className="w-8 h-8" />, title: "Expert Mentors", desc: "Access to industry professionals" },
+                { icon: <Award className="w-8 h-8" />, title: "Proven Results", desc: "95% student success rate" }
+              ].map((item, index) => (
+                <Card
+                  key={index}
+                  className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-xl hover:border-white/20 transition-all duration-300"
+                >
+                  <CardHeader className="p-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4">
+                      {item.icon}
+                    </div>
+                    <CardTitle className="text-lg font-bold text-white mb-2">
+                      {item.title}
+                    </CardTitle>
+                    <CardDescription className="text-gray-400 text-sm">
+                      {item.desc}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -404,6 +603,86 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Contact Section */}
+      <section id="contact-section" className="py-32 px-6 relative">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 px-4 py-2 rounded-full border border-white/10 mb-6 backdrop-blur-sm">
+              <Mail className="w-4 h-4 text-indigo-400" />
+              <span className="text-sm text-gray-300">Get In Touch</span>
+            </div>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+              Contact Us
+            </h2>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
+              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+            <div className="space-y-8">
+              <Card className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-xl">
+                <CardHeader className="p-8">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-bold text-white mb-2">
+                        Email Us
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        <a href="mailto:vijishvanya@gmail.com" className="hover:text-white transition-colors">
+                          vijishvanya@gmail.com
+                        </a>
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-xl">
+                <CardHeader className="p-8">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-teal-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Phone className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-bold text-white mb-2">
+                        Call Us
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        Available Monday to Friday, 9AM - 6PM
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 backdrop-blur-xl">
+                <CardHeader className="p-8">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-bold text-white mb-2">
+                        Visit Us
+                      </CardTitle>
+                      <CardDescription className="text-gray-400">
+                        We're always happy to meet in person
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+            </div>
+
+            <ContactForm />
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-32 px-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-blue-600/20 to-white/50 opacity-90" />
@@ -411,26 +690,26 @@ export default function HomePage() {
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           animation: 'moveBackground 20s linear infinite'
         }} />
-        
+
         <div className="max-w-5xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full border border-white/20 mb-8 backdrop-blur-sm">
             <Award className="w-4 h-4 text-yellow-300" />
             <span className="text-sm text-white/90">Transform Your Future Today</span>
           </div>
-          
+
           <h2 className="text-5xl md:text-6xl font-bold text-white mb-8 leading-tight">
             Ready to Unlock Your{" "}
             <span className="text-yellow-300">Potential?</span>
           </h2>
-          
+
           <p className="text-xl text-white/90 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Join StudentPath today and embark on a transformative journey towards academic excellence 
+            Join StudentPath today and embark on a transformative journey towards academic excellence
             and career success with personalized AI-powered guidance.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link href="/register">
-              <Button 
+            <Link href="/register-other">
+              <Button
                 size="lg"
                 className="bg-gradient-to-r from-gray-600 to-white hover:from-blue-700 hover:to-white-700 text-black font-bold px-10 py-4 rounded-full transform hover:scale-105 transition-all duration-300 shadow-2xl text-lg group"
               >
@@ -438,15 +717,15 @@ export default function HomePage() {
                 <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
               </Button>
             </Link>
-            <Link href="/contact">
-              <Button 
-                size="lg" 
-                variant="outline" 
+            <a href="mailto:vijishvanya@gmail.com">
+              <Button
+                size="lg"
+                variant="outline"
                 className="border-white text-white hover:bg-white/10 px-10 py-4 rounded-full transition-all duration-300 text-lg backdrop-blur-sm"
               >
                 Contact Sales
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -454,50 +733,68 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-16 px-6 bg-black/50 backdrop-blur-xl border-t border-white/10">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div>
               <img
-              src="/logo.png"
-              alt="StudentPath Logo"
-              className="h-15 w-auto"
+                src="/logo.png"
+                alt="StudentPath Logo"
+                className="h-15 w-auto mb-6"
               />
               <p className="text-gray-400 leading-relaxed">
                 Empowering students worldwide with AI-powered career guidance and personalized learning experiences.
               </p>
             </div>
-            
-            {[
-              {
-                title: "Platform",
-                links: ["Features", "Pricing", "Partner Colleges", "API"]
-              },
-              {
-                title: "Support",
-                links: ["Help Center", "Contact Us", "Community", "Status"]
-              },
-              {
-                title: "Legal",
-                links: ["Privacy Policy", "Terms of Service", "Cookie Policy", "GDPR"]
-              }
-            ].map((section, index) => (
-              <div key={index}>
-                <h4 className="text-lg font-semibold text-white mb-6">{section.title}</h4>
-                <ul className="space-y-3">
-                  {section.links.map((link, linkIndex) => (
-                    <li key={linkIndex}>
-                      <Link 
-                        href={`/${link.toLowerCase().replace(/\s+/g, '-')}`}
-                        className="text-gray-400 hover:text-white transition-colors duration-300"
-                      >
-                        {link}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+
+            <div>
+              <h4 className="text-lg font-semibold text-white mb-6">Quick Links</h4>
+              <ul className="space-y-3">
+                <li>
+                  <a
+                    href="#features-section"
+                    onClick={scrollToSection('features-section')}
+                    className="text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer"
+                  >
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#about-section"
+                    onClick={scrollToSection('about-section')}
+                    className="text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer"
+                  >
+                    About
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#contact-section"
+                    onClick={scrollToSection('contact-section')}
+                    className="text-gray-400 hover:text-white transition-colors duration-300 cursor-pointer"
+                  >
+                    Contact
+                  </a>
+                </li>
+                <li>
+                  <Link
+                    href="/terms"
+                    className="text-gray-400 hover:text-white transition-colors duration-300"
+                  >
+                    Terms & Conditions
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/privacy"
+                    className="text-gray-400 hover:text-white transition-colors duration-300"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+              </ul>
+            </div>
           </div>
-          
+
           <div className="border-t border-white/10 mt-12 pt-8 text-center">
             <p className="text-gray-400">
               &copy; 2025 StudentPath. All rights reserved. Built with ❤️ for students worldwide.

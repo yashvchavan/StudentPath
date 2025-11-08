@@ -21,9 +21,25 @@ export async function POST(req: NextRequest) {
     }
 
     const studentData = JSON.parse(studentCookie)
-    const { student_id, isAuthenticated } = studentData
+    console.log("📋 Parsed cookie data:", studentData)
 
-    if (!isAuthenticated) {
+    // Determine if this is a student or professional
+    const isStudent = !!studentData.student_id
+    const isProfessional = !!studentData.id && !studentData.student_id
+
+    const userId = isStudent ? studentData.student_id : studentData.id
+    const userType = isStudent ? 'student' : 'professional'
+
+    console.log(`👤 User type: ${userType}, ID: ${userId}`)
+
+    if (!userId) {
+      return NextResponse.json({ 
+        error: "Invalid user ID",
+        debug: { studentData, isStudent, isProfessional, userId }
+      }, { status: 400 })
+    }
+
+    if (!studentData.isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -56,12 +72,17 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary with appropriate folder
+    const folderName = isStudent ? "student_avatars" : "professional_avatars"
+    const publicId = `${userType}_${userId}`
+
+    console.log(`☁️ Uploading to Cloudinary: ${folderName}/${publicId}`)
+
     const uploadResult = await new Promise<any>((resolve, reject) => {
       cloudinary.uploader.upload_stream(
         {
-          folder: "student_avatars",
-          public_id: `student_${student_id}`,
+          folder: folderName,
+          public_id: publicId,
           overwrite: true,
           transformation: [
             { width: 400, height: 400, crop: "fill", gravity: "face" },
@@ -76,18 +97,40 @@ export async function POST(req: NextRequest) {
       ).end(buffer)
     })
 
-    // Update database - UPDATED to match your schema
+    console.log("✅ Cloudinary upload successful:", uploadResult.secure_url)
+
+    // Update database based on user type
     const connection = await pool.getConnection()
-    await connection.execute(
-      `UPDATE Students SET profile_picture = ?, updated_at = NOW() WHERE student_id = ?`,
-      [uploadResult.secure_url, student_id]
-    )
+    
+    if (isStudent) {
+      console.log(`🔄 Updating Students table for student_id: ${userId}`)
+      await connection.execute(
+        `UPDATE Students SET profile_picture = ?, updated_at = NOW() WHERE student_id = ?`,
+        [uploadResult.secure_url, userId]
+      )
+    } else {
+      console.log(`🔄 Updating Professionals table for id: ${userId}`)
+      // Professionals table uses 'id' as primary key, not 'professional_id'
+      // Also, we need to clear the base64 fields since we're using Cloudinary URL
+      await connection.execute(
+        `UPDATE professionals 
+         SET profile_picture_base64 = ?, 
+             profile_picture_mime = ?, 
+             updated_at = NOW() 
+         WHERE id = ?`,
+        [uploadResult.secure_url, 'image/url', userId]
+      )
+    }
+    
     connection.release()
+
+    console.log("✅ Database updated successfully")
 
     return NextResponse.json({
       success: true,
       url: uploadResult.secure_url,
-      message: "Avatar uploaded successfully"
+      message: "Avatar uploaded successfully",
+      userType: userType
     })
 
   } catch (error: any) {

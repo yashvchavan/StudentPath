@@ -13,7 +13,8 @@ import {
   Calendar,
   Mail,
   Phone,
-  GraduationCap
+  GraduationCap,
+  AlertCircle
 } from "lucide-react"
 import {
   Table,
@@ -30,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface Student {
   student_id: number
@@ -62,36 +64,57 @@ export default function AdminStudentsPage() {
   const [yearFilter, setYearFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const itemsPerPage = 10
 
-  // 🔹 Fetch students from API
+  // Fetch students from API
   useEffect(() => {
     async function fetchStudents() {
       try {
-        const res = await fetch("/api/student/list", { cache: "no-store" })
+        setLoading(true)
+        setError(null)
+        
+        const res = await fetch("/api/student/list", { 
+          cache: "no-store",
+          credentials: 'include', // Important: Include cookies
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
         const data = await res.json()
+        
+        if (!res.ok) {
+          throw new Error(data.error || `HTTP error! status: ${res.status}`)
+        }
+        
         if (data.success) {
-          // convert current_gpa to number
+          // Convert current_gpa to number and is_active to boolean
           const processed: Student[] = data.students.map((s: any) => ({
             ...s,
             current_gpa: s.current_gpa !== null ? Number(s.current_gpa) : null,
             current_year: s.current_year !== null ? Number(s.current_year) : undefined,
             current_semester: s.current_semester !== null ? Number(s.current_semester) : undefined,
-            is_active: s.is_active ?? false,
+            is_active: s.is_active === 1 || s.is_active === true,
           }))
           setStudents(processed)
           setFilteredStudents(processed)
+          console.log(`Loaded ${processed.length} students`)
         } else {
-          console.error("Error:", data.error)
+          throw new Error(data.error || "Failed to fetch students")
         }
       } catch (err) {
         console.error("Failed to fetch students:", err)
+        setError(err instanceof Error ? err.message : "Failed to fetch students")
+      } finally {
+        setLoading(false)
       }
     }
     fetchStudents()
   }, [])
 
-  // 🔹 Apply filters
+  // Apply filters
   useEffect(() => {
     let filtered = [...students]
 
@@ -128,8 +151,43 @@ export default function AdminStudentsPage() {
     currentPage * itemsPerPage
   )
 
-  // 🔹 Get unique departments for filter
+  // Get unique departments for filter
   const departments = [...new Set(students.map(s => s.department).filter(Boolean))]
+
+  if (loading) {
+    return (
+      <AdminShell title="Student Management" description="Search, filter, and manage student records.">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading students...</p>
+          </div>
+        </div>
+      </AdminShell>
+    )
+  }
+
+  if (error) {
+    return (
+      <AdminShell title="Student Management" description="Search, filter, and manage student records.">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Error loading students:</strong> {error}
+            <br />
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </AdminShell>
+    )
+  }
 
   return (
     <AdminShell title="Student Management" description="Search, filter, and manage student records.">
@@ -177,7 +235,12 @@ export default function AdminStudentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {filteredStudents.filter(s => new Date(s.created_at).getMonth() === new Date().getMonth()).length}
+              {filteredStudents.filter(s => {
+                const studentDate = new Date(s.created_at)
+                const now = new Date()
+                return studentDate.getMonth() === now.getMonth() && 
+                       studentDate.getFullYear() === now.getFullYear()
+              }).length}
             </div>
           </CardContent>
         </Card>
@@ -287,7 +350,6 @@ export default function AdminStudentsPage() {
                       <div className="text-sm text-muted-foreground">
                         Year {student.current_year ?? "N/A"} • GPA: {student.current_gpa !== null && student.current_gpa !== undefined ? student.current_gpa.toFixed(2) : "N/A"}
                       </div>
-                      <div className="text-xs text-muted-foreground">{student.college ?? "N/A"}</div>
                     </div>
                   </TableCell>
                   <TableCell>
