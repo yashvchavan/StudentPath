@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     values.push(professionalId)
 
     const query = `
-      UPDATE Professionals 
+      UPDATE professionals 
       SET ${updates.join(', ')}
       WHERE id = ?
     `
