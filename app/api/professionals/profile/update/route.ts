@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    // Add professional id to values (table uses 'id', not 'professional_id')
+    // Add professional id values (table uses 'id', not 'professional_id')
     values.push(professionalId)
 
     const query = `
