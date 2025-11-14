@@ -652,7 +652,7 @@ export default function HomePage() {
                         Call Us
                       </CardTitle>
                       <CardDescription className="text-gray-400">
-                        Available Monday to Friday, 9AM - 6PM
+                        Comming Soon..
                       </CardDescription>
                     </div>
                   </div>
@@ -670,7 +670,7 @@ export default function HomePage() {
                         Visit Us
                       </CardTitle>
                       <CardDescription className="text-gray-400">
-                        We're always happy to meet in person
+                        Comming Soon..
                       </CardDescription>
                     </div>
                   </div>
