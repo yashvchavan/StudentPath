@@ -67,10 +67,11 @@ export async function POST(request: NextRequest) {
     // ✅ Set secure cookies properly
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,        // ❗ Must be FALSE for http://
       sameSite: 'strict' as const,
       path: '/'
     };
+
 
     response.cookies.set(
       'collegeData',

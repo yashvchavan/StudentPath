@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import ThemeToggle from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,7 +86,7 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'student' | 'profess
   return (
     <div className="min-h-screen flex items-center justify-center relative">
       <AnimatedBackground />
-      
+
       <div className="relative z-10 max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
           <img
@@ -105,33 +104,32 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'student' | 'profess
 
         <div className="grid md:grid-cols-1 gap-8">
           <Card
-            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${
-              hoveredCard === 'student' 
-                ? 'border-indigo-400 shadow-2xl shadow-indigo-500/20' 
-                : 'border-white/20 hover:border-white/30'
-            } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
+            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${hoveredCard === 'student'
+              ? 'border-indigo-400 shadow-2xl shadow-indigo-500/20'
+              : 'border-white/20 hover:border-white/30'
+              } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
             onMouseEnter={() => setHoveredCard('student')}
             onMouseLeave={() => setHoveredCard(null)}
             onClick={() => onSelect('student')}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
+
             <CardContent className="p-8 relative z-10">
               <div className="flex justify-center mb-6">
                 <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl group-hover:animate-pulse">
                   <GraduationCap className="w-12 h-12 text-white" />
                 </div>
               </div>
-              
+
               <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
                 I'm Student
               </h2>
-              
+
               <p className="text-gray-300 text-center mb-6">
                 Currently pursuing education and looking to build skills for future career
               </p>
-              
-              <Button 
+
+              <Button
                 className="w-full mt-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
               >
                 Continue as Student
@@ -185,9 +183,8 @@ const StepTransition = ({
   isActive: boolean;
 }) => (
   <div
-    className={`transition-all duration-500 ${
-      isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-    }`}
+    className={`transition-all duration-500 ${isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
   >
     {children}
   </div>
@@ -197,7 +194,7 @@ const StepTransition = ({
 // === Rocket Launch Loader with Dynamic Messages ===
 const RocketLaunchLoader = () => {
   const [messageIndex, setMessageIndex] = useState(0);
-  
+
   const loadingMessages = [
     { text: "Analyzing your profile...", icon: "📊" },
     { text: "Parsing your interests...", icon: "🔍" },
@@ -230,34 +227,33 @@ const RocketLaunchLoader = () => {
           <span className="text-2xl">⭐</span>
         </div>
       </div>
-      
+
       <div className="text-center space-y-3 min-h-[80px]">
         <div className="flex items-center justify-center gap-3">
           <span className="text-3xl animate-bounce" style={{ animationDelay: "0.1s" }}>
             {loadingMessages[messageIndex].icon}
           </span>
-          <h3 
+          <h3
             key={messageIndex}
             className="text-2xl font-bold bg-gradient-to-r from-red-400 to-yellow-400 bg-clip-text text-transparent animate-fade-in"
           >
             {loadingMessages[messageIndex].text}
           </h3>
         </div>
-        
+
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mt-4">
           {loadingMessages.map((_, idx) => (
             <div
               key={idx}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                idx === messageIndex 
-                  ? 'bg-indigo-500 w-8' 
-                  : 'bg-white/20'
-              }`}
+              className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === messageIndex
+                ? 'bg-indigo-500 w-8'
+                : 'bg-white/20'
+                }`}
             />
           ))}
         </div>
-        
+
         <p className="text-gray-400 animate-pulse text-sm">
           This won't take long...
         </p>
@@ -380,23 +376,23 @@ const technicalSkillsByInterest = {
   "Cloud Computing": ["AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "DevOps", "Terraform"],
   "DevOps": ["Docker", "Kubernetes", "Jenkins", "Git", "CI/CD", "Linux", "Monitoring Tools"],
   "Blockchain": ["Solidity", "Web3", "Smart Contracts", "Ethereum", "Cryptocurrency", "DApps"],
-  
+
   // Engineering
   "Embedded Systems": ["C", "C++", "Microcontrollers", "Arduino", "Raspberry Pi", "Circuit Design"],
   "IoT Development": ["Arduino", "Raspberry Pi", "Sensors", "Wireless Communication", "Cloud Integration"],
   "Signal Processing": ["MATLAB", "DSP", "Analog Circuits", "Digital Filters", "Signal Analysis"],
   "VLSI Design": ["Verilog", "VHDL", "Cadence", "Synopsis", "Digital Design", "Analog Design"],
   "Robotics": ["ROS", "Python", "C++", "Computer Vision", "Control Systems", "Sensors"],
-  
+
   // Mechanical & Design
   "CAD/CAM": ["AutoCAD", "SolidWorks", "CATIA", "Fusion 360", "3D Modeling", "Manufacturing"],
   "Product Design": ["SolidWorks", "Fusion 360", "Prototyping", "3D Printing", "Design Thinking"],
-  
+
   // Business & Analytics
   "Digital Marketing": ["Google Analytics", "SEO", "SEM", "Social Media Marketing", "Content Marketing"],
   "Data Analytics": ["Excel", "SQL", "Tableau", "Power BI", "Python", "R", "Statistics"],
   "Finance": ["Excel", "Financial Modeling", "Risk Analysis", "Portfolio Management", "Bloomberg"],
-  
+
   // Default for others
   "Other": ["Communication", "Problem Solving", "Critical Thinking", "Project Management", "Teamwork"],
 };
@@ -509,7 +505,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     agreeToTerms: false,
     country: "India",
     showAllInterests: false,
-    
+
     // Academic Info (Step 2)
     program: "",
     currentYear: "",
@@ -517,15 +513,15 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     enrollmentYear: "",
     currentGPA: [7.5],
     academicInterests: [] as string[],
-    
+
     // Career Quiz (Step 3)
     careerQuizAnswers: {} as { [key: string]: string },
-    
+
     // Skills (Step 4)
     technicalSkills: {} as { [key: string]: number },
     softSkills: {} as { [key: string]: number },
     languageSkills: {} as { [key: string]: number },
-    
+
     // Goals (Step 5)
     primaryGoal: "",
     secondaryGoal: "",
@@ -534,12 +530,12 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     industryFocus: [] as string[],
     intensityLevel: "moderate",
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [error, setError] = useState<string>("");
   const router = useRouter();
-  
+
   const totalSteps = 6;
   const progress = (currentStep / totalSteps) * 100;
 
@@ -683,13 +679,13 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
   // Get technical skills based on selected interests
   const getTechnicalSkills = () => {
     if (formData.academicInterests.length === 0) return technicalSkillsByInterest["Other"];
-    
+
     const allSkills = new Set<string>();
     formData.academicInterests.forEach(interest => {
       const skills = technicalSkillsByInterest[interest as keyof typeof technicalSkillsByInterest] || [];
       skills.forEach(skill => allSkills.add(skill));
     });
-    
+
     return Array.from(allSkills).sort();
   };
 
@@ -820,7 +816,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                 </div>
 
                 <div className="space-y-2">
-                  
+
                   <Label className="text-gray-900 dark:text-white font-medium">Gender (Optional)</Label>
                   <Select
                     value={formData.gender}
@@ -1016,7 +1012,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       <SelectValue placeholder="Select year" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
-                      {["2029","2028","2027","2026","2025", "2024", "2023", "2022", "2021", "2020"].map((year) => (
+                      {["2029", "2028", "2027", "2026", "2025", "2024", "2023", "2022", "2021", "2020"].map((year) => (
                         <SelectItem
                           key={year}
                           value={year}
@@ -1067,11 +1063,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                             <label
                               key={interest}
                               htmlFor={interest}
-                              className={`flex items-center gap-3 p-3 rounded-lg border transition ${
-                                checked
-                                  ? "bg-indigo-500/10 border-indigo-400/40"
-                                  : "bg-white/5 border-white/10 hover:bg-white/10"
-                              } cursor-pointer`}
+                              className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
+                                ? "bg-indigo-500/10 border-indigo-400/40"
+                                : "bg-white/5 border-white/10 hover:bg-white/10"
+                                } cursor-pointer`}
                             >
                               <Checkbox
                                 id={interest}
@@ -1116,7 +1111,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                         </label>
                       </div>
                     )}
-                    
+
                     {(formData as any).showAllInterests && (
                       <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
                         <h4 className="text-white font-medium mb-3">All Academic Interests</h4>
@@ -1127,11 +1122,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                               <label
                                 key={interest}
                                 htmlFor={`all-${interest}`}
-                                className={`flex items-center gap-2 p-2 rounded border transition text-xs ${
-                                  checked
-                                    ? "bg-indigo-500/10 border-indigo-400/40"
-                                    : "bg-white/5 border-white/10 hover:bg-white/10"
-                                } cursor-pointer`}
+                                className={`flex items-center gap-2 p-2 rounded border transition text-xs ${checked
+                                  ? "bg-indigo-500/10 border-indigo-400/40"
+                                  : "bg-white/5 border-white/10 hover:bg-white/10"
+                                  } cursor-pointer`}
                               >
                                 <Checkbox
                                   id={`all-${interest}`}
@@ -1224,11 +1218,10 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                         <label
                           key={option.value}
                           htmlFor={option.value}
-                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${
-                            selected
-                              ? "bg-indigo-500/10 border-indigo-400/40"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                          }`}
+                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${selected
+                            ? "bg-indigo-500/10 border-indigo-400/40"
+                            : "bg-white/5 border-white/10 hover:bg-white/10"
+                            }`}
                         >
                           <RadioGroupItem value={option.value} id={option.value} />
                           <span className="text-2xl">{option.icon}</span>
@@ -1559,37 +1552,36 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                           <label
                             key={industry}
                             htmlFor={industry}
-                              className={`flex items-center gap-3 p-3 rounded-lg border transition ${
-                                checked
-                                  ? "bg-indigo-500/10 border-indigo-400/40"
-                                  : "bg-white/5 border-white/10 hover:bg-white/10"
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
+                              ? "bg-indigo-500/10 border-indigo-400/40"
+                              : "bg-white/5 border-white/10 hover:bg-white/10"
                               }`}
-                            >
-                              <Checkbox
-                                id={industry}
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  if (isChecked) {
-                                    updateFormData({
-                                      industryFocus: [
-                                        ...formData.industryFocus,
-                                        industry,
-                                      ],
-                                    });
-                                  } else {
-                                    updateFormData({
-                                      industryFocus: formData.industryFocus.filter(
-                                        (i) => i !== industry
-                                      ),
-                                    });
-                                  }
-                                }}
-                                className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                              />
-                              <span className="text-white/90">{industry}</span>
-                            </label>
-                          );
-                        }
+                          >
+                            <Checkbox
+                              id={industry}
+                              checked={checked}
+                              onCheckedChange={(isChecked) => {
+                                if (isChecked) {
+                                  updateFormData({
+                                    industryFocus: [
+                                      ...formData.industryFocus,
+                                      industry,
+                                    ],
+                                  });
+                                } else {
+                                  updateFormData({
+                                    industryFocus: formData.industryFocus.filter(
+                                      (i) => i !== industry
+                                    ),
+                                  });
+                                }
+                              }}
+                              className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                            />
+                            <span className="text-white/90">{industry}</span>
+                          </label>
+                        );
+                      }
                       )}
                     </div>
                   </CardContent>
@@ -1745,7 +1737,7 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
   return (
     <div className="space-y-8">
       {isLoading ? <RocketLaunchLoader /> : renderStep()}
-      
+
       {currentStep < totalSteps && !isLoading && (
         <div className="flex justify-between mt-6">
           <Button
@@ -2073,7 +2065,7 @@ const ProfessionalRegistration = () => {
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
                       {[
-                        
+
                         "Technology",
 
                         "Finance",
@@ -2178,11 +2170,10 @@ const ProfessionalRegistration = () => {
                         <label
                           key={skill}
                           htmlFor={skill}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${
-                            checked
-                              ? "bg-yellow-500/10 border-yellow-400/40"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                          }`}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${checked
+                            ? "bg-yellow-500/10 border-yellow-400/40"
+                            : "bg-white/5 border-white/10 hover:bg-white/10"
+                            }`}
                         >
                           <Checkbox
                             id={skill}
@@ -2285,7 +2276,7 @@ const ProfessionalRegistration = () => {
   return (
     <div className="space-y-8">
       {isLoading ? <RocketLaunchLoader /> : renderStep()}
-      
+
       {currentStep !== 3 && !isLoading && (
         <div className="flex justify-between mt-6">
           <Button
@@ -2384,17 +2375,15 @@ function RegisterPage() {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <ThemeToggle />
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  isStudent 
-                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' 
-                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                }`}>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${isStudent
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                  }`}>
                   {isStudent ? 'Student' : 'Professional'} Registration
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
 
