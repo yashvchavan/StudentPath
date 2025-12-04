@@ -121,7 +121,7 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        {/* Notification Stats */}
+        {/*Notification Stats*/}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
