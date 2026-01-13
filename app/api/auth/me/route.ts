@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
       email: parsed.email || null,
       token: parsed.token || null,
       type: parsed.type || null,
+      logo_url: parsed.logo_url || null,
     }
 
     return NextResponse.json({ success: true, college: safeProfile })

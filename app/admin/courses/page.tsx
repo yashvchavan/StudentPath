@@ -66,11 +66,13 @@ export default function AdminCoursesPage() {
         setUserInfo(data.user_info)
         alert(`✅ Syllabus extracted successfully!\n\nSubjects found: ${data.subjects_till_semester?.length || 0}\nSemesters parsed: ${data.total_semesters_parsed}`)
       } else {
-        alert(`Error: ${data.error || "Failed to extract syllabus"}`)
+        // Show detailed error message with troubleshooting steps
+        const errorMessage = data.message || data.error || "Failed to extract syllabus";
+        alert(`❌ ${errorMessage}`);
       }
     } catch (err) {
       console.error(err)
-      alert("Failed to extract syllabus. Make sure Flask server is running.")
+      alert("Failed to extract syllabus. Network error or server is down.")
     } finally {
       setExtracting(null)
     }
@@ -174,7 +176,7 @@ export default function AdminCoursesPage() {
   }
 
   return (
-    <>
+    <AdminShell title="Courses" description="Courses Management" showRange>
       {/* User Info Display */}
       {userInfo && (
         <div className="mb-4 p-4 bg-gray-100 border border-gray-200 rounded">
@@ -347,6 +349,6 @@ export default function AdminCoursesPage() {
           </ul>
         </>
       )}
-    </>
+    </AdminShell>
   )
 }

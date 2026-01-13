@@ -20,6 +20,18 @@ import {
   Download,
   Search,
   Eye,
+  LayoutDashboard,
+  UsersRound,
+  Library,
+  School,
+  BrainCircuit,
+  Wallet,
+  LineChart,
+  BellRing,
+  Boxes,
+  Cog,
+  UserCog,
+  LifeBuoy,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,18 +54,18 @@ type AdminShellProps = PropsWithChildren<{
 }>
 
 const adminNav = [
-  { icon: BarChart3, label: "Dashboard", href: "/admin" },
-  { icon: Users, label: "Student Management", href: "/admin/students" },
-  { icon: BookOpen, label: "Course Catalog", href: "/admin/courses" },
-  { icon: GraduationCap, label: "Program Management", href: "/admin/programs" },
-  { icon: Bot, label: "AI Configuration", href: "/admin/ai" },
-  { icon: DollarSign, label: "Affiliate Dashboard", href: "/admin/affiliate" },
-  { icon: TrendingUp, label: "Analytics & Reports", href: "/admin/analytics" },
-  { icon: Bell, label: "Notification Center", href: "/admin/notifications" },
-  { icon: Database, label: "System Integrations", href: "/admin/integrations" },
-  { icon: SettingsIcon, label: "College Settings", href: "/admin/settings" },
-  { icon: UserCheck, label: "Admin Users", href: "/admin/users" },
-  { icon: Shield, label: "Support Center", href: "/admin/support" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
+  { icon: UsersRound, label: "Student Management", href: "/admin/students" },
+  { icon: Library, label: "Course Catalog", href: "/admin/courses" },
+  { icon: School, label: "Program Management", href: "/admin/programs" },
+  { icon: BrainCircuit, label: "AI Configuration", href: "/admin/ai" },
+  { icon: Wallet, label: "Affiliate Dashboard", href: "/admin/affiliate" },
+  { icon: LineChart, label: "Analytics & Reports", href: "/admin/analytics" },
+  { icon: BellRing, label: "Notification Center", href: "/admin/notifications" },
+  { icon: Boxes, label: "System Integrations", href: "/admin/integrations" },
+  { icon: Cog, label: "College Settings", href: "/admin/settings" },
+  { icon: UserCog, label: "Admin Users", href: "/admin/users" },
+  { icon: LifeBuoy, label: "Support Center", href: "/admin/support" },
 ]
 
 export default function AdminShell({ title, description, showRange = false, children }: AdminShellProps) {
@@ -65,6 +77,7 @@ export default function AdminShell({ title, description, showRange = false, chil
     name?: string | null
     email?: string | null
     token?: string | null
+    logo_url?: string | null
   } | null>(null)
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
   const pathname = usePathname()
@@ -74,20 +87,12 @@ export default function AdminShell({ title, description, showRange = false, chil
   useEffect(() => {
     let mounted = true;
 
-    const storedProfile = sessionStorage.getItem("adminProfile");
-    if (storedProfile) {
-      const parsed = JSON.parse(storedProfile);
-      setAdminProfile(parsed);
-
-      // ✅ Skip re-fetch if profile already valid
-      if (parsed?.id) return;
-    }
-
     const fetchProfile = async () => {
       try {
         const res = await fetch("/api/auth/me");
         if (!res.ok) return;
         const data = await res.json();
+        console.log("Admin profile fetched:", data); // Debug log
         if (mounted && data?.success && data.college) {
           setAdminProfile(data.college);
           sessionStorage.setItem("adminProfile", JSON.stringify(data.college));
@@ -97,6 +102,7 @@ export default function AdminShell({ title, description, showRange = false, chil
       }
     };
 
+    // Always fetch fresh data to get latest logo
     fetchProfile();
     return () => {
       mounted = false;
@@ -131,9 +137,19 @@ export default function AdminShell({ title, description, showRange = false, chil
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-white" />
-              </div>
+              {adminProfile?.logo_url ? (
+                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-gray-200 dark:border-gray-700">
+                  <img
+                    src={adminProfile.logo_url}
+                    alt={adminProfile.name || 'College Logo'}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+              )}
               <div>
                 {adminProfile ? (
                   <>
@@ -274,8 +290,9 @@ export default function AdminShell({ title, description, showRange = false, chil
       <div className="flex">
         {/* Sidebar */}
         <aside
-          className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          className={`fixed lg:fixed inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out overflow-y-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             }`}
+          style={{ top: '60px', height: 'calc(100vh - 60px)' }}
         >
           <nav className="p-4">
             <ul className="space-y-2">
@@ -285,12 +302,12 @@ export default function AdminShell({ title, description, showRange = false, chil
                   <li key={item.href}>
                     <a
                       href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-300 ${active
-                        ? "bg-blue-500 text-white"
-                        : "text-muted-foreground hover:bg-blue-100 hover:text-blue-700"
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-300 ${active
+                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
+                        : "text-muted-foreground hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:text-blue-700 dark:hover:from-blue-900/20 dark:hover:to-blue-800/20"
                         }`}
                     >
-                      <item.icon className="w-4 h-4 transition-colors duration-300" />
+                      <item.icon className="w-5 h-5 transition-colors duration-300" />
                       {item.label}
                     </a>
                   </li>
@@ -306,7 +323,7 @@ export default function AdminShell({ title, description, showRange = false, chil
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8">
+        <main className="flex-1 p-6 lg:p-8 lg:ml-64">
           {(title || description || showRange) && (
             <div className="flex items-center justify-between mb-6">
               <div>

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ Correct destructuring
     const [rows] = await connection.execute<LoginCollegeRow[]>(
-      'SELECT id, college_name, email, password_hash, college_token, is_active FROM colleges WHERE email = ?',
+      'SELECT id, college_name, email, password_hash, college_token, is_active, logo_url FROM colleges WHERE email = ?',
       [email]
     );
 
@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
         name: college.college_name,
         email: college.email,
         token: college.college_token,
-        type: 'college'
+        type: 'college',
+        logo_url: college.logo_url || null
       }),
       cookieOptions
     );
