@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, type PropsWithChildren } from "react"
+import { useState, type PropsWithChildren } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import { useAdminProfile, clearAdminProfileCache } from "@/contexts/AdminProfileContext"
 import {
   BarChart3,
   Users,
@@ -32,6 +33,7 @@ import {
   Cog,
   UserCog,
   LifeBuoy,
+  LogOut,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -71,74 +73,66 @@ const adminNav = [
 export default function AdminShell({ title, description, showRange = false, children }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchFocused, setSearchFocused] = useState(false); // ✅ Add this state
-  const [adminProfile, setAdminProfile] = useState<{
-    id?: number | string
-    name?: string | null
-    email?: string | null
-    token?: string | null
-    logo_url?: string | null
-  } | null>(null)
+  const [searchFocused, setSearchFocused] = useState(false)
+  const { adminProfile, setAdminProfile } = useAdminProfile() // Use context instead of local state
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
   const pathname = usePathname()
   const router = useRouter()
 
-  // Fetch server-side college/admin profile (reads httpOnly cookie server-side)
-  useEffect(() => {
-    let mounted = true;
+  const [loggingOut, setLoggingOut] = useState(false)
 
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch("/api/auth/me");
-        if (!res.ok) return;
-        const data = await res.json();
-        console.log("Admin profile fetched:", data); // Debug log
-        if (mounted && data?.success && data.college) {
-          setAdminProfile(data.college);
-          sessionStorage.setItem("adminProfile", JSON.stringify(data.college));
-        }
-      } catch (err) {
-        console.error("Failed to fetch admin profile:", err);
-      }
-    };
+  // � Search filtering logic
+  const filteredNav = adminNav.filter(item =>
+    item.label.toLowerCase().includes(searchQuery.toLowerCase())
+  )
 
-    // Always fetch fresh data to get latest logo
-    fetchProfile();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // 🔍 Handle search navigation
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim() && filteredNav.length > 0) {
+      router.push(filteredNav[0].href)
+      setSearchQuery("")
+      setSearchFocused(false)
+    }
+  }
 
-
-  // 🔹 Logout function
+  // �🔹 Logout function
   const handleLogout = async () => {
+    setLoggingOut(true)
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        sessionStorage.removeItem("adminProfile"); // 🧹 clear cached profile
+        setAdminProfile(null); // Clear context state
+        clearAdminProfileCache(); // Clear module-level cache
         router.replace("/college-login");
       } else {
         console.error("Logout failed:", data.error);
+        setLoggingOut(false)
       }
     } catch (err) {
       console.error("Error logging out:", err);
+      setLoggingOut(false)
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="flex items-center justify-between px-4 py-3">
+      <header className="border-b border-zinc-900 bg-black sticky top-0 z-50 shadow-lg shadow-black/20">
+        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4">
           {/* Left */}
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="lg:hidden text-zinc-400 hover:text-white hover:bg-zinc-800 p-2 h-auto"
+              onClick={() => setSidebarOpen((v) => !v)}
+            >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 max-w-[200px] sm:max-w-xs md:max-w-md lg:max-w-lg">
               {adminProfile?.logo_url ? (
-                <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-gray-200 dark:border-gray-700">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden bg-white border border-zinc-700 flex-shrink-0 shadow-md">
                   <img
                     src={adminProfile.logo_url}
                     alt={adminProfile.name || 'College Logo'}
@@ -146,47 +140,49 @@ export default function AdminShell({ title, description, showRange = false, chil
                   />
                 </div>
               ) : (
-                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
+                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </div>
               )}
-              <div>
+              <div className="min-w-0 flex-1">
                 {adminProfile ? (
                   <>
-                    <h1 className="text-lg font-bold text-foreground">{adminProfile.name}</h1>
-                    <p className="text-xs text-muted-foreground">Admin Portal</p>
+                    <h1 className="text-sm sm:text-base md:text-lg font-bold text-white truncate" title={adminProfile.name ?? undefined}>
+                      {adminProfile.name}
+                    </h1>
+                    <p className="text-xs text-zinc-400 hidden sm:block">Admin Portal</p>
                   </>
                 ) : (
-                  // 👇 Simple shimmer or placeholder while loading
                   <div className="animate-pulse">
-                    <div className="h-4 w-24 bg-muted rounded mb-1" />
-                    <div className="h-3 w-16 bg-muted rounded" />
+                    <div className="h-4 w-20 sm:w-24 bg-zinc-800 rounded mb-1" />
+                    <div className="h-3 w-12 sm:w-16 bg-zinc-800 rounded hidden sm:block" />
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Center */}
-          <div className="flex-1 max-w-md mx-4">
+          {/* Center - Search (Hidden on mobile) */}
+          <div className="flex-1 max-w-md mx-4 hidden lg:block">
             <div
-              className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""
+              className={`relative transition-all duration-300 ${searchFocused ? "scale-[1.02]" : ""
                 }`}
             >
               <Search
-                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-primary" : "text-muted-foreground"
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-blue-400" : "text-zinc-500"
                   }`}
               />
               <Input
                 placeholder="Search students, courses, reports..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                className={`pl-10 bg-background text-foreground border rounded-xl transition-all duration-200
+                className={`pl-10 bg-zinc-900 text-white border rounded-xl transition-all duration-200 placeholder:text-zinc-500
         ${searchFocused
-                    ? "border-primary ring-2 ring-primary/20"
-                    : "border-border hover:border-muted-foreground/40"
+                    ? "border-blue-500 ring-2 ring-blue-500/20 shadow-lg shadow-blue-500/10"
+                    : "border-zinc-700 hover:border-zinc-600"
                   }`}
               />
             </div>
@@ -195,94 +191,26 @@ export default function AdminShell({ title, description, showRange = false, chil
 
           {/* Right */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* <div className="hidden sm:flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full" aria-hidden="true" />
-              <span className="text-sm text-muted-foreground">System Healthy</span>
-            </div> */}
-            {/* <Button variant="ghost" size="sm" className="relative" aria-label="Notifications">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-xs rounded-full flex items-center justify-center">
-                5
-              </span>
-            </Button> */}
-
-            {/* <ThemeToggle /> */}
-
-            {/* <Button variant="outline" size="sm" className="hidden md:inline-flex bg-transparent">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button> */}
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="inline-flex items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-ring"
-                  aria-label="Open profile menu"
-                >
-                  <Avatar className="w-8 h-8">
-                    {/* keep image optional; fall back to initials */}
-                    <AvatarImage src="/admin-avatar.png" alt={adminProfile?.name ?? 'Admin'} />
-                    <AvatarFallback>
-                      {adminProfile?.name
-                        ? adminProfile.name
-                          .split(' ')
-                          .map((s) => s[0])
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase()
-                        : 'AD'}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
-                <DropdownMenuLabel className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src="/admin-avatar.png" alt={adminProfile?.name ?? 'Admin'} />
-                    <AvatarFallback>
-                      {adminProfile?.name
-                        ? adminProfile.name
-                          .split(' ')
-                          .map((s) => s[0])
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase()
-                        : 'AD'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{adminProfile?.name ?? 'Dr. Admin'}</p>
-                    <p className="text-xs text-muted-foreground truncate">{adminProfile?.email ?? 'admin@iitdelhi.ac.in'}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {/* <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <a href="/admin/users">
-                      <UserCheck className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a href="/admin/settings">
-                      <SettingsIcon className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a href="/admin/support">
-                      <Shield className="mr-2 h-4 w-4" />
-                      <span>Help & Support</span>
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup> */}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <Eye className="mr-2 h-4 w-4 rotate-180" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Logout Button */}
+            <Button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="bg-red-600/90 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-600/20 transition-all duration-200 hover:shadow-red-600/40 hover:scale-105 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
+              size="sm"
+            >
+              {loggingOut ? (
+                <>
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Logging out...</span>
+                  <span className="sm:hidden">...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Logout</span>
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </header>
@@ -290,29 +218,35 @@ export default function AdminShell({ title, description, showRange = false, chil
       <div className="flex">
         {/* Sidebar */}
         <aside
-          className={`fixed lg:fixed inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out overflow-y-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          className={`fixed lg:fixed inset-y-0 left-0 z-40 w-64 bg-black border-r border-zinc-700 transform transition-transform duration-300 ease-in-out overflow-y-auto scrollbar-hide ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             }`}
-          style={{ top: '60px', height: 'calc(100vh - 60px)' }}
+          style={{ top: '68px', height: 'calc(100vh - 68px)' }}
         >
           <nav className="p-4">
-            <ul className="space-y-2">
-              {adminNav.map((item) => {
-                const active = pathname === item.href
-                return (
-                  <li key={item.href}>
-                    <a
-                      href={item.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-300 ${active
-                        ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md"
-                        : "text-muted-foreground hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:text-blue-700 dark:hover:from-blue-900/20 dark:hover:to-blue-800/20"
-                        }`}
-                    >
-                      <item.icon className="w-5 h-5 transition-colors duration-300" />
-                      {item.label}
-                    </a>
-                  </li>
-                )
-              })}
+            <ul className="space-y-1">
+              {filteredNav.length > 0 ? (
+                filteredNav.map((item) => {
+                  const active = pathname === item.href
+                  return (
+                    <li key={item.href}>
+                      <a
+                        href={item.href}
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${active
+                          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/30"
+                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white hover:shadow-md hover:shadow-zinc-800/50 hover:scale-[1.02]"
+                          }`}
+                      >
+                        <item.icon className="w-5 h-5 transition-colors duration-200" />
+                        <span className="truncate">{item.label}</span>
+                      </a>
+                    </li>
+                  )
+                })
+              ) : searchQuery ? (
+                <li className="px-3 py-4 text-center text-sm text-zinc-500">
+                  No results found for "{searchQuery}"
+                </li>
+              ) : null}
             </ul>
           </nav>
         </aside>
@@ -323,19 +257,19 @@ export default function AdminShell({ title, description, showRange = false, chil
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8 lg:ml-64">
+        <main className="flex-1 p-6 lg:p-8 lg:ml-64 bg-black min-h-screen">
           {(title || description || showRange) && (
             <div className="flex items-center justify-between mb-6">
               <div>
-                {title && <h2 className="text-3xl font-bold text-foreground">{title}</h2>}
-                {description && <p className="text-muted-foreground">{description}</p>}
+                {title && <h2 className="text-3xl font-bold text-white">{title}</h2>}
+                {description && <p className="text-zinc-400 mt-1">{description}</p>}
               </div>
               {showRange && (
                 <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700 text-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-zinc-900 border-zinc-700">
                     <SelectItem value="24h">Last 24h</SelectItem>
                     <SelectItem value="7d">Last 7 days</SelectItem>
                     <SelectItem value="30d">Last 30 days</SelectItem>
@@ -348,6 +282,26 @@ export default function AdminShell({ title, description, showRange = false, chil
           {children}
         </main>
       </div>
+
+      {/* Logout Loading Overlay */}
+      {loggingOut && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm mx-4">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
+              <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                Logging Out...
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Please wait while we securely log you out
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,74 +3,138 @@
 
 :root {
   /* Updated color tokens for StudentPath platform with blue primary and orange accent */
-  --background: oklch(1 0 0); /* White background */
-  --foreground: oklch(0.35 0 0); /* Dark gray text */
-  --card: oklch(0.98 0 0); /* Light gray card background */
-  --card-foreground: oklch(0.35 0 0); /* Dark gray card text */
-  --popover: oklch(1 0 0); /* White popover background */
-  --popover-foreground: oklch(0.35 0 0); /* Dark gray popover text */
-  --primary: oklch(0.45 0.15 250); /* #1976D2 blue primary */
-  --primary-foreground: oklch(1 0 0); /* White text on primary */
-  --secondary: oklch(0.65 0.15 65); /* #FF9800 orange accent */
-  --secondary-foreground: oklch(1 0 0); /* White text on secondary */
-  --muted: oklch(0.96 0 0); /* Light muted background */
-  --muted-foreground: oklch(0.55 0 0); /* Medium gray muted text */
-  --accent: oklch(0.65 0.15 65); /* #FF9800 orange accent */
-  --accent-foreground: oklch(1 0 0); /* White text on accent */
-  --destructive: oklch(0.55 0.25 25); /* Red for destructive actions */
-  --destructive-foreground: oklch(1 0 0); /* White text on destructive */
-  --border: oklch(0.9 0 0); /* Light gray borders */
-  --input: oklch(0.98 0 0); /* Light input background */
-  --ring: oklch(0.45 0.15 250); /* Blue focus ring */
-  --chart-1: oklch(0.45 0.15 250); /* Blue chart color */
-  --chart-2: oklch(0.65 0.15 65); /* Orange chart color */
-  --chart-3: oklch(0.35 0 0); /* Dark gray chart color */
-  --chart-4: oklch(0.7 0.12 85); /* Yellow chart color */
-  --chart-5: oklch(0.6 0.2 35); /* Red-orange chart color */
+  --background: oklch(1 0 0);
+  /* White background */
+  --foreground: oklch(0.35 0 0);
+  /* Dark gray text */
+  --card: oklch(0.98 0 0);
+  /* Light gray card background */
+  --card-foreground: oklch(0.35 0 0);
+  /* Dark gray card text */
+  --popover: oklch(1 0 0);
+  /* White popover background */
+  --popover-foreground: oklch(0.35 0 0);
+  /* Dark gray popover text */
+  --primary: oklch(0.45 0.15 250);
+  /* #1976D2 blue primary */
+  --primary-foreground: oklch(1 0 0);
+  /* White text on primary */
+  --secondary: oklch(0.65 0.15 65);
+  /* #FF9800 orange accent */
+  --secondary-foreground: oklch(1 0 0);
+  /* White text on secondary */
+  --muted: oklch(0.96 0 0);
+  /* Light muted background */
+  --muted-foreground: oklch(0.55 0 0);
+  /* Medium gray muted text */
+  --accent: oklch(0.65 0.15 65);
+  /* #FF9800 orange accent */
+  --accent-foreground: oklch(1 0 0);
+  /* White text on accent */
+  --destructive: oklch(0.55 0.25 25);
+  /* Red for destructive actions */
+  --destructive-foreground: oklch(1 0 0);
+  /* White text on destructive */
+  --border: oklch(0.9 0 0);
+  /* Light gray borders */
+  --input: oklch(0.98 0 0);
+  /* Light input background */
+  --ring: oklch(0.45 0.15 250);
+  /* Blue focus ring */
+  --chart-1: oklch(0.45 0.15 250);
+  /* Blue chart color */
+  --chart-2: oklch(0.65 0.15 65);
+  /* Orange chart color */
+  --chart-3: oklch(0.35 0 0);
+  /* Dark gray chart color */
+  --chart-4: oklch(0.7 0.12 85);
+  /* Yellow chart color */
+  --chart-5: oklch(0.6 0.2 35);
+  /* Red-orange chart color */
   --radius: 0.5rem;
-  --sidebar: oklch(1 0 0); /* White sidebar */
-  --sidebar-foreground: oklch(0.35 0 0); /* Dark gray sidebar text */
-  --sidebar-primary: oklch(0.45 0.15 250); /* Blue sidebar primary */
-  --sidebar-primary-foreground: oklch(1 0 0); /* White sidebar primary text */
-  --sidebar-accent: oklch(0.65 0.15 65); /* Orange sidebar accent */
-  --sidebar-accent-foreground: oklch(1 0 0); /* White sidebar accent text */
-  --sidebar-border: oklch(0.9 0 0); /* Light gray sidebar border */
-  --sidebar-ring: oklch(0.45 0.15 250); /* Blue sidebar focus ring */
+  --sidebar: oklch(1 0 0);
+  /* White sidebar */
+  --sidebar-foreground: oklch(0.35 0 0);
+  /* Dark gray sidebar text */
+  --sidebar-primary: oklch(0.45 0.15 250);
+  /* Blue sidebar primary */
+  --sidebar-primary-foreground: oklch(1 0 0);
+  /* White sidebar primary text */
+  --sidebar-accent: oklch(0.65 0.15 65);
+  /* Orange sidebar accent */
+  --sidebar-accent-foreground: oklch(1 0 0);
+  /* White sidebar accent text */
+  --sidebar-border: oklch(0.9 0 0);
+  /* Light gray sidebar border */
+  --sidebar-ring: oklch(0.45 0.15 250);
+  /* Blue sidebar focus ring */
 }
 
 .dark {
-  --background: oklch(0.1 0 0); /* Dark background */
-  --foreground: oklch(0.95 0 0); /* Light text */
-  --card: oklch(0.15 0 0); /* Dark card background */
-  --card-foreground: oklch(0.95 0 0); /* Light card text */
-  --popover: oklch(0.1 0 0); /* Dark popover background */
-  --popover-foreground: oklch(0.95 0 0); /* Light popover text */
-  --primary: oklch(0.55 0.15 250); /* Lighter blue for dark mode */
-  --primary-foreground: oklch(0.1 0 0); /* Dark text on primary */
-  --secondary: oklch(0.7 0.15 65); /* Lighter orange for dark mode */
-  --secondary-foreground: oklch(0.1 0 0); /* Dark text on secondary */
-  --muted: oklch(0.2 0 0); /* Dark muted background */
-  --muted-foreground: oklch(0.65 0 0); /* Light muted text */
-  --accent: oklch(0.7 0.15 65); /* Lighter orange accent */
-  --accent-foreground: oklch(0.1 0 0); /* Dark text on accent */
-  --destructive: oklch(0.6 0.25 25); /* Lighter red for dark mode */
-  --destructive-foreground: oklch(0.95 0 0); /* Light text on destructive */
-  --border: oklch(0.25 0 0); /* Dark borders */
-  --input: oklch(0.15 0 0); /* Dark input background */
-  --ring: oklch(0.55 0.15 250); /* Lighter blue focus ring */
-  --chart-1: oklch(0.55 0.15 250); /* Lighter blue chart */
-  --chart-2: oklch(0.7 0.15 65); /* Lighter orange chart */
-  --chart-3: oklch(0.75 0 0); /* Light gray chart */
-  --chart-4: oklch(0.75 0.12 85); /* Lighter yellow chart */
-  --chart-5: oklch(0.65 0.2 35); /* Lighter red-orange chart */
-  --sidebar: oklch(0.12 0 0); /* Dark sidebar */
-  --sidebar-foreground: oklch(0.95 0 0); /* Light sidebar text */
-  --sidebar-primary: oklch(0.55 0.15 250); /* Lighter blue sidebar primary */
-  --sidebar-primary-foreground: oklch(0.1 0 0); /* Dark sidebar primary text */
-  --sidebar-accent: oklch(0.7 0.15 65); /* Lighter orange sidebar accent */
-  --sidebar-accent-foreground: oklch(0.1 0 0); /* Dark sidebar accent text */
-  --sidebar-border: oklch(0.25 0 0); /* Dark sidebar border */
-  --sidebar-ring: oklch(0.55 0.15 250); /* Lighter blue sidebar focus ring */
+  --background: oklch(0.1 0 0);
+  /* Dark background */
+  --foreground: oklch(0.95 0 0);
+  /* Light text */
+  --card: oklch(0.15 0 0);
+  /* Dark card background */
+  --card-foreground: oklch(0.95 0 0);
+  /* Light card text */
+  --popover: oklch(0.1 0 0);
+  /* Dark popover background */
+  --popover-foreground: oklch(0.95 0 0);
+  /* Light popover text */
+  --primary: oklch(0.55 0.15 250);
+  /* Lighter blue for dark mode */
+  --primary-foreground: oklch(0.1 0 0);
+  /* Dark text on primary */
+  --secondary: oklch(0.7 0.15 65);
+  /* Lighter orange for dark mode */
+  --secondary-foreground: oklch(0.1 0 0);
+  /* Dark text on secondary */
+  --muted: oklch(0.2 0 0);
+  /* Dark muted background */
+  --muted-foreground: oklch(0.65 0 0);
+  /* Light muted text */
+  --accent: oklch(0.7 0.15 65);
+  /* Lighter orange accent */
+  --accent-foreground: oklch(0.1 0 0);
+  /* Dark text on accent */
+  --destructive: oklch(0.6 0.25 25);
+  /* Lighter red for dark mode */
+  --destructive-foreground: oklch(0.95 0 0);
+  /* Light text on destructive */
+  --border: oklch(0.25 0 0);
+  /* Dark borders */
+  --input: oklch(0.15 0 0);
+  /* Dark input background */
+  --ring: oklch(0.55 0.15 250);
+  /* Lighter blue focus ring */
+  --chart-1: oklch(0.55 0.15 250);
+  /* Lighter blue chart */
+  --chart-2: oklch(0.7 0.15 65);
+  /* Lighter orange chart */
+  --chart-3: oklch(0.75 0 0);
+  /* Light gray chart */
+  --chart-4: oklch(0.75 0.12 85);
+  /* Lighter yellow chart */
+  --chart-5: oklch(0.65 0.2 35);
+  /* Lighter red-orange chart */
+  --sidebar: oklch(0.12 0 0);
+  /* Dark sidebar */
+  --sidebar-foreground: oklch(0.95 0 0);
+  /* Light sidebar text */
+  --sidebar-primary: oklch(0.55 0.15 250);
+  /* Lighter blue sidebar primary */
+  --sidebar-primary-foreground: oklch(0.1 0 0);
+  /* Dark sidebar primary text */
+  --sidebar-accent: oklch(0.7 0.15 65);
+  /* Lighter orange sidebar accent */
+  --sidebar-accent-foreground: oklch(0.1 0 0);
+  /* Dark sidebar accent text */
+  --sidebar-border: oklch(0.25 0 0);
+  /* Dark sidebar border */
+  --sidebar-ring: oklch(0.55 0.15 250);
+  /* Lighter blue sidebar focus ring */
 }
 
 /* Removed problematic theme icon CSS that was causing conflicts */
@@ -120,6 +184,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
     /* Simplified transitions without forcing color-scheme */
@@ -132,6 +197,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -140,4 +206,19 @@
 
 .animate-fade-in {
   animation: fade-in 0.5s ease-out;
+}
+
+/* Hide scrollbar while maintaining scroll functionality */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari and Opera */
+  }
 }
