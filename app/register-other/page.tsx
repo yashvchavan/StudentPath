@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
 // === Animated Background ===
 const AnimatedBackground = () => {
@@ -78,7 +79,7 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'co
   return (
     <div className="min-h-screen flex items-center justify-center relative">
       <AnimatedBackground />
-      
+
       <div className="relative z-10 max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
           <img
@@ -97,32 +98,31 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'co
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {/* College Card */}
           <Card
-            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${
-              hoveredCard === 'college' 
-                ? 'border-green-400 shadow-2xl shadow-green-500/20' 
-                : 'border-white/20 hover:border-white/30'
-            } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
+            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${hoveredCard === 'college'
+              ? 'border-green-400 shadow-2xl shadow-green-500/20'
+              : 'border-white/20 hover:border-white/30'
+              } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
             onMouseEnter={() => setHoveredCard('college')}
             onMouseLeave={() => setHoveredCard(null)}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
+
             <CardContent className="p-8 relative z-10">
               <div className="flex justify-center mb-6">
                 <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl group-hover:animate-pulse">
                   <Building className="w-12 h-12 text-white" />
                 </div>
               </div>
-              
+
               <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
                 I'm a College
               </h2>
-              
+
               <p className="text-gray-300 text-center mb-6">
                 Educational institution looking to manage students and provide career guidance
               </p>
-              
-              <Button 
+
+              <Button
                 className="w-full mt-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
                 onClick={() => onSelect('college')}
               >
@@ -139,32 +139,31 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'co
           </Card>
           {/* Professinal Card */}
           <Card
-            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${
-              hoveredCard === 'college' 
-                ? 'border-orange-400 shadow-2xl shadow-orange-500/20' 
-                : 'border-white/20 hover:border-white/30'
-            } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
+            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${hoveredCard === 'college'
+              ? 'border-orange-400 shadow-2xl shadow-orange-500/20'
+              : 'border-white/20 hover:border-white/30'
+              } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
             onMouseEnter={() => setHoveredCard('college')}
             onMouseLeave={() => setHoveredCard(null)}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/10 to-orange-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
+
             <CardContent className="p-8 relative z-10">
               <div className="flex justify-center mb-6">
                 <div className="w-24 h-24 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center shadow-2xl group-hover:animate-pulse">
                   <Building className="w-12 h-12 text-white" />
                 </div>
               </div>
-              
+
               <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-yellow-500 to-orange-600 bg-clip-text text-transparent">
                 I'm a Professional
               </h2>
-              
+
               <p className="text-gray-300 text-center mb-6">
                 Professional looking to improve skills and manage career
               </p>
-              
-              <Button 
+
+              <Button
                 className="w-full mt-8 bg-gradient-to-r  from-yellow-500 to-orange-600  text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
                 onClick={() => onSelect('professional')}
               >
@@ -225,9 +224,8 @@ const StepTransition = ({
   isActive: boolean;
 }) => (
   <div
-    className={`transition-all duration-500 ${
-      isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-    }`}
+    className={`transition-all duration-500 ${isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+      }`}
   >
     {children}
   </div>
@@ -394,20 +392,20 @@ const industries = [
 const StudentRegistration = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-      studentId: "",
-      dateOfBirth: "",
-      gender: "",
-      password: "",
-      confirmPassword: "",
-      agreeToTerms: false,
-      college: "",
-      program: "",
-      currentYear: "",
-      currentSemester: "",
-      enrollmentYear: "",
-      currentGPA: [7.5],
-      academicInterests: [] as string[],
-    firstName: "",  
+    studentId: "",
+    dateOfBirth: "",
+    gender: "",
+    password: "",
+    confirmPassword: "",
+    agreeToTerms: false,
+    college: "",
+    program: "",
+    currentYear: "",
+    currentSemester: "",
+    enrollmentYear: "",
+    currentGPA: [7.5],
+    academicInterests: [] as string[],
+    firstName: "",
     lastName: "",
     email: "",
     phone: "",
@@ -431,7 +429,7 @@ const StudentRegistration = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const totalSteps = 6;
   const progress = (currentStep / totalSteps) * 100;
-  
+
   const [error, setError] = useState<string>("")
   const updateFormData = (updates: any) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -899,11 +897,10 @@ const StudentRegistration = () => {
                           <label
                             key={interest}
                             htmlFor={interest}
-                            className={`flex items-center gap-3 p-3 rounded-lg border transition ${
-                              checked
-                                ? "bg-indigo-500/10 border-indigo-400/40"
-                                : "bg-white/5 border-white/10 hover:bg-white/10"
-                            }`}
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
+                              ? "bg-indigo-500/10 border-indigo-400/40"
+                              : "bg-white/5 border-white/10 hover:bg-white/10"
+                              }`}
                           >
                             <Checkbox
                               id={interest}
@@ -991,11 +988,10 @@ const StudentRegistration = () => {
                         <label
                           key={option.value}
                           htmlFor={option.value}
-                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${
-                            selected
-                              ? "bg-indigo-500/10 border-indigo-400/40"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                          }`}
+                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${selected
+                            ? "bg-indigo-500/10 border-indigo-400/40"
+                            : "bg-white/5 border-white/10 hover:bg-white/10"
+                            }`}
                         >
                           <RadioGroupItem value={option.value} id={option.value} />
                           <span className="text-2xl">{option.icon}</span>
@@ -1326,37 +1322,36 @@ const StudentRegistration = () => {
                           <label
                             key={industry}
                             htmlFor={industry}
-                              className={`flex items-center gap-3 p-3 rounded-lg border transition ${
-                                checked
-                                  ? "bg-indigo-500/10 border-indigo-400/40"
-                                  : "bg-white/5 border-white/10 hover:bg-white/10"
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
+                              ? "bg-indigo-500/10 border-indigo-400/40"
+                              : "bg-white/5 border-white/10 hover:bg-white/10"
                               }`}
-                            >
-                              <Checkbox
-                                id={industry}
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  if (isChecked) {
-                                    updateFormData({
-                                      industryFocus: [
-                                        ...formData.industryFocus,
-                                        industry,
-                                      ],
-                                    });
-                                  } else {
-                                    updateFormData({
-                                      industryFocus: formData.industryFocus.filter(
-                                        (i) => i !== industry
-                                      ),
-                                    });
-                                  }
-                                }}
-                                className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                              />
-                              <span className="text-white/90">{industry}</span>
-                            </label>
-                          );
-                        }
+                          >
+                            <Checkbox
+                              id={industry}
+                              checked={checked}
+                              onCheckedChange={(isChecked) => {
+                                if (isChecked) {
+                                  updateFormData({
+                                    industryFocus: [
+                                      ...formData.industryFocus,
+                                      industry,
+                                    ],
+                                  });
+                                } else {
+                                  updateFormData({
+                                    industryFocus: formData.industryFocus.filter(
+                                      (i) => i !== industry
+                                    ),
+                                  });
+                                }
+                              }}
+                              className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                            />
+                            <span className="text-white/90">{industry}</span>
+                          </label>
+                        );
+                      }
                       )}
                     </div>
                   </CardContent>
@@ -1512,7 +1507,7 @@ const StudentRegistration = () => {
   return (
     <div className="space-y-8">
       {isLoading ? <RocketLaunchLoader /> : renderStep()}
-      
+
       {currentStep < totalSteps && !isLoading && (
         <div className="flex justify-between mt-6">
           <Button
@@ -1573,19 +1568,19 @@ const CollegeRegistration = () => {
   ];
 
   const indianStates = [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", 
-    "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", 
-    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana",
+    "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu",
     "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
   ];
 
   const collegeTypes = [
-    "Public University", "Private University", "Government College", "Private College", 
+    "Public University", "Private University", "Government College", "Private College",
     "Institute of Technology", "Medical College", "Engineering College", "Business School", "Arts College"
   ];
 
   const availablePrograms = [
-    "Computer Science Engineering", "Information Technology", "Electronics Engineering", 
+    "Computer Science Engineering", "Information Technology", "Electronics Engineering",
     "Mechanical Engineering", "Civil Engineering", "Business Administration", "Economics",
     "Medicine", "Law", "Arts", "Science", "Commerce", "Pharmacy", "Architecture"
   ];
@@ -1924,11 +1919,10 @@ const CollegeRegistration = () => {
                         <label
                           key={program}
                           htmlFor={program}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition ${
-                            checked
-                              ? "bg-green-500/10 border-green-400/40"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                          }`}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
+                            ? "bg-green-500/10 border-green-400/40"
+                            : "bg-white/5 border-white/10 hover:bg-white/10"
+                            }`}
                         >
                           <Checkbox
                             id={program}
@@ -2009,7 +2003,7 @@ const CollegeRegistration = () => {
                     Almost Ready! 🎉
                   </h3>
                   <p className="text-gray-300">
-                    After registration, you'll receive a unique token to share with your students 
+                    After registration, you'll receive a unique token to share with your students
                     for easy registration and access to your college's platform.
                   </p>
                 </div>
@@ -2099,7 +2093,7 @@ const CollegeRegistration = () => {
   return (
     <div className="space-y-8">
       {isLoading ? <RocketLaunchLoader /> : renderStep()}
-      
+
       {currentStep < totalSteps && !isLoading && (
         <div className="flex justify-between mt-6">
           <Button
@@ -2509,11 +2503,10 @@ const ProfessionalRegistration = () => {
                         <label
                           key={skill}
                           htmlFor={skill}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${
-                            checked
-                              ? "bg-yellow-500/10 border-yellow-400/40"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                          }`}
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${checked
+                            ? "bg-yellow-500/10 border-yellow-400/40"
+                            : "bg-white/5 border-white/10 hover:bg-white/10"
+                            }`}
                         >
                           <Checkbox
                             id={skill}
@@ -2616,7 +2609,7 @@ const ProfessionalRegistration = () => {
   return (
     <div className="space-y-8">
       {isLoading ? <RocketLaunchLoader /> : renderStep()}
-      
+
       {currentStep !== 3 && !isLoading && (
         <div className="flex justify-between mt-6">
           <Button
@@ -2646,6 +2639,17 @@ export default function RegisterPage() {
   const [userType, setUserType] = useState<'professional' | 'college' | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 40 });
 
+  // Check for any existing session - we need to check both roles to detect any logged in user
+  const { isBlocked: isBlockedByProfessional, isLoading: isLoadingProfessional, activeRole: professionalActiveRole } = useSessionBlock('professional');
+  const { isBlocked: isBlockedByCollege, isLoading: isLoadingCollege, activeRole: collegeActiveRole } = useSessionBlock('college');
+
+  // Determine if still loading
+  const isLoadingSession = isLoadingProfessional || isLoadingCollege;
+
+  // Determine if blocked and by what role
+  const activeRole = professionalActiveRole || collegeActiveRole || null;
+  const isBlocked = activeRole !== null;
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       setMousePosition({
@@ -2656,6 +2660,30 @@ export default function RegisterPage() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
+
+  // Show loading state while checking session
+  if (isLoadingSession) {
+    return (
+      <div
+        className="dark min-h-screen relative text-white flex items-center justify-center"
+        style={{
+          background:
+            "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
+        }}
+      >
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  // Block access if logged in as any role
+  if (isBlocked && activeRole) {
+    // Determine which block page to show based on what the user might be trying to access
+    // Since they're on register-other, they might be trying to register as professional or college
+    // We'll default to showing a professional block since that's likely the common case
+    const intendedRole = userType || 'professional';
+    return <ActiveSessionBlock intendedRole={intendedRole} pageName="Registration" />;
+  }
 
   if (!userType) {
     return (
@@ -2713,16 +2741,15 @@ export default function RegisterPage() {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  isCollege
-                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                }`}>
+                <div className={`px-3 py-1 rounded-full text-sm font-medium ${isCollege
+                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                  }`}>
                   {isCollege ? 'College' : 'Professional'} Registration
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
 

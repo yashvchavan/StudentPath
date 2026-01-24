@@ -8,13 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { 
-  Eye, 
-  EyeOff, 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  GraduationCap, 
+import {
+  Eye,
+  EyeOff,
+  BookOpen,
+  Users,
+  TrendingUp,
+  GraduationCap,
   Rocket,
   Stars,
   Zap,
@@ -24,13 +24,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
 // Animated Background Component
 const AnimatedBackground = () => {
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
+  const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, delay: number }>>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({length: 30}, (_, i) => ({
+    const newParticles = Array.from({ length: 30 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -63,8 +64,8 @@ const RocketLoader = () => {
     <div className="flex flex-col items-center justify-center py-4">
       <div className="relative">
         <div className="animate-bounce">
-          <svg 
-            viewBox="0 0 100 100" 
+          <svg
+            viewBox="0 0 100 100"
             className="w-12 h-12 drop-shadow-lg"
             style={{
               filter: 'drop-shadow(0 0 10px rgba(99, 102, 241, 0.5))'
@@ -82,7 +83,7 @@ const RocketLoader = () => {
                 <stop offset="100%" stopColor="#dc2626" />
               </linearGradient>
             </defs>
-            
+
             <ellipse cx="50" cy="75" rx="4" ry="10" fill="url(#loginFireGradient)" opacity="0.8">
               <animateTransform
                 attributeName="transform"
@@ -92,7 +93,7 @@ const RocketLoader = () => {
                 repeatCount="indefinite"
               />
             </ellipse>
-            
+
             <ellipse cx="50" cy="50" rx="12" ry="25" fill="url(#loginRocketGradient)" />
             <path d="M 38 25 Q 50 15 62 25 L 62 35 L 38 35 Z" fill="url(#loginRocketGradient)" />
             <path d="M 38 60 L 30 70 L 38 70 Z" fill="url(#loginRocketGradient)" />
@@ -100,9 +101,9 @@ const RocketLoader = () => {
             <circle cx="50" cy="40" r="4" fill="#60a5fa" opacity="0.8" />
           </svg>
         </div>
-        
+
         <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-          {Array.from({length: 8}).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
               className="absolute w-1 h-1 bg-gradient-to-t from-orange-400 to-red-500 rounded-full animate-ping"
@@ -127,7 +128,7 @@ const AdminLoader = () => {
     <div className="flex flex-col items-center justify-center py-4">
       <div className="relative">
         <div className="animate-pulse">
-          <Shield className="w-12 h-12 text-amber-400 drop-shadow-lg" 
+          <Shield className="w-12 h-12 text-amber-400 drop-shadow-lg"
             style={{
               filter: 'drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))'
             }}
@@ -144,6 +145,7 @@ const AdminLoader = () => {
 
 export default function LoginPage() {
   const router = useRouter();
+  const { isBlocked, isLoading: sessionLoading } = useSessionBlock('student');
   const [isAdminLogin, setIsAdminLogin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -156,6 +158,21 @@ export default function LoginPage() {
   const [showInvalidTokenDialog, setShowInvalidTokenDialog] = useState(false);
   const [collegeToken, setCollegeToken] = useState<string | null>(null);
   const [collegeInfo, setCollegeInfo] = useState<any>(null);
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+
+  const studentTestimonials = [
+    { name: "Priya Sharma", text: "StudentPath helped me plan my CS degree perfectly!", college: "IIT Delhi" },
+    { name: "Arjun Patel", text: "The career guidance is amazing. Got my dream job!", college: "BITS Pilani" },
+    { name: "Sneha Reddy", text: "Love the personalized recommendations!", college: "NIT Warangal" },
+  ];
+
+  const adminTestimonials = [
+    { name: "Dr. Rajesh Kumar", text: "Managing student data has never been easier!", position: "Academic Director" },
+    { name: "Prof. Meera Singh", text: "Excellent analytics and reporting features.", position: "Department Head" },
+    { name: "Admin Team Lead", text: "Streamlined our entire academic workflow!", position: "Operations Manager" },
+  ];
+
+  const currentTestimonials = isAdminLogin ? adminTestimonials : studentTestimonials;
 
   // Handle token validation
   useEffect(() => {
@@ -172,7 +189,7 @@ export default function LoginPage() {
         }
       }
     };
-    
+
     validateToken();
   }, [isAdminLogin]);
 
@@ -191,11 +208,30 @@ export default function LoginPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Testimonial carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % currentTestimonials.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [currentTestimonials.length]);
+
+  // Reset testimonial on login type switch
+  useEffect(() => {
+    setCurrentTestimonial(0);
+  }, [isAdminLogin]);
+
+  // Block access if logged in as another role - MUST be after all hooks
+  if (isBlocked) {
+    return <ActiveSessionBlock intendedRole="student" pageName="Student Login" />;
+  }
+
+
   const validateCollegeToken = async (token: string) => {
     try {
       const response = await fetch(`/api/auth/validate-token?token=${token}`);
       const data = await response.json();
-      
+
       if (response.ok && data.valid) {
         setCollegeInfo(data.college);
       } else {
@@ -257,7 +293,7 @@ export default function LoginPage() {
 
         // Clear any existing cookies first
         document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        
+
         // Set the new cookie
         document.cookie = `studentData=${encodeURIComponent(JSON.stringify(adminData))}; path=/; max-age=86400; SameSite=Strict`;
 
@@ -271,8 +307,8 @@ export default function LoginPage() {
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email, 
+          body: JSON.stringify({
+            email,
             password,
             collegeToken
           })
@@ -290,12 +326,14 @@ export default function LoginPage() {
           token: data.token || collegeToken,
           isAuthenticated: true,
           isAdmin: false,
+          userType: 'student', // Explicit user type for RBAC
           timestamp: Date.now() // Add timestamp to prevent stale cookies
         };
-        
+
         // Clear any existing cookies first
         document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        
+        document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
         // Set the new cookie
         document.cookie = `studentData=${encodeURIComponent(JSON.stringify(studentData))}; path=/; max-age=86400; SameSite=Strict`;
 
@@ -319,12 +357,12 @@ export default function LoginPage() {
 
   const handleLoginTypeSwitch = (adminLogin: boolean) => {
     if (adminLogin === isAdminLogin) return;
-    
+
     setIsTransitioning(true);
     setEmail("");
     setPassword("");
     setErrors({});
-    
+
     setTimeout(() => {
       setIsAdminLogin(adminLogin);
       setTimeout(() => {
@@ -333,64 +371,36 @@ export default function LoginPage() {
     }, 300);
   };
 
-  const studentTestimonials = [
-    { name: "Priya Sharma", text: "StudentPath helped me plan my CS degree perfectly!", college: "IIT Delhi" },
-    { name: "Arjun Patel", text: "The career guidance is amazing. Got my dream job!", college: "BITS Pilani" },
-    { name: "Sneha Reddy", text: "Love the personalized recommendations!", college: "NIT Warangal" },
-  ];
 
-  const adminTestimonials = [
-    { name: "Dr. Rajesh Kumar", text: "Managing student data has never been easier!", position: "Academic Director" },
-    { name: "Prof. Meera Singh", text: "Excellent analytics and reporting features.", position: "Department Head" },
-    { name: "Admin Team Lead", text: "Streamlined our entire academic workflow!", position: "Operations Manager" },
-  ];
-
-  const currentTestimonials = isAdminLogin ? adminTestimonials : studentTestimonials;
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % currentTestimonials.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [currentTestimonials.length]);
-
-  useEffect(() => {
-    setCurrentTestimonial(0);
-  }, [isAdminLogin]);
 
   return (
     <div className="min-h-screen flex bg-black text-white overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
-        <div 
+        <div
           className="absolute inset-0 opacity-20"
           style={{
-            background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, ${
-              isAdminLogin 
-                ? 'rgba(251, 191, 36, 0.3) 0%, rgba(217, 119, 6, 0.2) 25%' 
-                : 'rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.2) 25%'
-            }, transparent 50%)`,
+            background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, ${isAdminLogin
+              ? 'rgba(251, 191, 36, 0.3) 0%, rgba(217, 119, 6, 0.2) 25%'
+              : 'rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.2) 25%'
+              }, transparent 50%)`,
             transition: 'background 0.5s ease'
           }}
         />
-        <div className={`absolute inset-0 transition-all duration-700 ${
-          isAdminLogin 
-            ? 'bg-gradient-to-br from-black via-amber-900/20 to-orange-600/20' 
-            : 'bg-gradient-to-br from-black via-blue-900/20 to-blue-600/20'
-        }`} />
+        <div className={`absolute inset-0 transition-all duration-700 ${isAdminLogin
+          ? 'bg-gradient-to-br from-black via-amber-900/20 to-orange-600/20'
+          : 'bg-gradient-to-br from-black via-blue-900/20 to-blue-600/20'
+          }`} />
         <AnimatedBackground />
       </div>
 
       {/* Content Container with Sliding Animation */}
-      <div className={`flex w-full transition-transform duration-700 ease-in-out ${
-        isAdminLogin ? 'translate-x-0' : 'translate-x-0'
-      }`}>
-        
-        {/* Left Side - Branding & Hero Content */}
-        <div className={`hidden lg:flex lg:w-2/5 relative z-10 p-12 flex-col justify-between transition-all duration-700 ${
-          isAdminLogin ? 'lg:order-2 lg:translate-x-full' : 'lg:order-1 lg:translate-x-0'
+      <div className={`flex w-full transition-transform duration-700 ease-in-out ${isAdminLogin ? 'translate-x-0' : 'translate-x-0'
         }`}>
+
+        {/* Left Side - Branding & Hero Content */}
+        <div className={`hidden lg:flex lg:w-2/5 relative z-10 p-12 flex-col justify-between transition-all duration-700 ${isAdminLogin ? 'lg:order-2 lg:translate-x-full' : 'lg:order-1 lg:translate-x-0'
+          }`}>
           <div
             className="absolute inset-0 h-screen bg-cover bg-center animate-[spin_60s_linear_infinite] scale-[2.0] translate-x-[-100px]"
             style={{ backgroundImage: "url('/moon.png')" }}
@@ -400,14 +410,14 @@ export default function LoginPage() {
               <h2 className="text-5xl font-bold mb-6 leading-tight">
                 {isAdminLogin ? (
                   <>
-                    Manage Your Institution,{" "}<br/>
+                    Manage Your Institution,{" "}<br />
                     <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
                       Empower Students
                     </span>
                   </>
                 ) : (
                   <>
-                    Plan Your Academic Journey,{" "}<br/>
+                    Plan Your Academic Journey,{" "}<br />
                     <span className="bg-gradient-to-r from-black to-blue-900 bg-clip-text text-transparent">
                       Achieve Your Goals
                     </span>
@@ -415,7 +425,7 @@ export default function LoginPage() {
                 )}
               </h2>
               <p className="text-xl text-white/80 leading-relaxed">
-                {isAdminLogin 
+                {isAdminLogin
                   ? "Comprehensive administrative tools for managing students, courses, and academic programs with powerful analytics and insights."
                   : "Join thousands of students who are successfully navigating their educational path with personalized guidance and AI-powered recommendations."
                 }
@@ -445,8 +455,8 @@ export default function LoginPage() {
               <div>
                 <p className="font-semibold text-white">{currentTestimonials[currentTestimonial].name}</p>
                 <p className="text-gray-400 text-sm">
-                  {isAdminLogin 
-                    ? (currentTestimonials[currentTestimonial] as any).position 
+                  {isAdminLogin
+                    ? (currentTestimonials[currentTestimonial] as any).position
                     : (currentTestimonials[currentTestimonial] as any).college
                   }
                 </p>
@@ -456,11 +466,10 @@ export default function LoginPage() {
                   <button
                     key={index}
                     onClick={() => setCurrentTestimonial(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      index === currentTestimonial 
-                        ? `${isAdminLogin ? 'bg-amber-400' : 'bg-blue-400'} w-6` 
-                        : "bg-white/30 hover:bg-white/50"
-                    }`}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentTestimonial
+                      ? `${isAdminLogin ? 'bg-amber-400' : 'bg-blue-400'} w-6`
+                      : "bg-white/30 hover:bg-white/50"
+                      }`}
                   />
                 ))}
               </div>
@@ -469,29 +478,26 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className={`flex-1 flex items-center justify-center p-8 relative z-10 transition-all duration-700 ease-in-out ${
-          isAdminLogin ? 'lg:order-1' : 'lg:order-2'
-        }`}>
+        <div className={`flex-1 flex items-center justify-center p-8 relative z-10 transition-all duration-700 ease-in-out ${isAdminLogin ? 'lg:order-1' : 'lg:order-2'
+          }`}>
           <div className="w-full max-w-md">
             {/* Mobile Logo */}
             <div className="lg:hidden mb-8 text-center">
               <div className="flex items-center justify-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                  isAdminLogin 
-                    ? 'bg-gradient-to-br from-amber-500 to-orange-600' 
-                    : 'bg-gradient-to-br from-indigo-500 to-purple-600'
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${isAdminLogin
+                  ? 'bg-gradient-to-br from-amber-500 to-orange-600'
+                  : 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                  }`}>
                   {isAdminLogin ? (
                     <Shield className="w-6 h-6 text-white" />
                   ) : (
                     <GraduationCap className="w-6 h-6 text-white" />
                   )}
                 </div>
-                <h1 className={`text-2xl font-bold bg-clip-text text-transparent transition-all duration-500 ${
-                  isAdminLogin 
-                    ? 'bg-gradient-to-r from-white to-amber-200' 
-                    : 'bg-gradient-to-r from-white to-indigo-200'
-                }`}>
+                <h1 className={`text-2xl font-bold bg-clip-text text-transparent transition-all duration-500 ${isAdminLogin
+                  ? 'bg-gradient-to-r from-white to-amber-200'
+                  : 'bg-gradient-to-r from-white to-indigo-200'
+                  }`}>
                   StudentPath {isAdminLogin ? 'Admin' : ''}
                 </h1>
               </div>
@@ -502,11 +508,10 @@ export default function LoginPage() {
               <div className="flex bg-white/5 rounded-2xl p-1 backdrop-blur-sm border border-white/10">
                 <button
                   onClick={() => handleLoginTypeSwitch(false)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
-                    !isAdminLogin 
-                      ? 'bg-gradient-to-r from-grey-900 to-white text-black shadow-lg' 
-                      : 'text-white/70 hover:text-white hover:bg-white/5'
-                  }`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${!isAdminLogin
+                    ? 'bg-gradient-to-r from-grey-900 to-white text-black shadow-lg'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                    }`}
                 >
                   <GraduationCap className="w-4 h-4" />
                   Student Login
@@ -526,15 +531,13 @@ export default function LoginPage() {
             </div>
 
             {/* Login Card */}
-            <Card className={`shadow-2xl backdrop-blur-xl border transition-all duration-500 ${
-              isTransitioning 
-                ? 'opacity-0 transform scale-95' 
-                : 'opacity-100 transform scale-100'
-            } ${
-              isAdminLogin 
-                ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/20' 
+            <Card className={`shadow-2xl backdrop-blur-xl border transition-all duration-500 ${isTransitioning
+              ? 'opacity-0 transform scale-95'
+              : 'opacity-100 transform scale-100'
+              } ${isAdminLogin
+                ? 'bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-amber-500/20'
                 : 'bg-gradient-to-br from-white/10 to-white/5 border-white/20'
-            }`}>
+              }`}>
               <CardHeader className="text-center pb-6">
                 <div className="flex justify-center mb-4">
                   {isAdminLogin ? (
@@ -543,18 +546,18 @@ export default function LoginPage() {
                     </div>
                   ) : (
                     <img
-                        src="/logo.png"
-                        alt="StudentPath Logo"
-                        className="h-15 w-auto"
-                        />
+                      src="/logo.png"
+                      alt="StudentPath Logo"
+                      className="h-15 w-auto"
+                    />
                   )}
                 </div>
                 <CardTitle className="text-3xl font-bold text-white mb-2">
                   {isAdminLogin ? 'Admin Portal' : 'Welcome Back'}
                 </CardTitle>
                 <CardDescription className="text-gray-300 text-lg">
-                  {isAdminLogin 
-                    ? 'Access your administrative dashboard' 
+                  {isAdminLogin
+                    ? 'Access your administrative dashboard'
                     : 'Sign in to continue your academic journey'
                   }
                 </CardDescription>
@@ -576,11 +579,10 @@ export default function LoginPage() {
                         placeholder={isAdminLogin ? "admin@institution.edu" : "your.email@college.edu"}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className={`bg-white/5 border-white/20 text-white placeholder:text-gray-400 transition-all duration-300 ${
-                          isAdminLogin 
-                            ? 'focus:border-amber-400 focus:ring-amber-400/20' 
-                            : 'focus:border-indigo-400 focus:ring-indigo-400/20'
-                        } ${errors.email ? "border-red-400" : ""}`}
+                        className={`bg-white/5 border-white/20 text-white placeholder:text-gray-400 transition-all duration-300 ${isAdminLogin
+                          ? 'focus:border-amber-400 focus:ring-amber-400/20'
+                          : 'focus:border-indigo-400 focus:ring-indigo-400/20'
+                          } ${errors.email ? "border-red-400" : ""}`}
                       />
                       {errors.email && <p className="text-sm text-red-400">{errors.email}</p>}
                     </div>
@@ -596,11 +598,10 @@ export default function LoginPage() {
                           placeholder="Enter your password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className={`pr-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400 transition-all duration-300 ${
-                            isAdminLogin 
-                              ? 'focus:border-amber-400 focus:ring-amber-400/20' 
-                              : 'focus:border-indigo-400 focus:ring-indigo-400/20'
-                          } ${errors.password ? "border-red-400" : ""}`}
+                          className={`pr-10 bg-white/5 border-white/20 text-white placeholder:text-gray-400 transition-all duration-300 ${isAdminLogin
+                            ? 'focus:border-amber-400 focus:ring-amber-400/20'
+                            : 'focus:border-indigo-400 focus:ring-indigo-400/20'
+                            } ${errors.password ? "border-red-400" : ""}`}
                         />
                         <button
                           type="button"
@@ -619,11 +620,10 @@ export default function LoginPage() {
                           id="remember"
                           checked={rememberMe}
                           onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                          className={`border-white/20 transition-colors duration-300 ${
-                            isAdminLogin 
-                              ? 'data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500' 
-                              : 'data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500'
-                          }`}
+                          className={`border-white/20 transition-colors duration-300 ${isAdminLogin
+                            ? 'data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500'
+                            : 'data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500'
+                            }`}
                         />
                         <Label htmlFor="remember" className="text-sm text-gray-300">
                           Remember me
@@ -631,11 +631,10 @@ export default function LoginPage() {
                       </div>
                       <Link
                         href="/forgot-password"
-                        className={`text-sm font-medium transition-colors ${
-                          isAdminLogin 
-                            ? 'text-amber-400 hover:text-amber-300' 
-                            : 'text-indigo-400 hover:text-indigo-300'
-                        }`}
+                        className={`text-sm font-medium transition-colors ${isAdminLogin
+                          ? 'text-amber-400 hover:text-amber-300'
+                          : 'text-indigo-400 hover:text-indigo-300'
+                          }`}
                       >
                         Forgot password?
                       </Link>
@@ -643,11 +642,10 @@ export default function LoginPage() {
 
                     <Button
                       type="submit"
-                      className={`w-full font-semibold py-3 rounded-xl transform hover:scale-[1.02] transition-all duration-300 shadow-2xl group ${
-                        isAdminLogin 
-                          ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white' 
-                          : 'bg-gradient-to-r from-gray-600 to-white hover:from-blue-700 hover:to-white-700 text-black'
-                      }`}
+                      className={`w-full font-semibold py-3 rounded-xl transform hover:scale-[1.02] transition-all duration-300 shadow-2xl group ${isAdminLogin
+                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white'
+                        : 'bg-gradient-to-r from-gray-600 to-white hover:from-blue-700 hover:to-white-700 text-black'
+                        }`}
                       disabled={isLoading}
                     >
                       {isAdminLogin ? (
@@ -655,8 +653,8 @@ export default function LoginPage() {
                       ) : (
                         <Rocket className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform duration-300" />
                       )}
-                      {isLoading 
-                        ? (isAdminLogin ? "Securing Access..." : "Launching...") 
+                      {isLoading
+                        ? (isAdminLogin ? "Securing Access..." : "Launching...")
                         : (isAdminLogin ? "Access Portal" : "Sign In")
                       }
                     </Button>
@@ -673,9 +671,9 @@ export default function LoginPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <Button 
-                        variant="outline" 
-                        type="button" 
+                      <Button
+                        variant="outline"
+                        type="button"
                         className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300"
                       >
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
@@ -698,20 +696,20 @@ export default function LoginPage() {
                         </svg>
                         Google
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        type="button" 
+                      <Button
+                        variant="outline"
+                        type="button"
                         className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300"
                       >
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M5.8 3h12.4c1.4 0 2.6 1.2 2.6 2.6v11.6c0 1.4-1.2 2.6-2.6 2.6H5.8c-1.4 0-2.6-1.2-2.6-2.6V5.6C3.2 4.2 4.4 3 5.8 3z"/>
-                          <path d="M20.6 6.9H3.4L12 14.1l8.6-7.2z" fill="white"/>
+                          <path d="M5.8 3h12.4c1.4 0 2.6 1.2 2.6 2.6v11.6c0 1.4-1.2 2.6-2.6 2.6H5.8c-1.4 0-2.6-1.2-2.6-2.6V5.6C3.2 4.2 4.4 3 5.8 3z" />
+                          <path d="M20.6 6.9H3.4L12 14.1l8.6-7.2z" fill="white" />
                         </svg>
                         Microsoft
                       </Button>
                     </div>
 
-                    
+
                   </form>
                 )}
               </CardContent>
@@ -777,12 +775,12 @@ export default function LoginPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-red-400">Invalid Access URL</AlertDialogTitle>
             <AlertDialogDescription className="text-gray-300">
-              The URL you're trying to access is invalid or has expired. Please contact your college administrator 
+              The URL you're trying to access is invalid or has expired. Please contact your college administrator
               for a valid registration link, or visit the main StudentPath website to get started.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => router.push('/')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >

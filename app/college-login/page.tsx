@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Eye, 
-  EyeOff, 
-  Building, 
+import {
+  Eye,
+  EyeOff,
+  Building,
   Shield,
   Settings,
   BarChart3,
@@ -18,13 +18,14 @@ import {
   GraduationCap
 } from "lucide-react";
 import Link from "next/link";
+import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
 // Animated Background Component
 const AnimatedBackground = () => {
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, delay: number}>>([]);
+  const [particles, setParticles] = useState<Array<{ id: number, x: number, y: number, delay: number }>>([]);
 
   useEffect(() => {
-    const newParticles = Array.from({length: 30}, (_, i) => ({
+    const newParticles = Array.from({ length: 30 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -57,7 +58,7 @@ const CollegeLoader = () => {
     <div className="flex flex-col items-center justify-center py-4">
       <div className="relative">
         <div className="animate-pulse">
-          <Building className="w-12 h-12 text-green-400 drop-shadow-lg" 
+          <Building className="w-12 h-12 text-green-400 drop-shadow-lg"
             style={{
               filter: 'drop-shadow(0 0 15px rgba(34, 197, 94, 0.6))'
             }}
@@ -73,6 +74,7 @@ const CollegeLoader = () => {
 };
 
 export default function CollegeLoginPage() {
+  const { isBlocked, isLoading: sessionLoading } = useSessionBlock('college');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,6 +82,13 @@ export default function CollegeLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+
+  const collegeTestimonials = [
+    { name: "Dr. Rajesh Kumar", text: "Managing student data has never been easier!", position: "Academic Director" },
+    { name: "Prof. Meera Singh", text: "Excellent analytics and reporting features.", position: "Department Head" },
+    { name: "Admin Team Lead", text: "Streamlined our entire academic workflow!", position: "Operations Manager" },
+  ];
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -92,6 +101,18 @@ export default function CollegeLoginPage() {
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTestimonial((prev) => (prev + 1) % collegeTestimonials.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [collegeTestimonials.length]);
+
+  // Block access if logged in as another role - MUST be after all hooks
+  if (isBlocked) {
+    return <ActiveSessionBlock intendedRole="college" pageName="College Admin Login" />;
+  }
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -113,70 +134,61 @@ export default function CollegeLoginPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validateForm()) return;
+    e.preventDefault();
+    if (!validateForm()) return;
 
-  setIsLoading(true);
-  
-  try {
-    const response = await fetch('/api/auth/login-college', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+    setIsLoading(true);
 
-    const data = await response.json();
+    try {
+      const response = await fetch('/api/auth/login-college', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    if (response.ok) {
-      // Store college data in localStorage as backup
-      const collegeData = {
-        id: data.college.id,
-        name: data.college.name,
-        email: data.college.email,
-        token: data.college.token,
-        type: 'college'
-      };
-      
-      // Store in localStorage for immediate access
-      localStorage.setItem('collegeData', JSON.stringify(collegeData));
-      
-      console.log('✅ Login successful, stored college data:', collegeData);
-      console.log('🍪 Cookie should also be set for:', collegeData.name);
-      
-      // Redirect to admin dashboard
-      window.location.href = '/admin';
-    } else {
-      setErrors({ email: data.error || 'Login failed' });
+      const data = await response.json();
+
+      if (response.ok) {
+        // Store college data in localStorage as backup
+        const collegeData = {
+          id: data.college.id,
+          name: data.college.name,
+          email: data.college.email,
+          token: data.college.token,
+          type: 'college',
+          userType: 'college', // Explicit user type for RBAC
+          timestamp: Date.now() // Add timestamp for expiration checks
+        };
+
+        // Clear studentData cookie first to prevent conflicts
+        document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+
+        // Store in localStorage for immediate access
+        localStorage.setItem('collegeData', JSON.stringify(collegeData));
+
+        console.log('✅ Login successful, stored college data:', collegeData);
+        console.log('🍪 Cookie should also be set for:', collegeData.name);
+
+        // Redirect to admin dashboard
+        window.location.href = '/admin';
+      } else {
+        setErrors({ email: data.error || 'Login failed' });
+      }
+    } catch (error) {
+      console.error('❌ Login failed:', error);
+      setErrors({ email: 'Login failed. Please try again.' });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('❌ Login failed:', error);
-    setErrors({ email: 'Login failed. Please try again.' });
-  } finally {
-    setIsLoading(false);
-  }
-};
-  const collegeTestimonials = [
-    { name: "Dr. Rajesh Kumar", text: "Managing student data has never been easier!", position: "Academic Director" },
-    { name: "Prof. Meera Singh", text: "Excellent analytics and reporting features.", position: "Department Head" },
-    { name: "Admin Team Lead", text: "Streamlined our entire academic workflow!", position: "Operations Manager" },
-  ];
-
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % collegeTestimonials.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [collegeTestimonials.length]);
+  };
 
   return (
     <div className="min-h-screen flex bg-black text-white overflow-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
-        <div 
+        <div
           className="absolute inset-0 opacity-20"
           style={{
             background: `radial-gradient(circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.2) 25%, transparent 50%)`,
@@ -189,7 +201,7 @@ export default function CollegeLoginPage() {
 
       {/* Content Container */}
       <div className="flex w-full">
-        
+
         {/* Left Side - Branding & Hero Content */}
         <div className="hidden lg:flex lg:w-2/5 relative z-10 p-12 flex-col justify-between">
           <div
@@ -199,7 +211,7 @@ export default function CollegeLoginPage() {
           <div className="relative z-20">
             <div className="mb-16 mt-20">
               <h2 className="text-5xl font-bold mb-6 leading-tight">
-                Manage Your Institution,{" "}<br/>
+                Manage Your Institution,{" "}<br />
                 <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">
                   Empower Students
                 </span>
@@ -231,11 +243,10 @@ export default function CollegeLoginPage() {
                   <button
                     key={index}
                     onClick={() => setCurrentTestimonial(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      index === currentTestimonial 
-                        ? 'bg-green-400 w-6' 
-                        : "bg-white/30 hover:bg-white/50"
-                    }`}
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentTestimonial
+                      ? 'bg-green-400 w-6'
+                      : "bg-white/30 hover:bg-white/50"
+                      }`}
                   />
                 ))}
               </div>
@@ -360,9 +371,9 @@ export default function CollegeLoginPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <Button 
-                        variant="outline" 
-                        type="button" 
+                      <Button
+                        variant="outline"
+                        type="button"
                         className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300"
                       >
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
@@ -385,14 +396,14 @@ export default function CollegeLoginPage() {
                         </svg>
                         Google
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        type="button" 
+                      <Button
+                        variant="outline"
+                        type="button"
                         className="w-full bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30 transition-all duration-300"
                       >
                         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M5.8 3h12.4c1.4 0 2.6 1.2 2.6 2.6v11.6c0 1.4-1.2 2.6-2.6 2.6H5.8c-1.4 0-2.6-1.2-2.6-2.6V5.6C3.2 4.2 4.4 3 5.8 3z"/>
-                          <path d="M20.6 6.9H3.4L12 14.1l8.6-7.2z" fill="white"/>
+                          <path d="M5.8 3h12.4c1.4 0 2.6 1.2 2.6 2.6v11.6c0 1.4-1.2 2.6-2.6 2.6H5.8c-1.4 0-2.6-1.2-2.6-2.6V5.6C3.2 4.2 4.4 3 5.8 3z" />
+                          <path d="M20.6 6.9H3.4L12 14.1l8.6-7.2z" fill="white" />
                         </svg>
                         Microsoft
                       </Button>

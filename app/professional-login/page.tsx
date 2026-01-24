@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Eye, EyeOff, Briefcase, TrendingUp, Settings } from "lucide-react";
 import Link from "next/link";
+import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
 const AnimatedBackground = () => {
   const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([]);
@@ -58,6 +59,7 @@ const ProfessionalLoader = () => (
 
 export default function ProfessionalLoginPage() {
   const router = useRouter();
+  const { isBlocked, isLoading: sessionLoading } = useSessionBlock('professional');
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,6 +68,13 @@ export default function ProfessionalLoginPage() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [currentTestimonial, setCurrentTestimonial] = useState(0);
+
+  const professionalTestimonials = [
+    { name: "Sarah Johnson", text: "Enhanced my skills and got promoted within 6 months!", position: "Software Engineer" },
+    { name: "Michael Chen", text: "The career guidance helped me transition to a better role.", position: "Product Manager" },
+    { name: "Emily Rodriguez", text: "Amazing networking opportunities and skill development.", position: "Data Scientist" },
+  ];
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -74,6 +83,16 @@ export default function ProfessionalLoginPage() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => setCurrentTestimonial((prev) => (prev + 1) % professionalTestimonials.length), 4000);
+    return () => clearInterval(interval);
+  }, [professionalTestimonials.length]);
+
+  // Block access if logged in as another role - MUST be after all hooks
+  if (isBlocked) {
+    return <ActiveSessionBlock intendedRole="professional" pageName="Professional Login" />;
+  }
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -116,11 +135,13 @@ export default function ProfessionalLoginPage() {
         email: prof.email || "",
         isAuthenticated: true,
         isAdmin: false,
+        userType: 'professional', // Explicit user type for RBAC
         timestamp: Date.now(),
       };
 
-      // Clear existing studentData cookie and set new one (keeps client-side session shape consistent)
+      // Clear existing cookies first (both studentData and collegeData)
       document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
       document.cookie = `studentData=${encodeURIComponent(JSON.stringify(professionalData))}; path=/; max-age=86400; SameSite=Strict`;
 
       // small delay to ensure cookie is set before redirect
@@ -134,18 +155,6 @@ export default function ProfessionalLoginPage() {
       setIsLoading(false);
     }
   };
-
-  const professionalTestimonials = [
-    { name: "Sarah Johnson", text: "Enhanced my skills and got promoted within 6 months!", position: "Software Engineer" },
-    { name: "Michael Chen", text: "The career guidance helped me transition to a better role.", position: "Product Manager" },
-    { name: "Emily Rodriguez", text: "Amazing networking opportunities and skill development.", position: "Data Scientist" },
-  ];
-
-  const [currentTestimonial, setCurrentTestimonial] = useState(0);
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTestimonial((prev) => (prev + 1) % professionalTestimonials.length), 4000);
-    return () => clearInterval(interval);
-  }, [professionalTestimonials.length]);
 
   return (
     <div className="min-h-screen flex bg-black text-white overflow-hidden">

@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 
 import { StudentRegistration } from "../student";
+import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
 export default function StudentRegisterPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -55,6 +56,7 @@ export default function StudentRegisterPageContent() {
   const [collegeInfo, setCollegeInfo] = useState<any>(null);
   const [showInvalidTokenDialog, setShowInvalidTokenDialog] = useState(false);
   const [isValidatingToken, setIsValidatingToken] = useState(true);
+  const { isBlocked, isLoading: sessionLoading } = useSessionBlock('student');
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,6 +73,11 @@ export default function StudentRegisterPageContent() {
     setCollegeToken(token);
     validateCollegeToken(token);
   }, [searchParams]);
+
+  // Block access if logged in as another role - MUST be after all hooks
+  if (isBlocked) {
+    return <ActiveSessionBlock intendedRole="student" pageName="Student Registration" />;
+  }
 
   const validateCollegeToken = async (token: string) => {
     try {
@@ -171,7 +178,7 @@ export default function StudentRegisterPageContent() {
             </div>
             <div className="flex items-center gap-4">
               {/* ThemeToggle removed so the page stays forced in dark mode */}
-                <Button
+              <Button
                 variant="outline"
                 onClick={() => (window.location.href = `/login?token=${collegeToken}`)}
                 className="border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
@@ -186,7 +193,7 @@ export default function StudentRegisterPageContent() {
                 Back to Home
               </Button>
             </div>
-            
+
           </div>
         </div>
       </div>
@@ -215,7 +222,7 @@ export default function StudentRegisterPageContent() {
         )}
 
         {/* Student Registration Form */}
-        <StudentRegistration 
+        <StudentRegistration
           collegeToken={collegeToken}
           collegeInfo={collegeInfo}
         />

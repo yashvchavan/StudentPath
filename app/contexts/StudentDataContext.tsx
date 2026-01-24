@@ -36,6 +36,32 @@ interface StudentDataContextType {
 
 const StudentDataContext = createContext<StudentDataContextType | undefined>(undefined);
 
+// Helper function to safely parse JSON
+function safeJsonParse(str: string): any {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
+}
+
+// Helper function to get cookie value
+function getCookieValue(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+
+  const cookie = document.cookie
+    .split("; ")
+    .find(row => row.startsWith(`${name}=`));
+
+  if (!cookie) return null;
+
+  try {
+    return decodeURIComponent(cookie.split("=")[1]);
+  } catch {
+    return null;
+  }
+}
+
 export function StudentDataProvider({ children }: { children: ReactNode }) {
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,19 +73,44 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
       setError(null);
 
       // Get data from cookie
-      const cookie = document.cookie
-        .split("; ")
-        .find(row => row.startsWith("studentData="));
-      
-      if (!cookie) {
-        throw new Error("No student data found");
+      const cookieValue = getCookieValue('studentData');
+
+      if (!cookieValue) {
+        throw new Error("No student data found - please log in again");
       }
 
-      const studentDataFromCookie = JSON.parse(decodeURIComponent(cookie.split("=")[1]));
-      
+      const studentDataFromCookie = safeJsonParse(cookieValue);
+
+      if (!studentDataFromCookie) {
+        throw new Error("Invalid session data - please log in again");
+      }
+
+      // Verify this is a student user
+      if (studentDataFromCookie.userType && studentDataFromCookie.userType !== 'student') {
+        throw new Error("Invalid user type - this dashboard is for students only");
+      }
+
+      // Get student_id - check both possible field names
+      const studentId = studentDataFromCookie.student_id || studentDataFromCookie.studentId;
+
+      // Get token - check both possible field names  
+      const token = studentDataFromCookie.token || studentDataFromCookie.collegeToken;
+
+      if (!studentId) {
+        console.error('Missing student_id in cookie data:', studentDataFromCookie);
+        throw new Error("Student ID not found in session - please log in again");
+      }
+
+      if (!token) {
+        console.error('Missing token in cookie data:', studentDataFromCookie);
+        throw new Error("Authentication token not found - please log in again");
+      }
+
+      console.log('Fetching student data with:', { studentId, token: token.substring(0, 10) + '...' });
+
       // Fetch detailed student data from API
       const apiResponse = await fetch(
-        `/api/student/data?studentId=${studentDataFromCookie.student_id}&token=${encodeURIComponent(studentDataFromCookie.token)}`,
+        `/api/student/data?studentId=${encodeURIComponent(studentId)}&token=${encodeURIComponent(token)}`,
         {
           headers: {
             'Cache-Control': 'no-cache',
@@ -69,12 +120,13 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
       );
 
       if (!apiResponse.ok) {
-        const errorData = await apiResponse.json();
+        const errorData = await apiResponse.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('API error response:', errorData);
         throw new Error(errorData.error || "Failed to fetch student data");
       }
 
       const apiData = await apiResponse.json();
-      
+
       if (apiData.success && apiData.data) {
         // Add safe defaults for empty fields
         const safeData = {
@@ -88,7 +140,7 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
           industry_focus: apiData.data.industry_focus || [],
           career_quiz_answers: apiData.data.career_quiz_answers || {}
         };
-        
+
         setStudentData(safeData);
       } else {
         throw new Error("Invalid API response");
@@ -107,11 +159,11 @@ export function StudentDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <StudentDataContext.Provider value={{ 
-      studentData, 
-      isLoading, 
-      error, 
-      refetchStudentData: fetchStudentData 
+    <StudentDataContext.Provider value={{
+      studentData,
+      isLoading,
+      error,
+      refetchStudentData: fetchStudentData
     }}>
       {children}
     </StudentDataContext.Provider>

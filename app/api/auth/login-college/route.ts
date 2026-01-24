@@ -65,13 +65,22 @@ export async function POST(request: NextRequest) {
     });
 
     // ✅ Set secure cookies properly
-    const cookieOptions = {
-      httpOnly: true,
+    // Note: collegeData cookie MUST NOT be httpOnly so client-side JavaScript
+    // can read it for session detection (ActiveSessionBlock component)
+    const collegeDataCookieOptions = {
+      httpOnly: false,      // ❗ Must be FALSE for client-side session detection
       secure: false,        // ❗ Must be FALSE for http://
       sameSite: 'strict' as const,
       path: '/'
     };
 
+    // Auth token can remain httpOnly for security
+    const authTokenCookieOptions = {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'strict' as const,
+      path: '/'
+    };
 
     response.cookies.set(
       'collegeData',
@@ -81,12 +90,14 @@ export async function POST(request: NextRequest) {
         email: college.email,
         token: college.college_token,
         type: 'college',
-        logo_url: college.logo_url || null
+        userType: 'college',  // Explicit user type for RBAC
+        logo_url: college.logo_url || null,
+        timestamp: Date.now() // Add timestamp for expiration checks
       }),
-      cookieOptions
+      collegeDataCookieOptions
     );
 
-    response.cookies.set('authToken', college.college_token, cookieOptions);
+    response.cookies.set('authToken', college.college_token, authTokenCookieOptions);
 
     return response;
 

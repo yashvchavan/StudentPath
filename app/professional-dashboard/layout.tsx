@@ -56,8 +56,26 @@ export default function DashboardLayout({
       const cookie = document.cookie
         .split('; ')
         .find((row) => row.startsWith('studentData='));
-      if (!cookie) return;
+      if (!cookie) {
+        // No cookie, redirect to login
+        router.push('/professional-login');
+        return;
+      }
       const data = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
+
+      // Verify this is a professional user
+      if (data.userType && data.userType !== 'professional') {
+        // Wrong user type, redirect to appropriate dashboard
+        if (data.userType === 'student') {
+          router.push('/dashboard');
+        } else if (data.userType === 'college') {
+          router.push('/admin');
+        } else {
+          router.push('/professional-login');
+        }
+        return;
+      }
+
       const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.email || null;
       setDisplayName(name);
       if (name) {
@@ -66,9 +84,10 @@ export default function DashboardLayout({
         setInitials(ivals.toUpperCase());
       }
     } catch (e) {
-      // ignore
+      console.error('Error parsing cookie:', e);
+      router.push('/professional-login');
     }
-  }, []);
+  }, [router]);
 
   const handleLogout = async () => {
     try {
@@ -76,8 +95,10 @@ export default function DashboardLayout({
     } catch (e) {
       console.error('Logout error', e);
     } finally {
-      // Clear client cookie as well and redirect
+      // Clear both cookies as well and redirect
       document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
+      localStorage.removeItem('collegeData');
       router.push('/professional-login');
     }
   };
@@ -115,8 +136,8 @@ export default function DashboardLayout({
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${isActive
-                    ? "bg-yellow-500 text-black font-semibold"
-                    : "text-gray-300 hover:bg-zinc-800 hover:text-white"
+                  ? "bg-yellow-500 text-black font-semibold"
+                  : "text-gray-300 hover:bg-zinc-800 hover:text-white"
                   }`}
               >
                 <item.icon className="w-5 h-5" />
