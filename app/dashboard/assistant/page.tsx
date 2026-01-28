@@ -6,23 +6,22 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Bot, Send, Lightbulb, BookOpen, Target, Sparkles, Loader2, AlertCircle, Plus, Trash2, MoreVertical, History, GraduationCap
+  Bot, Send, Lightbulb, BookOpen, Target, Sparkles, Loader2, AlertCircle, Plus, Trash2, History, GraduationCap, MessageSquare, Brain, Zap
 } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 
 interface Message {
   id: number
   role: "user" | "assistant"
   content: string
   created_at: string
+  context?: {
+    hasSyllabusData?: boolean
+    syllabusConfidence?: string
+    program?: string
+    semester?: number
+  }
 }
 
 interface Conversation {
@@ -30,13 +29,6 @@ interface Conversation {
   title: string
   created_at: string
   updated_at: string
-}
-
-interface Course {
-  id: number
-  course_name: string
-  year: string
-  syllab_doc: string
 }
 
 interface StudentData {
@@ -84,15 +76,6 @@ export default function AIAssistantPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
-  // Syllabus extraction states
-  const [courses, setCourses] = useState<Course[]>([])
-  const [selectedCourse, setSelectedCourse] = useState<number | null>(null)
-  const [extractYear, setExtractYear] = useState("")
-  const [extractSemester, setExtractSemester] = useState("")
-  const [extracting, setExtracting] = useState(false)
-  const [syllabusInfo, setSyllabusInfo] = useState<string>("")
-  const [showSyllabusPanel, setShowSyllabusPanel] = useState(false)
-
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -108,116 +91,30 @@ export default function AIAssistantPage() {
     }
 
     setStudentData(data)
-    // Use student_id for students, id for professionals
     const id = data.student_id || data.id
     if (id) {
       setUserId(id)
-      console.log("Logged in user ID:", id)
     } else {
       setError("User ID not found in session")
     }
   }, [])
 
-  // Load conversations and courses after userId is set
+  // Load conversations after userId is set
   useEffect(() => {
     if (userId) {
       loadConversations()
-      fetchCourses()
-      fetchSyllabusInfo()
 
-      // Show welcome message for new users
+      // Show welcome message
       if (messages.length === 0) {
         setMessages([{
           id: Date.now(),
           role: "assistant",
-          content: `Hi ${studentData?.first_name || "there"} — I'm your AI learning assistant. How can I help you today?`,
-          created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          content: `Hi ${studentData?.first_name || "there"}! 👋 I'm your **personalized AI learning assistant**.\n\nI have access to your complete academic profile, syllabus, skills, and career goals. I can help you with:\n\n📚 **Study Planning** - Get customized study schedules based on your syllabus\n🎯 **Career Guidance** - Connect your subjects with career opportunities\n🛤️ **Learning Roadmaps** - Build paths aligned with your semester structure\n💡 **Skill Development** - Identify gaps and get recommendations\n📊 **Subject Help** - Questions about your current and upcoming subjects\n\nTry asking me things like:\n- "What subjects should I focus on for web development?"\n- "Create a study plan for this semester"\n- "How does my current syllabus connect to AI careers?"\n\nWhat would you like to explore?`,
+          created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         }])
       }
     }
   }, [userId])
-
-  // Fetch available courses
-  const fetchCourses = async () => {
-    try {
-      const res = await fetch("/api/courses", { credentials: "include" })
-      const data = await res.json()
-      if (data.courses) setCourses(data.courses)
-    } catch (err) {
-      console.error("Error fetching courses:", err)
-    }
-  }
-
-  // Fetch existing syllabus info
-  // Fetch existing syllabus info - UPDATED VERSION
-  const fetchSyllabusInfo = async () => {
-    try {
-      const res = await fetch("/api/extract-syllabus", {
-        method: "GET",
-        credentials: "include",
-      })
-
-      const data = await res.json()
-
-      // Handle the new response structure
-      if (res.ok) {
-        if (data.hasData && data.user_info) {
-          // Syllabus exists - set the info
-          setSyllabusInfo(data.user_info)
-          console.log("✅ Syllabus info loaded:", data.user_info)
-        } else {
-          // No syllabus uploaded yet - this is normal, not an error
-          console.log("ℹ️ No syllabus uploaded yet")
-          setSyllabusInfo("")
-          // Optionally show the panel automatically for first-time users
-          // setShowSyllabusPanel(true)
-        }
-      } else {
-        // Only log actual errors (500, etc)
-        console.error("❌ Error fetching syllabus:", data.message || data.error)
-      }
-    } catch (err) {
-      console.error("❌ Error fetching syllabus info:", err)
-      // Don't show error to user - syllabus is optional
-    }
-  }
-
-  // Extract syllabus
-  const handleExtractSyllabus = async () => {
-    if (!selectedCourse || !extractYear || !extractSemester) {
-      alert("Please select course, year, and semester")
-      return
-    }
-
-    setExtracting(true)
-    try {
-      const res = await fetch("/api/extract-syllabus", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          course_id: selectedCourse,
-          year: extractYear,
-          semester: extractSemester,
-        }),
-        credentials: "include",
-      })
-
-      const data = await res.json()
-
-      if (res.ok && data.success) {
-        setSyllabusInfo(data.user_info)
-        alert(`✅ Syllabus extracted successfully!\n\nSubjects found: ${data.subjects_till_semester?.length || 0}\nSemesters parsed: ${data.total_semesters_parsed}`)
-        setShowSyllabusPanel(false)
-      } else {
-        alert(`Error: ${data.error || "Failed to extract syllabus"}`)
-      }
-    } catch (err) {
-      console.error(err)
-      alert("Failed to extract syllabus. Make sure Flask server is running.")
-    } finally {
-      setExtracting(false)
-    }
-  }
 
   const loadConversations = async () => {
     if (!userId) return
@@ -233,7 +130,6 @@ export default function AIAssistantPage() {
       setConversations(data.conversations || [])
     } catch (err: any) {
       console.error('Error loading conversations:', err)
-      setError(err.message || 'Failed to load conversations')
     } finally {
       setIsLoadingConversations(false)
     }
@@ -255,7 +151,7 @@ export default function AIAssistantPage() {
         id: msg.id,
         role: msg.role,
         content: msg.content,
-        created_at: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        created_at: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       })))
       setCurrentConversationId(conversationId)
     } catch (err: any) {
@@ -272,8 +168,8 @@ export default function AIAssistantPage() {
     setMessages([{
       id: Date.now(),
       role: "assistant",
-      content: `Hi ${studentData?.first_name || "there"} — I'm your AI learning assistant. How can I help you today?`,
-      created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      content: `Hi ${studentData?.first_name || "there"}! 👋 I'm your **personalized AI learning assistant**.\n\nI have access to your complete academic profile, syllabus, skills, and career goals. How can I help you today?`,
+      created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     }])
   }
 
@@ -304,6 +200,7 @@ export default function AIAssistantPage() {
     }
   }
 
+  // Send message to unified chat API
   const handleSendMessage = async () => {
     if (!message.trim() || isLoading || !userId) return
 
@@ -311,7 +208,7 @@ export default function AIAssistantPage() {
       id: Date.now(),
       role: "user",
       content: message.trim(),
-      created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -328,7 +225,6 @@ export default function AIAssistantPage() {
           conversationId: currentConversationId,
           userId,
           userType,
-          syllabusContext: syllabusInfo, // Include syllabus info in context
         }),
       })
 
@@ -343,6 +239,7 @@ export default function AIAssistantPage() {
         role: "assistant",
         content: data.message,
         created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        context: data.context
       }
 
       setMessages(prev => [...prev, assistantMessage])
@@ -357,8 +254,8 @@ export default function AIAssistantPage() {
       const errorMessage: Message = {
         id: Date.now() + 1,
         role: "assistant",
-        content: "I encountered an error processing your request. Please try again or rephrase your question.",
-        created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        content: `I encountered an error: ${err.message || "Unknown error"}. Please try again or rephrase your question.`,
+        created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {
@@ -423,135 +320,23 @@ export default function AIAssistantPage() {
     <DashboardLayout currentPage="assistant">
       <div className="w-full mx-auto p-3 md:p-4 space-y-4 bg-gradient-to-b from-background to-muted/20">
 
-        {/* Syllabus Context Info Banner */}
-        {syllabusInfo && (
-          <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="w-5 h-5 text-primary" />
-                  <CardTitle className="text-base">Your Syllabus Context</CardTitle>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowSyllabusPanel(true)}
-                >
-                  Update Syllabus
-                </Button>
+        {/* Header Card */}
+        <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{syllabusInfo}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Syllabus Extraction Panel */}
-        {showSyllabusPanel && (
-          <Card className="border-2 border-primary/20">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Extract Your Syllabus</CardTitle>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setShowSyllabusPanel(false)}
-                >
-                  ✕
-                </Button>
+              <div className="text-center">
+                <h2 className="font-semibold text-lg">Personalized Learning Assistant</h2>
+                <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <Zap className="w-3 h-3" />
+                  Powered by your syllabus, profile & career goals
+                </p>
               </div>
-              <CardDescription>
-                Select your course and current semester to extract relevant subjects
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Course</label>
-                  <Select onValueChange={(val) => setSelectedCourse(parseInt(val))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id.toString()}>
-                          {course.course_name} ({course.year})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Your Current Year</label>
-                  <Select onValueChange={setExtractYear}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="First">First Year</SelectItem>
-                      <SelectItem value="Second">Second Year</SelectItem>
-                      <SelectItem value="Third">Third Year</SelectItem>
-                      <SelectItem value="Fourth">Fourth Year</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">Current Semester</label>
-                  <Select onValueChange={setExtractSemester}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {["I", "II", "III", "IV", "V", "VI", "VII", "VIII"].map((sem) => (
-                        <SelectItem key={sem} value={sem}>
-                          Semester {sem}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleExtractSyllabus}
-                disabled={extracting || !selectedCourse || !extractYear || !extractSemester}
-                className="w-full"
-              >
-                {extracting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Extracting Syllabus...
-                  </>
-                ) : (
-                  <>
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Extract Syllabus
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {!syllabusInfo && !showSyllabusPanel && (
-          <Card className="border-dashed border-2 border-primary/30 bg-primary/5">
-            <CardContent className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-3">
-                <GraduationCap className="w-6 h-6 text-primary" />
-                <div>
-                  <p className="font-medium">Extract your syllabus for personalized guidance</p>
-                  <p className="text-sm text-muted-foreground">Get recommendations based on your current subjects</p>
-                </div>
-              </div>
-              <Button onClick={() => setShowSyllabusPanel(true)}>
-                Setup Now
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Error Alert */}
         {error && (
@@ -573,18 +358,19 @@ export default function AIAssistantPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left Sidebar - Conversations */}
           <div className="lg:col-span-3">
-            <Card className="h-[calc(100vh-140px)] flex flex-col shadow-lg border-0">
+            <Card className="h-[calc(100vh-280px)] flex flex-col shadow-lg border-0">
               <CardHeader className="pb-3 px-4 py-3 bg-gradient-to-b from-background to-muted/30 border-b">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base flex items-center gap-2">
                     <History className="w-4 h-4" />
-                    Chats
+                    Conversations
                   </CardTitle>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={startNewConversation}
                     className="h-7 w-7 p-0"
+                    title="New conversation"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -592,61 +378,49 @@ export default function AIAssistantPage() {
               </CardHeader>
               <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full">
-                  <div className="p-3 space-y-3">
+                  <div className="p-3 space-y-2">
                     {isLoadingConversations ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                       </div>
                     ) : conversations.length === 0 ? (
                       <div className="text-center py-8 px-2">
-                        <p className="text-sm text-muted-foreground mb-1">No conversations yet</p>
-                        <p className="text-xs text-muted-foreground">Start chatting!</p>
+                        <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">No conversations yet</p>
+                        <p className="text-xs text-muted-foreground mt-1">Start chatting!</p>
                       </div>
                     ) : (
-                      <>
-                        {conversations.map((conv) => (
-                          <div
-                            key={conv.id}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Open conversation ${conv.title}`}
-                            onClick={() => loadConversation(conv.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') loadConversation(conv.id)
-                              if (e.key === 'Delete') deleteConversation(conv.id)
-                            }}
-                            className={`p-3.5 rounded-xl cursor-pointer transition-all group hover:bg-muted/60 flex items-center justify-between gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${currentConversationId === conv.id ? 'bg-primary/5 border-l-4 border-primary shadow-sm' : ''
-                              }`}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 bg-gradient-to-br from-primary/10 to-primary/30 rounded-full flex items-center justify-center text-sm font-medium text-primary flex-shrink-0 shadow-sm">
-                                {conv.title ? conv.title.charAt(0).toUpperCase() : 'C'}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-base font-medium break-words whitespace-normal">{conv.title}</p>
-                                <p className="text-sm text-muted-foreground mt-0.5">
-                                  {new Date(conv.updated_at).toLocaleDateString([], {
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={(e) => deleteConversation(conv.id, e)}
-                                className="h-8 w-auto p-2 rounded hover:bg-destructive/10"
-                                title="Delete conversation"
-                              >
-                                <Trash2 className="w-4 h-4 text-destructive" />
-                              </Button>
-                            </div>
+                      conversations.map((conv) => (
+                        <div
+                          key={conv.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => loadConversation(conv.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') loadConversation(conv.id)
+                          }}
+                          className={`p-3 rounded-xl cursor-pointer transition-all group hover:bg-muted/60 flex items-center justify-between gap-2 ${currentConversationId === conv.id ? 'bg-primary/10 border-l-4 border-primary' : ''
+                            }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{conv.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(conv.updated_at).toLocaleDateString([], {
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </p>
                           </div>
-                        ))}
-                      </>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => deleteConversation(conv.id, e)}
+                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))
                     )}
                   </div>
                 </ScrollArea>
@@ -656,46 +430,78 @@ export default function AIAssistantPage() {
 
           {/* Center - Chat Area */}
           <div className="lg:col-span-9">
-            <Card className="h-[calc(100vh-140px)] flex flex-col">
-              <CardHeader className="px-3 py-2 border-b">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Bot className="w-5 h-5 text-primary" />
-                  Chat
-                </CardTitle>
+            <Card className="h-[calc(100vh-280px)] flex flex-col shadow-lg">
+              <CardHeader className="px-4 py-3 border-b bg-gradient-to-r from-primary/5 to-transparent">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-primary" />
+                    Chat
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      <BookOpen className="w-3 h-3 mr-1" />
+                      Syllabus-Aware
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      GPT-4 Turbo
+                    </Badge>
+                  </div>
+                </div>
               </CardHeader>
+
               <div className="flex-1 overflow-hidden">
                 <ScrollArea className="h-full" ref={scrollAreaRef}>
-                  <div className="p-3 space-y-3">
+                  <div className="p-4 space-y-4">
                     {messages.map((msg) => (
                       <div
                         key={msg.id}
                         className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                       >
                         <div
-                          className={`max-w-[90%] p-6 rounded-2xl shadow-md backdrop-blur-sm ${msg.role === "user"
-                            ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
-                            : "bg-gradient-to-br from-muted to-muted/80"
+                          className={`max-w-[85%] p-5 rounded-2xl shadow-md ${msg.role === "user"
+                              ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
+                              : "bg-gradient-to-br from-muted to-muted/80"
                             }`}
                         >
+                          {/* Context indicator for assistant messages */}
+                          {msg.role === "assistant" && msg.context && (
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              {msg.context.hasSyllabusData && (
+                                <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 border-green-500/20">
+                                  <BookOpen className="w-3 h-3 mr-1" />
+                                  Syllabus Data
+                                </Badge>
+                              )}
+                              {msg.context.program && (
+                                <Badge variant="outline" className="text-xs">
+                                  <GraduationCap className="w-3 h-3 mr-1" />
+                                  {msg.context.program}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
                           <div className="whitespace-pre-wrap break-words text-base leading-7">
-                            {msg.role === "assistant" ? formatMessageContent(msg.content) : <p className="text-base leading-7">{msg.content}</p>}
+                            {msg.role === "assistant" ? formatMessageContent(msg.content) : (
+                              <p className="text-base leading-7">{msg.content}</p>
+                            )}
                           </div>
-                          <p
-                            className={`text-sm mt-3 ${msg.role === "user"
-                              ? "text-primary-foreground/80"
-                              : "text-muted-foreground"
-                              }`}
-                          >
+
+                          <p className={`text-xs mt-3 ${msg.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                            }`}>
                             {msg.created_at}
                           </p>
                         </div>
                       </div>
                     ))}
+
                     {isLoading && (
                       <div className="flex justify-start">
-                        <div className="max-w-[85%] p-4 rounded-xl bg-gradient-to-br from-muted to-muted/80 shadow-md backdrop-blur-sm flex items-center gap-3">
-                          <Loader2 className="w-5 h-5 animate-spin text-primary/80" />
-                          <span className="text-base font-medium text-muted-foreground">Thinking...</span>
+                        <div className="max-w-[85%] p-4 rounded-xl bg-gradient-to-br from-muted to-muted/80 shadow-md flex items-center gap-3">
+                          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                          <span className="text-sm text-muted-foreground">
+                            Analyzing your profile & syllabus...
+                          </span>
                         </div>
                       </div>
                     )}
@@ -704,10 +510,11 @@ export default function AIAssistantPage() {
                 </ScrollArea>
               </div>
 
+              {/* Input Area */}
               <div className="p-4 border-t bg-gradient-to-b from-background to-muted/20">
                 <div className="flex gap-3">
                   <Input
-                    placeholder="Ask me anything about your studies..."
+                    placeholder="Ask about your studies, career, subjects, or learning paths..."
                     className="shadow-sm"
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -723,12 +530,53 @@ export default function AIAssistantPage() {
                     onClick={handleSendMessage}
                     size="icon"
                     disabled={isLoading || !message.trim()}
+                    className="shrink-0"
                   >
                     {isLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Send className="w-4 h-4" />
                     )}
+                  </Button>
+                </div>
+
+                {/* Quick suggestions */}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setMessage("What subjects should I focus on for web development?")}
+                  >
+                    <Target className="w-3 h-3 mr-1" />
+                    Web Dev Path
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setMessage("Create a study plan based on my current semester")}
+                  >
+                    <BookOpen className="w-3 h-3 mr-1" />
+                    Study Plan
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setMessage("How do my syllabus subjects connect to AI careers?")}
+                  >
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    AI Career
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => setMessage("What skills should I develop alongside my syllabus?")}
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Skills Gap
                   </Button>
                 </div>
               </div>
