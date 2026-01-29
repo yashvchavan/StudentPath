@@ -7,9 +7,13 @@ export default function AIPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the professional assistant chat page where the chat UI lives
+    // Redirect to the professional assistant chat page
     router.replace("/professional-dashboard/assistant");
   }, [router]);
 
-  return null;
+  return (
+    <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+      <div className="animate-pulse text-zinc-500">Redirecting to AI Assistant...</div>
+    </div>
+  );
 }

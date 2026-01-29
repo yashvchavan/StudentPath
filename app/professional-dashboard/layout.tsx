@@ -17,7 +17,9 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  LogOut
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -53,14 +55,24 @@ export default function DashboardLayout({
 
   useEffect(() => {
     try {
-      const cookie = document.cookie
+      // First try professionalData cookie (new format)
+      let cookie = document.cookie
         .split('; ')
-        .find((row) => row.startsWith('studentData='));
+        .find((row) => row.startsWith('professionalData='));
+
+      // Fallback to studentData with userType check (legacy support)
+      if (!cookie) {
+        cookie = document.cookie
+          .split('; ')
+          .find((row) => row.startsWith('studentData='));
+      }
+
       if (!cookie) {
         // No cookie, redirect to login
         router.push('/professional-login');
         return;
       }
+
       const data = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
 
       // Verify this is a professional user
@@ -95,7 +107,8 @@ export default function DashboardLayout({
     } catch (e) {
       console.error('Logout error', e);
     } finally {
-      // Clear both cookies as well and redirect
+      // Clear all session cookies and redirect
+      document.cookie = "professionalData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
       document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
       document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
       localStorage.removeItem('collegeData');
@@ -104,14 +117,14 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-black text-white">
+    <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* Sidebar */}
       <aside
         className={`${collapsed ? "w-20" : "w-64"
-          } bg-zinc-900 p-4 flex flex-col transition-all duration-300`}
+          } bg-zinc-950 border-r border-zinc-800 p-4 flex flex-col transition-all duration-300 h-full`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-shrink-0">
           {!collapsed && (
             <h1 className="text-lg font-bold text-yellow-400">Pro Dashboard</h1>
           )}
@@ -128,7 +141,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -149,39 +162,23 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 overflow-y-auto">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Topbar */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-2xl font-bold">{displayName ? `Welcome, ${displayName}` : 'Welcome Back'}</h2>
-            <p className="text-sm text-gray-400">Professional dashboard</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
-              <div className="text-gray-400 text-sm">Signed in as</div>
-              <div className="font-medium">{displayName ?? 'Professional'}</div>
-            </div>
-
-            {/* Profile dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="inline-flex items-center gap-3">
-                  <Avatar>
-                    {/* If portfolio contains an image url we display it via AvatarImage in profile page fetch flow; here use initials fallback */}
-                    <AvatarFallback className="bg-yellow-500 text-black font-bold">{initials ?? 'P'}</AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-
-              <DropdownMenuContent align="end" className="w-48">
-                {/* <DropdownMenuItem onSelect={() => (window.location.href = '/professional-dashboard/profile')}>Profile</DropdownMenuItem> */}
-                <DropdownMenuItem onSelect={handleLogout} data-variant="destructive">Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className="flex justify-end items-center px-6 py-2 flex-shrink-0 border-b border-zinc-800/50">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </div>
 
-        {children}
+        <div className="flex-1 overflow-hidden relative">
+          {children}
+        </div>
       </main>
     </div>
   );

@@ -20,7 +20,25 @@ function getActiveSession(): ActiveSession | null {
     if (typeof window === 'undefined') return null;
 
     try {
-        // Check for student/professional session (from studentData cookie)
+        // Check for professional session (from new professionalData cookie)
+        const professionalDataMatch = document.cookie.match(/professionalData=([^;]+)/);
+        if (professionalDataMatch) {
+            const decoded = decodeURIComponent(professionalDataMatch[1]);
+            const data = JSON.parse(decoded);
+
+            if (data.isAuthenticated && data.timestamp) {
+                const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000;
+                if (!isExpired) {
+                    return {
+                        role: 'professional',
+                        name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
+                        email: data.email
+                    };
+                }
+            }
+        }
+
+        // Check for student/professional session (from studentData cookie - legacy or student)
         const studentDataMatch = document.cookie.match(/studentData=([^;]+)/);
         if (studentDataMatch) {
             const decoded = decodeURIComponent(studentDataMatch[1]);
@@ -135,6 +153,7 @@ export function ActiveSessionBlock({ intendedRole, pageName }: ActiveSessionBloc
         setIsLoggingOut(true);
 
         // Clear all auth cookies
+        document.cookie = "professionalData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
         document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
         document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
 
@@ -142,6 +161,7 @@ export function ActiveSessionBlock({ intendedRole, pageName }: ActiveSessionBloc
         if (typeof window !== 'undefined') {
             localStorage.removeItem('collegeData');
             localStorage.removeItem('studentData');
+            localStorage.removeItem('professionalData');
         }
 
         // Small delay to ensure cookies are cleared

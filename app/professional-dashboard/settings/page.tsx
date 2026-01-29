@@ -23,7 +23,10 @@ export default function SettingsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const cookie = document.cookie.split('; ').find(row => row.startsWith('studentData='));
+        let cookie = document.cookie.split('; ').find(row => row.startsWith('professionalData='));
+        if (!cookie) {
+          cookie = document.cookie.split('; ').find(row => row.startsWith('studentData='));
+        }
         if (!cookie) throw new Error('Not authenticated');
         const session = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
         const id = session.id;
@@ -181,7 +184,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-black p-6">
+    <div className="h-full overflow-y-auto bg-black p-6 custom-scrollbar">
       <div className="max-w-7xl mx-auto">
         {/* Header with yellow accent */}
         <div className="mb-8">

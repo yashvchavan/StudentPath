@@ -103,7 +103,7 @@ function validateProfessionalData(data: string | undefined): boolean {
     // Check userType - must be professional
     if (parsed.userType === 'professional') return true;
 
-    // Legacy support: professional has id but no student_id
+    // Legacy support: if studentData cookie contains a professional
     if (parsed.id && !parsed.student_id && !parsed.isAdmin) return true;
 
     return false;
@@ -198,19 +198,22 @@ export function middleware(request: NextRequest) {
 
     // Get cookies
     const studentDataRaw = request.cookies.get('studentData')?.value;
+    const professionalDataRaw = request.cookies.get('professionalData')?.value;
     const collegeDataRaw = request.cookies.get('collegeData')?.value;
 
     // Parse cookie data - decode URIComponent for consistency
     const studentData = studentDataRaw ? safeJsonParse(decodeURIComponent(studentDataRaw)) : null;
+    const professionalData = professionalDataRaw ? safeJsonParse(decodeURIComponent(professionalDataRaw)) : null;
     const collegeData = collegeDataRaw ? safeJsonParse(decodeURIComponent(collegeDataRaw)) : null;
 
     console.log('Path:', path);
     console.log('Has studentData:', !!studentData);
+    console.log('Has professionalData:', !!professionalData);
     console.log('Has collegeData:', !!collegeData);
 
     // Determine current user type
     const isValidStudent = validateStudentData(studentDataRaw);
-    const isValidProfessional = validateProfessionalData(studentDataRaw);
+    const isValidProfessional = validateProfessionalData(professionalDataRaw) || validateProfessionalData(studentDataRaw);
     const isValidCollege = validateCollegeData(collegeDataRaw);
 
     let currentUserType: UserType = null;
@@ -229,6 +232,7 @@ export function middleware(request: NextRequest) {
       console.log('Clearing cookies and redirecting to:', redirectUrl);
       const response = NextResponse.redirect(new URL(redirectUrl, request.url));
       response.cookies.delete('studentData');
+      response.cookies.delete('professionalData');
       response.cookies.delete('collegeData');
       return response;
     };

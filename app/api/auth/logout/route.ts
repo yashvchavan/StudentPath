@@ -12,6 +12,13 @@ export async function POST() {
       secure: false,      // false for localhost
     });
 
+    response.cookies.set("professionalData", "", {
+      path: "/",
+      maxAge: 0,
+      sameSite: "strict",
+      secure: false,
+    });
+
     response.cookies.set("collegeData", "", {
       path: "/",
       maxAge: 0,

@@ -42,8 +42,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // read professional data from cookie set at login (professional login uses studentData cookie)
-        const cookie = document.cookie.split('; ').find(row => row.startsWith('studentData='));
+        // Check professionalData cookie primarily
+        let cookie = document.cookie.split('; ').find(row => row.startsWith('professionalData='));
+
+        // Fallback to studentData for legacy session support
+        if (!cookie) {
+          cookie = document.cookie.split('; ').find(row => row.startsWith('studentData='));
+        }
+
         if (!cookie) throw new Error('Not authenticated');
         const session = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
         const professionalId = session.id;
@@ -89,7 +95,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div>
+    <div className="h-full overflow-y-auto p-6 custom-scrollbar">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">{prof.first_name} {prof.last_name}</h1>
         <div className="flex items-center gap-3 text-gray-400 mt-1">
@@ -123,7 +129,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Briefcase className="w-4 h-4"/> Profile</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Profile</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -149,7 +155,7 @@ export default function DashboardPage() {
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Code className="w-4 h-4"/> Skills</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Code className="w-4 h-4" /> Skills</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
@@ -166,7 +172,7 @@ export default function DashboardPage() {
 
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="w-4 h-4"/> Career</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Users className="w-4 h-4" /> Career</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

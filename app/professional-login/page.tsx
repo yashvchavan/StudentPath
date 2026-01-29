@@ -114,7 +114,7 @@ export default function ProfessionalLoginPage() {
       const res = await fetch("/api/professionals/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, userType: "professional" }),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
@@ -125,24 +125,10 @@ export default function ProfessionalLoginPage() {
         return;
       }
 
-      // Successful login - set cookie similar to student login so other pages (chat) can read session
-      const prof = data.professional || data.user || data;
-
-      const professionalData = {
-        id: prof.id,
-        first_name: prof.firstName || prof.first_name || "",
-        last_name: prof.lastName || prof.last_name || "",
-        email: prof.email || "",
-        isAuthenticated: true,
-        isAdmin: false,
-        userType: 'professional', // Explicit user type for RBAC
-        timestamp: Date.now(),
-      };
-
-      // Clear existing cookies first (both studentData and collegeData)
+      // The API now sets the professionalData cookie automatically
+      // Just need to clear any conflicting cookies on the client side
       document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
       document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      document.cookie = `studentData=${encodeURIComponent(JSON.stringify(professionalData))}; path=/; max-age=86400; SameSite=Strict`;
 
       // small delay to ensure cookie is set before redirect
       await new Promise((resolve) => setTimeout(resolve, 100));
