@@ -2681,8 +2681,12 @@ export default function RegisterPage() {
     // Determine which block page to show based on what the user might be trying to access
     // Since they're on register-other, they might be trying to register as professional or college
     // We'll default to showing a professional block since that's likely the common case
-    const intendedRole = userType || 'professional';
-    return <ActiveSessionBlock intendedRole={intendedRole} pageName="Registration" />;
+    // We must pass a role that CONFLICTS with the active session to force the blocker to render.
+    // If we pass the same role (e.g. professional), ActiveSessionBlock returns null (allowing access),
+    // causing a blank screen because we returned valid JSX that rendered nothing.
+    // Since this is a registration page, NO logged-in user should access it.
+    const conflictingRole = activeRole === 'professional' ? 'student' : 'professional';
+    return <ActiveSessionBlock intendedRole={conflictingRole} pageName="Registration" />;
   }
 
   if (!userType) {

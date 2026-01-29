@@ -1,27 +1,37 @@
 "use client"
 
 import DashboardLayout from "@/components/dashboard-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  Bot, Send, Lightbulb, BookOpen, Target, Sparkles, Loader2, AlertCircle, Plus, Trash2, History, GraduationCap, MessageSquare, Brain, Zap
+  Loader2, Bot, Send, History, Plus, Trash2, AlertCircle, PanelLeftClose, PanelLeft,
+  Sparkles, Building2, GraduationCap, Briefcase, Edit3, RotateCcw, Copy, Check, ChevronDown,
+  ChevronUp, FileText, BookOpen, Target, TrendingUp, MessageSquare, X, Search, Zap, Lightbulb
 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { useState, useRef, useEffect } from "react"
+
+interface Source {
+  title?: string
+  url?: string
+  snippet?: string
+  type?: string
+  score?: number
+}
 
 interface Message {
   id: number
   role: "user" | "assistant"
   content: string
   created_at: string
-  context?: {
-    hasSyllabusData?: boolean
-    syllabusConfidence?: string
-    program?: string
-    semester?: number
-  }
+  sources?: Source[]
+  isEditing?: boolean
+  originalContent?: string
+  context?: any
 }
 
 interface Conversation {
@@ -64,7 +74,7 @@ function getStudentDataFromCookie(): StudentData | null {
 export default function AIAssistantPage() {
   const [studentData, setStudentData] = useState<StudentData | null>(null)
   const [userId, setUserId] = useState<number | null>(null)
-  const [userType, setUserType] = useState<"student" | "professional">("student")
+  const userType = "student"
 
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
@@ -74,14 +84,17 @@ export default function AIAssistantPage() {
   const [isLoadingConversations, setIsLoadingConversations] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  // UI State
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [copiedMessageId, setCopiedMessageId] = useState<number | null>(null)
+  const [expandedSources, setExpandedSources] = useState<Set<number>>(new Set())
+  const [searchTerm, setSearchTerm] = useState("")
 
-  // Load user data from cookie on mount
+  // Student-specific context
+  const [showContextPanel, setShowContextPanel] = useState(false)
+
   useEffect(() => {
     const data = getStudentDataFromCookie()
 
@@ -99,18 +112,38 @@ export default function AIAssistantPage() {
     }
   }, [])
 
-  // Load conversations after userId is set
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
   useEffect(() => {
     if (userId) {
       loadConversations()
+      // We don't fetch a separate profile API like professionals do, data is in cookie/context
 
-      // Show welcome message
       if (messages.length === 0) {
+        const welcomeMessage = `👋 **Welcome back, ${studentData?.first_name || 'Student'}!**
+
+I'm your **personalized AI learning assistant**. I have access to your complete academic profile, syllabus, skills, and career goals. I can help you with:
+
+📚 **Study Planning** — Get customized study schedules based on your syllabus
+🎯 **Career Guidance** — Connect your subjects with career opportunities
+🛤️ **Learning Roadmaps** — Build paths aligned with your semester structure
+💡 **Skill Development** — Identify gaps and get recommendations
+
+**Try asking me:**
+- "How should I prepare for a career in AI?"
+- "Create a study plan for my current semester"
+- "What certifications would boost my profile?"
+- "Analyze my skills and suggest improvements"
+
+What would you like to explore today?`
+
         setMessages([{
           id: Date.now(),
-          role: "assistant",
-          content: `Hi ${studentData?.first_name || "there"}! 👋 I'm your **personalized AI learning assistant**.\n\nI have access to your complete academic profile, syllabus, skills, and career goals. I can help you with:\n\n📚 **Study Planning** - Get customized study schedules based on your syllabus\n🎯 **Career Guidance** - Connect your subjects with career opportunities\n🛤️ **Learning Roadmaps** - Build paths aligned with your semester structure\n💡 **Skill Development** - Identify gaps and get recommendations\n📊 **Subject Help** - Questions about your current and upcoming subjects\n\nTry asking me things like:\n- "What subjects should I focus on for web development?"\n- "Create a study plan for this semester"\n- "How does my current syllabus connect to AI careers?"\n\nWhat would you like to explore?`,
-          created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          role: 'assistant',
+          content: welcomeMessage,
+          created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }])
       }
     }
@@ -118,14 +151,10 @@ export default function AIAssistantPage() {
 
   const loadConversations = async () => {
     if (!userId) return
-
     try {
       setIsLoadingConversations(true)
       const response = await fetch(`/api/chat/conversations?userId=${userId}&userType=${userType}`)
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to load conversations')
-      }
+      if (!response.ok) throw new Error('Failed to load conversations')
       const data = await response.json()
       setConversations(data.conversations || [])
     } catch (err: any) {
@@ -137,21 +166,19 @@ export default function AIAssistantPage() {
 
   const loadConversation = async (conversationId: number) => {
     if (!userId) return
-
     try {
       setIsLoading(true)
       setError(null)
       const response = await fetch(`/api/chat/conversations/${conversationId}?userId=${userId}&userType=${userType}`)
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to load conversation')
-      }
+      if (!response.ok) throw new Error('Failed to load conversation')
       const data = await response.json()
       setMessages(data.messages.map((msg: any) => ({
         id: msg.id,
         role: msg.role,
         content: msg.content,
-        created_at: new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        created_at: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sources: msg.sources || [],
+        context: msg.context
       })))
       setCurrentConversationId(conversationId)
     } catch (err: any) {
@@ -167,16 +194,17 @@ export default function AIAssistantPage() {
     setError(null)
     setMessages([{
       id: Date.now(),
-      role: "assistant",
-      content: `Hi ${studentData?.first_name || "there"}! 👋 I'm your **personalized AI learning assistant**.\n\nI have access to your complete academic profile, syllabus, skills, and career goals. How can I help you today?`,
-      created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      role: 'assistant',
+      content: `👋 **Ready for a new conversation!**\n\nHow can I assist you with your studies or career today?`,
+      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }])
+    inputRef.current?.focus()
   }
 
   const deleteConversation = async (conversationId: number, e?: React.MouseEvent) => {
     if (!userId) return
     if (e) e.stopPropagation()
-    if (!confirm('Are you sure you want to delete this conversation?')) return
+    if (!confirm('Delete this conversation?')) return
 
     try {
       const response = await fetch(`/api/chat/conversations/${conversationId}`, {
@@ -184,64 +212,57 @@ export default function AIAssistantPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, userType }),
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete conversation')
-      }
-
+      if (!response.ok) throw new Error('Failed to delete conversation')
       setConversations(prev => prev.filter(c => c.id !== conversationId))
-      if (currentConversationId === conversationId) {
-        startNewConversation()
-      }
+      if (currentConversationId === conversationId) startNewConversation()
     } catch (err: any) {
       console.error('Error deleting conversation:', err)
       setError(err.message || 'Failed to delete conversation')
     }
   }
 
-  // Send message to unified chat API
-  const handleSendMessage = async () => {
-    if (!message.trim() || isLoading || !userId) return
+  const handleSendMessage = async (customMessage?: string) => {
+    const msgToSend = customMessage || message.trim()
+    if (!msgToSend || isLoading || !userId) return
 
     const userMessage: Message = {
       id: Date.now(),
-      role: "user",
-      content: message.trim(),
-      created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      role: 'user',
+      content: msgToSend,
+      created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
-
     setMessages(prev => [...prev, userMessage])
-    setMessage("")
+    setMessage('')
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage.content,
+          message: msgToSend,
           conversationId: currentConversationId,
           userId,
-          userType,
+          userType
         }),
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to get response")
+        throw new Error(errorData.error || 'Failed to get response')
       }
 
       const data = await response.json()
+
       const assistantMessage: Message = {
         id: Date.now() + 1,
-        role: "assistant",
+        role: 'assistant',
         content: data.message,
-        created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        sources: data.sources || [],
         context: data.context
       }
-
       setMessages(prev => [...prev, assistantMessage])
 
       if (!currentConversationId && data.conversationId) {
@@ -249,13 +270,13 @@ export default function AIAssistantPage() {
         await loadConversations()
       }
     } catch (err: any) {
-      console.error("Chat error:", err)
-      setError(err.message || "Failed to send message. Please try again.")
+      console.error('Chat error:', err)
+      setError(err.message || 'Failed to send message')
       const errorMessage: Message = {
         id: Date.now() + 1,
-        role: "assistant",
-        content: `I encountered an error: ${err.message || "Unknown error"}. Please try again or rephrase your question.`,
-        created_at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        role: 'assistant',
+        content: '❌ I encountered an error processing your request. Please try again.',
+        created_at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {
@@ -263,52 +284,130 @@ export default function AIAssistantPage() {
     }
   }
 
-  const formatMessageContent = (content: string) => {
-    const lines = content.split('\n')
-    return lines.map((line, i) => {
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return <h3 key={i} className="font-bold text-lg mt-4 mb-2">{line.replace(/\*\*/g, '')}</h3>
+  // Edit message functionality
+  const handleEditMessage = (messageId: number) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId
+        ? { ...msg, isEditing: true, originalContent: msg.content }
+        : msg
+    ))
+  }
+
+  const handleCancelEdit = (messageId: number) => {
+    setMessages(prev => prev.map(msg =>
+      msg.id === messageId
+        ? { ...msg, isEditing: false, content: msg.originalContent || msg.content }
+        : msg
+    ))
+  }
+
+  const handleResendEdited = async (messageId: number, newContent: string) => {
+    const msgIndex = messages.findIndex(m => m.id === messageId)
+    if (msgIndex === -1) return
+    setMessages(prev => prev.slice(0, msgIndex))
+    await handleSendMessage(newContent)
+  }
+
+  // Copy message content
+  const handleCopyMessage = async (messageId: number, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageId(messageId)
+      setTimeout(() => setCopiedMessageId(null), 2000)
+    } catch (e) {
+      console.error('Failed to copy:', e)
+    }
+  }
+
+  // Toggle sources visibility
+  const toggleSources = (messageId: number) => {
+    setExpandedSources(prev => {
+      const next = new Set(prev)
+      if (next.has(messageId)) {
+        next.delete(messageId)
+      } else {
+        next.add(messageId)
       }
-      if (line.includes('**')) {
-        const parts = line.split('**')
-        return <p key={i} className="mb-2 text-base leading-7">{parts.map((part, j) => j % 2 === 0 ? part : <strong key={j}>{part}</strong>)}</p>
-      }
-      if (/^\s*[-•]/.test(line)) {
-        return <li key={i} className="ml-5 mb-1.5 text-base leading-7">{line.replace(/^[-•]\s*/, '')}</li>
-      }
-      if (/^\d+\./.test(line.trim())) {
-        return <li key={i} className="ml-5 mb-1.5 text-base leading-7 list-decimal">{line.replace(/^\d+\.\s*/, '')}</li>
-      }
-      if (line.includes('http')) {
-        const urlRegex = /(https?:\/\/[^\s]+)/g
-        const parts = line.split(urlRegex)
-        return <p key={i} className="mb-2 text-base leading-7">{parts.map((part, j) =>
-          urlRegex.test(part)
-            ? <a key={j} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 underline break-all">{part}</a>
-            : part
-        )}</p>
-      }
-      if (line.trim() === '') {
-        return <div key={i} className="h-2"></div>
-      }
-      return <p key={i} className="mb-2 text-base leading-7">{line}</p>
+      return next
     })
   }
 
-  // Show loading or error state if user not authenticated
+  // Format message content with modern markdown-like styling
+  const formatMessageContent = (content: string) => {
+    const lines = content.split('\n')
+    return lines.map((line, i) => {
+      const trimmedLine = line.trim();
+
+      // Handle Headers (up to 6 levels)
+      const headerMatch = trimmedLine.match(/^(#{1,6})\s+(.*)/);
+      if (headerMatch) {
+        const depth = headerMatch[1].length;
+        const text = headerMatch[2];
+
+        switch (depth) {
+          case 1: return <h1 key={i} className="font-extrabold text-2xl mt-6 mb-4 text-white">{text}</h1>;
+          case 2: return <h2 key={i} className="font-bold text-xl mt-5 mb-3 text-white border-b border-zinc-800 pb-2">{text}</h2>;
+          case 3: return <h3 key={i} className="font-bold text-lg mt-4 mb-2 text-yellow-500">{text}</h3>;
+          case 4: return <h4 key={i} className="font-bold text-base mt-3 mb-1 text-zinc-100 italic">{text}</h4>;
+          default: return <h5 key={i} className="font-semibold text-sm mt-3 mb-1 text-zinc-300">{text}</h5>;
+        }
+      }
+
+      // Handle List Items
+      const listMatch = trimmedLine.match(/^(\d+\.|[-•*+]|[\u{1F300}-\u{1F9FF}])\s*(.*)/u);
+      if (listMatch) {
+        const bullet = listMatch[1];
+        const isNumbered = /^\d+\./.test(bullet);
+        const content = listMatch[2];
+        const parts = content.split('**');
+
+        return (
+          <div key={i} className="flex items-start gap-3 ml-2 mb-2">
+            <span className={`text-zinc-400 font-medium flex-shrink-0 ${isNumbered ? 'min-w-[1.2rem]' : 'min-w-[1rem]'}`}>{bullet}</span>
+            <p className="leading-relaxed text-zinc-200">
+              {parts.map((part, j) => j % 2 === 0 ? part : <strong key={j} className="text-white font-semibold">{part}</strong>)}
+            </p>
+          </div>
+        );
+      }
+
+      // Handle Bold text and standard paragraphs
+      if (trimmedLine.includes('**')) {
+        const parts = trimmedLine.split('**')
+        return (
+          <p key={i} className="mb-2 leading-relaxed text-zinc-200">
+            {parts.map((part, j) => j % 2 === 0 ? part : <strong key={j} className="text-white font-semibold">{part}</strong>)}
+          </p>
+        )
+      }
+
+      if (trimmedLine === '') {
+        return <div key={i} className="h-3"></div>
+      }
+
+      return <p key={i} className="mb-2 leading-relaxed text-zinc-200">{line}</p>
+    })
+  }
+
+  // Quick suggestions
+  const quickSuggestions = [
+    { icon: Building2, label: "Career Prep", prompt: "Help me prepare for interviews in my field" },
+    { icon: GraduationCap, label: "Study Plan", prompt: "Create a study plan for my current semester" },
+    { icon: TrendingUp, label: "Career Path", prompt: "What career paths match my skills?" },
+    { icon: Target, label: "Skill Gap", prompt: "Identify skill gaps for my target role" },
+  ]
+
   if (!userId) {
     return (
       <DashboardLayout currentPage="assistant">
         <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-          <Card className="p-6 max-w-md">
+          <Card className="p-6 max-w-md bg-zinc-900 border-zinc-800">
             <CardContent className="flex flex-col items-center gap-4">
-              <AlertCircle className="w-12 h-12 text-destructive" />
-              <p className="text-lg font-medium">{error || "Loading user data..."}</p>
-              {error && (
-                <Button onClick={() => window.location.href = '/login'}>
-                  Go to Login
-                </Button>
-              )}
+              <AlertCircle className="w-12 h-12 text-red-500" />
+              <p className="text-lg font-medium text-white">{error || 'Loading...'}</p>
+              <Button onClick={() => window.location.href = '/login'} className="bg-yellow-500 text-black hover:bg-yellow-400">
+                Go to Login
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -318,269 +417,328 @@ export default function AIAssistantPage() {
 
   return (
     <DashboardLayout currentPage="assistant">
-      <div className="w-full mx-auto p-3 md:p-4 space-y-4 bg-gradient-to-b from-background to-muted/20">
+      {/* 
+        Adjusted height to calc(100vh - 8rem) to account for top navbar (~4rem) and padding/margins.
+        This ensures the internal ScrollArea has a fixed constraint to scroll against.
+      */}
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-8rem)] bg-background border rounded-xl overflow-hidden shadow-sm relative isolate">
 
-        {/* Header Card */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <Brain className="w-5 h-5 text-primary" />
-              </div>
-              <div className="text-center">
-                <h2 className="font-semibold text-lg">Personalized Learning Assistant</h2>
-                <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
-                  <Zap className="w-3 h-3" />
-                  Powered by your syllabus, profile & career goals
-                </p>
-              </div>
+        {/* Collapsible Sidebar */}
+        <div className={`${sidebarCollapsed ? 'w-0 opacity-0 lg:hidden' : 'w-full lg:w-80'} transition-all duration-300 bg-card border-r flex flex-col overflow-hidden absolute inset-0 z-40 lg:relative lg:inset-auto lg:z-auto`}>
+          {/* Sidebar Header */}
+          <div className="p-4 border-b flex items-center justify-between bg-muted/30">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold text-sm">Conversations</span>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
-            <p className="text-sm text-destructive flex-1">{error}</p>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setError(null)}
-              className="h-7 text-xs"
-            >
-              Dismiss
-            </Button>
-          </div>
-        )}
-
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* Left Sidebar - Conversations */}
-          <div className="lg:col-span-3">
-            <Card className="h-[calc(100vh-280px)] flex flex-col shadow-lg border-0">
-              <CardHeader className="pb-3 px-4 py-3 bg-gradient-to-b from-background to-muted/30 border-b">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <History className="w-4 h-4" />
-                    Conversations
-                  </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={startNewConversation}
-                    className="h-7 w-7 p-0"
-                    title="New conversation"
+                    className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 text-muted-foreground hover:text-blue-600"
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
+                </TooltipTrigger>
+                <TooltipContent>New Chat</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          {/* Search Bar */}
+          <div className="px-4 py-2 border-b bg-card">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search chats..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 h-9 bg-muted/50 border-input text-xs focus:ring-blue-500/20 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Conversations List */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="p-2 space-y-1">
+              {isLoadingConversations ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
-              </CardHeader>
-              <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="p-3 space-y-2">
-                    {isLoadingConversations ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : conversations.length === 0 ? (
-                      <div className="text-center py-8 px-2">
-                        <MessageSquare className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
-                        <p className="text-sm text-muted-foreground">No conversations yet</p>
-                        <p className="text-xs text-muted-foreground mt-1">Start chatting!</p>
-                      </div>
-                    ) : (
-                      conversations.map((conv) => (
-                        <div
-                          key={conv.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => loadConversation(conv.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') loadConversation(conv.id)
-                          }}
-                          className={`p-3 rounded-xl cursor-pointer transition-all group hover:bg-muted/60 flex items-center justify-between gap-2 ${currentConversationId === conv.id ? 'bg-primary/10 border-l-4 border-primary' : ''
-                            }`}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{conv.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(conv.updated_at).toLocaleDateString([], {
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </p>
-                          </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-8 px-4">
+                  <History className="w-8 h-8 mx-auto mb-3 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">No conversations yet</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Start a new chat!</p>
+                </div>
+              ) : (
+                conversations
+                  .filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((conv) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => loadConversation(conv.id)}
+                      className={`group p-3 mx-2 my-1 rounded-xl cursor-pointer transition-all border ${currentConversationId === conv.id
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-sm'
+                        : 'bg-transparent border-transparent hover:bg-muted/50 hover:border-border'
+                        }`}
+                    >
+                      <div className="flex flex-col gap-2">
+                        <p className={`text-sm font-semibold line-clamp-2 leading-snug transition-colors ${currentConversationId === conv.id ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
+                          {conv.title}
+                        </p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                            <History className="w-3 h-3" />
+                            {new Date(conv.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </p>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={(e) => deleteConversation(conv.id, e)}
-                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           >
-                            <Trash2 className="w-3 h-3 text-destructive" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            </Card>
+                      </div>
+                    </div>
+                  ))
+              )}
+            </div>
           </div>
 
-          {/* Center - Chat Area */}
-          <div className="lg:col-span-9">
-            <Card className="h-[calc(100vh-280px)] flex flex-col shadow-lg">
-              <CardHeader className="px-4 py-3 border-b bg-gradient-to-r from-primary/5 to-transparent">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-primary" />
-                    Chat
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
-                      <BookOpen className="w-3 h-3 mr-1" />
-                      Syllabus-Aware
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      GPT-4 Turbo
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
+          {/* Bottom Sidebar Action */}
+          <div className="p-4 border-t bg-muted/20">
+            <Button
+              onClick={startNewConversation}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 h-10"
+            >
+              <Plus className="w-4 h-4" />
+              New Conversation
+            </Button>
+          </div>
+        </div>
 
-              <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full" ref={scrollAreaRef}>
-                  <div className="p-4 space-y-4">
-                    {messages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                      >
-                        <div
-                          className={`max-w-[85%] p-5 rounded-2xl shadow-md ${msg.role === "user"
-                              ? "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
-                              : "bg-gradient-to-br from-muted to-muted/80"
-                            }`}
-                        >
-                          {/* Context indicator for assistant messages */}
-                          {msg.role === "assistant" && msg.context && (
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              {msg.context.hasSyllabusData && (
-                                <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 border-green-500/20">
-                                  <BookOpen className="w-3 h-3 mr-1" />
-                                  Syllabus Data
-                                </Badge>
-                              )}
-                              {msg.context.program && (
-                                <Badge variant="outline" className="text-xs">
-                                  <GraduationCap className="w-3 h-3 mr-1" />
-                                  {msg.context.program}
-                                </Badge>
-                              )}
-                            </div>
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col bg-background min-w-0">
+          {/* Chat Header */}
+          <div className="px-4 py-3 border-b flex items-center justify-between bg-card">
+            <div className="flex items-center gap-3">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                      className="h-8 w-8 p-0 lg:hidden text-muted-foreground hover:text-foreground"
+                    >
+                      {sidebarCollapsed ? (
+                        <PanelLeft className="w-4 h-4" />
+                      ) : (
+                        <PanelLeftClose className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+                  <Bot className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-sm md:text-base">AI Learning Assistant</h2>
+                  <p className="text-[10px] md:text-xs text-muted-foreground">Powered by GPT-4 + Your Syllabus</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                <Sparkles className="w-3 h-3 mr-1" />
+                GPT-4
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                <GraduationCap className="w-3 h-3 mr-1" />
+                Student
+              </Badge>
+            </div>
+          </div>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar scroll-smooth p-4">
+            <div className="space-y-6 max-w-4xl mx-auto">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] group`}>
+                    {/* Message Content */}
+                    <div className={`p-4 rounded-2xl shadow-sm ${msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      : 'bg-muted/50 border text-foreground rounded-bl-sm'
+                      }`}>
+
+                      {msg.isEditing ? (
+                        <div className="space-y-3">
+                          <Textarea
+                            defaultValue={msg.content}
+                            className="w-full min-h-[100px] bg-background border-input"
+                            id={`edit-${msg.id}`}
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCancelEdit(msg.id)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                const textarea = document.getElementById(`edit-${msg.id}`) as HTMLTextAreaElement
+                                if (textarea) {
+                                  handleResendEdited(msg.id, textarea.value)
+                                }
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <RotateCcw className="w-3 h-3 mr-1" />
+                              Resend
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none">
+                          {msg.role === 'assistant' ? formatMessageContent(msg.content) : (
+                            <p className="leading-relaxed">{msg.content}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Message Actions & Sources */}
+                    {!msg.isEditing && (
+                      <div className="flex items-center justify-between mt-1 px-1">
+                        <span className="text-[10px] text-muted-foreground">
+                          {msg.created_at}
+                        </span>
+
+                        <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          {msg.role === 'user' && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleEditMessage(msg.id)}
+                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                  >
+                                    <Edit3 className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit & Resend</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
 
-                          <div className="whitespace-pre-wrap break-words text-base leading-7">
-                            {msg.role === "assistant" ? formatMessageContent(msg.content) : (
-                              <p className="text-base leading-7">{msg.content}</p>
-                            )}
-                          </div>
-
-                          <p className={`text-xs mt-3 ${msg.role === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
-                            }`}>
-                            {msg.created_at}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-
-                    {isLoading && (
-                      <div className="flex justify-start">
-                        <div className="max-w-[85%] p-4 rounded-xl bg-gradient-to-br from-muted to-muted/80 shadow-md flex items-center gap-3">
-                          <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                          <span className="text-sm text-muted-foreground">
-                            Analyzing your profile & syllabus...
-                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleCopyMessage(msg.id, msg.content)}
+                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                >
+                                  {copiedMessageId === msg.id ? (
+                                    <Check className="w-3 h-3 text-green-500" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Copy</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       </div>
                     )}
-                    <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
-              </div>
-
-              {/* Input Area */}
-              <div className="p-4 border-t bg-gradient-to-b from-background to-muted/20">
-                <div className="flex gap-3">
-                  <Input
-                    placeholder="Ask about your studies, career, subjects, or learning paths..."
-                    className="shadow-sm"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage()
-                      }
-                    }}
-                    disabled={isLoading}
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    size="icon"
-                    disabled={isLoading || !message.trim()}
-                    className="shrink-0"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
                 </div>
+              ))}
 
-                {/* Quick suggestions */}
-                <div className="flex flex-wrap gap-2 mt-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setMessage("What subjects should I focus on for web development?")}
-                  >
-                    <Target className="w-3 h-3 mr-1" />
-                    Web Dev Path
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setMessage("Create a study plan based on my current semester")}
-                  >
-                    <BookOpen className="w-3 h-3 mr-1" />
-                    Study Plan
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setMessage("How do my syllabus subjects connect to AI careers?")}
-                  >
-                    <Lightbulb className="w-3 h-3 mr-1" />
-                    AI Career
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => setMessage("What skills should I develop alongside my syllabus?")}
-                  >
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Skills Gap
-                  </Button>
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] p-4 rounded-2xl bg-muted/50 border rounded-bl-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                      <span className="text-muted-foreground text-xs font-medium">Thinking...</span>
+                    </div>
+                  </div>
                 </div>
+              )}
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
+          </div>
+
+          {/* Input Area */}
+          <div className="p-4 border-t bg-card">
+            <div className="max-w-4xl mx-auto space-y-4">
+              {/* Quick Suggestions - Only show when no messages or empty chat */}
+              {messages.length <= 1 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                  {quickSuggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSendMessage(s.prompt)}
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted border border-transparent hover:border-blue-200 dark:hover:border-blue-800 transition-all text-center group"
+                    >
+                      <div className="p-2 rounded-full bg-background group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 text-blue-600 transition-colors">
+                        <s.icon className="w-4 h-4" />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">{s.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="relative flex gap-2 items-end bg-muted/30 p-2 rounded-xl border focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
+                <Textarea
+                  ref={inputRef}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="Ask focused questions about your studies..."
+                  className="min-h-[50px] max-h-[200px] border-0 focus-visible:ring-0 resize-none bg-transparent placeholder:text-muted-foreground py-3"
+                />
+                <Button
+                  onClick={() => handleSendMessage()}
+                  disabled={!message.trim() || isLoading}
+                  className="mb-1 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
               </div>
-            </Card>
+              <div className="flex justify-between items-center text-[10px] text-muted-foreground px-1">
+                <p>AI can make mistakes. Verify important info.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -36,32 +36,34 @@ function getActiveSession(): ActiveSession | null {
                     };
                 }
             }
-        }
+        } else {
+            // Only check for student/professional session (from studentData cookie - legacy or student) if no professionalData
+            const studentDataMatch = document.cookie.match(/studentData=([^;]+)/);
+            if (studentDataMatch) {
+                const decoded = decodeURIComponent(studentDataMatch[1]);
+                const data = JSON.parse(decoded);
 
-        // Check for student/professional session (from studentData cookie - legacy or student)
-        const studentDataMatch = document.cookie.match(/studentData=([^;]+)/);
-        if (studentDataMatch) {
-            const decoded = decodeURIComponent(studentDataMatch[1]);
-            const data = JSON.parse(decoded);
-
-            if (data.isAuthenticated && data.timestamp) {
-                // Check if not expired (24 hours)
-                const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000;
-                if (!isExpired) {
-                    // Determine if student or professional
-                    if (data.userType === 'professional' || (data.id && !data.student_id && !data.isAdmin)) {
-                        return {
-                            role: 'professional',
-                            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
-                            email: data.email
-                        };
-                    }
-                    if (data.userType === 'student' || data.student_id) {
-                        return {
-                            role: 'student',
-                            name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
-                            email: data.email
-                        };
+                if (data.isAuthenticated && data.timestamp) {
+                    // Check if not expired (24 hours)
+                    const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000;
+                    if (!isExpired) {
+                        // Determine if student or professional - STRICT check
+                        // If it's a legacy cookie and says professional, we trust it IF professionalData cookie was absent
+                        if (data.userType === 'professional') {
+                            return {
+                                role: 'professional',
+                                name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
+                                email: data.email
+                            };
+                        }
+                        // Otherwise assume student
+                        if (data.userType === 'student' || data.student_id) {
+                            return {
+                                role: 'student',
+                                name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
+                                email: data.email
+                            };
+                        }
                     }
                 }
             }

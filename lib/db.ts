@@ -8,9 +8,12 @@ const dbConfig = {
   database: process.env.DB_NAME || 'studentpath',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
-  connectTimeout: 10000,
-  connectionLimit: 10,
+  connectionLimit: 10, // Increased from 5
   queueLimit: 0,
+  connectTimeout: 10000,
+  acquireTimeout: 30000, // Add timeout for acquiring connections
+  idleTimeoutMillis: 60000, // Close idle connections after 60s
+  maxIdle: 5, // Maximum idle connections
 };
 
 // Create connection pool
@@ -22,7 +25,7 @@ export default pool;
 export async function initializeDatabase() {
   try {
     const connection = await pool.getConnection();
-    
+
     // Create colleges table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS colleges (
@@ -128,6 +131,68 @@ export async function initializeDatabase() {
         expires_at TIMESTAMP NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create user_settings table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS user_settings (
+        settings_id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT UNIQUE NOT NULL,
+        email_notifications BOOLEAN DEFAULT TRUE,
+        push_notifications BOOLEAN DEFAULT TRUE,
+        assignment_reminders BOOLEAN DEFAULT TRUE,
+        goal_updates BOOLEAN DEFAULT TRUE,
+        weekly_reports BOOLEAN DEFAULT FALSE,
+        course_updates BOOLEAN DEFAULT TRUE,
+        profile_visibility BOOLEAN DEFAULT TRUE,
+        progress_sharing BOOLEAN DEFAULT FALSE,
+        analytics_opt_in BOOLEAN DEFAULT TRUE,
+        theme VARCHAR(20) DEFAULT 'system',
+        language VARCHAR(20) DEFAULT 'en',
+        timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create chat_conversations table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        user_type ENUM('student', 'professional', 'college') NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        is_archived BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user (user_id, user_type)
+      )
+    `);
+
+    // Create chat_messages table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        conversation_id INT NOT NULL,
+        role ENUM('user', 'assistant', 'system') NOT NULL,
+        content TEXT NOT NULL,
+        tokens_used INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Create chat_context table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS chat_context (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        user_type ENUM('student', 'professional', 'college') NOT NULL,
+        context_data JSON,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY idx_user_context (user_id, user_type)
       )
     `);
 
