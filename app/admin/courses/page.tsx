@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Trash, X, ExternalLink, Download, BookOpen, Database, Loader2, CheckCircle, Upload } from "lucide-react"
+import { Plus, Trash, X, ExternalLink, Download, Database, Loader2, CheckCircle, Upload, FileText, Calendar } from "lucide-react"
 
 interface Course {
   id: number
@@ -21,19 +21,13 @@ interface Course {
 export default function AdminCoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [extracting, setExtracting] = useState<number | null>(null)
   const [ingesting, setIngesting] = useState<number | null>(null)
-  const [userInfo, setUserInfo] = useState<string>("")
 
   const [courseName, setCourseName] = useState("")
   const [year, setYear] = useState<Date | undefined>()
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [autoIngest, setAutoIngest] = useState(true)
-
-  // Year and semester for extraction
-  const [extractYear, setExtractYear] = useState("")
-  const [extractSemester, setExtractSemester] = useState("")
 
   // Ingest result
   const [ingestResult, setIngestResult] = useState<{
@@ -98,43 +92,6 @@ export default function AdminCoursesPage() {
       })
     } finally {
       setIngesting(null)
-    }
-  }
-
-  // 🔹 Extract syllabus using Flask
-  const handleExtractSyllabus = async (courseId: number) => {
-    if (!extractYear || !extractSemester) {
-      alert("Please select both year and semester for extraction")
-      return
-    }
-
-    setExtracting(courseId)
-    try {
-      const res = await fetch("/api/extract-syllabus", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          course_id: courseId,
-          year: extractYear,
-          semester: extractSemester,
-        }),
-        credentials: "include",
-      })
-
-      const data = await res.json()
-
-      if (res.ok && data.success) {
-        setUserInfo(data.user_info)
-        alert(`✅ Syllabus extracted successfully!\n\nSubjects found: ${data.subjects_till_semester?.length || 0}\nSemesters parsed: ${data.total_semesters_parsed}`)
-      } else {
-        const errorMessage = data.message || data.error || "Failed to extract syllabus"
-        alert(`❌ ${errorMessage}`)
-      }
-    } catch (err) {
-      console.error(err)
-      alert("Failed to extract syllabus. Network error or server is down.")
-    } finally {
-      setExtracting(null)
     }
   }
 
@@ -267,260 +224,255 @@ export default function AdminCoursesPage() {
   }
 
   return (
-    <AdminShell title="Courses" description="Courses Management & AI Syllabus Ingestion" showRange>
-      {/* User Info Display */}
-      {userInfo && (
-        <div className="mb-4 p-4 bg-gray-100 border border-gray-200 rounded">
-          <h3 className="font-semibold text-sm mb-2 text-gray-900">📚 Current User Info:</h3>
-          <p className="text-sm text-gray-900">{userInfo}</p>
-        </div>
-      )}
-
-      {/* Ingest Result Alert */}
-      {ingestResult && (
-        <Alert className={`mb-4 ${ingestResult.success ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50'}`}>
-          {ingestResult.success ? (
-            <CheckCircle className="w-4 h-4 text-green-600" />
-          ) : (
-            <X className="w-4 h-4 text-red-600" />
-          )}
-          <AlertDescription>
-            <div className={`font-semibold ${ingestResult.success ? 'text-green-700' : 'text-red-700'}`}>
-              {ingestResult.message}
-            </div>
-            {ingestResult.chunks !== undefined && (
-              <div className="text-sm mt-1 flex gap-2">
-                <Badge variant="secondary">Chunks: {ingestResult.chunks}</Badge>
-                <Badge variant="secondary">Vectors: {ingestResult.vectors}</Badge>
-              </div>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Uploaded Syllabuses</h2>
-        <Button onClick={() => setShowForm(!showForm)}>
+    <AdminShell
+      title="Courses"
+      description="Courses Management & AI Syllabus Ingestion"
+      rightContent={
+        <Button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-900/30"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Upload New Syllabus
         </Button>
-      </div>
-
-      {/* 🔹 Upload Form Dropdown */}
-      {showForm && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Upload New Syllabus</CardTitle>
-              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-            <CardDescription>Upload a syllabus PDF and optionally ingest it to the AI Vector Database</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Course Dropdown */}
-              <div>
-                <label className="block text-sm mb-1">Course</label>
-                <Select onValueChange={setCourseName}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Select course" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Mechanical">Mechanical</SelectItem>
-                    <SelectItem value="Electrical">Electrical</SelectItem>
-                    <SelectItem value="Computer">Computer</SelectItem>
-                    <SelectItem value="IT">IT</SelectItem>
-                    <SelectItem value="ENTC">ENTC</SelectItem>
-                    <SelectItem value="Civil">Civil</SelectItem>
-                  </SelectContent>
-                </Select>
+      }
+    >
+      <div className="space-y-6">
+        {/* Ingest Result Alert */}
+        {ingestResult && (
+          <Alert className={`border-2 ${ingestResult.success ? 'border-emerald-500/50 bg-emerald-950/30' : 'border-red-500/50 bg-red-950/30'}`}>
+            {ingestResult.success ? (
+              <CheckCircle className="w-5 h-5 text-emerald-400" />
+            ) : (
+              <X className="w-5 h-5 text-red-400" />
+            )}
+            <AlertDescription>
+              <div className={`font-semibold text-base ${ingestResult.success ? 'text-emerald-300' : 'text-red-300'}`}>
+                {ingestResult.message}
               </div>
+              {ingestResult.chunks !== undefined && (
+                <div className="flex gap-2 mt-2">
+                  <Badge className="bg-emerald-900/50 text-emerald-300 border-emerald-700">
+                    Chunks: {ingestResult.chunks}
+                  </Badge>
+                  <Badge className="bg-emerald-900/50 text-emerald-300 border-emerald-700">
+                    Vectors: {ingestResult.vectors}
+                  </Badge>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
 
-              {/* Year Selector */}
-              <div>
-                <label className="block text-sm mb-1">Year</label>
-                <Select onValueChange={(val) => setYear(new Date(parseInt(val), 0, 1))}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 6 }, (_, i) => 2020 + i).map((yr) => (
-                      <SelectItem key={yr} value={yr.toString()}>
-                        {yr}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="block text-sm mb-1">Upload Syllabus (PDF/Doc/JSON)</label>
-                <Input
-                  type="file"
-                  accept=".pdf,.doc,.docx,.json"
-                  onChange={(e) => setFile(e.target.files?.[0] || null)}
-                />
-              </div>
-
-              {/* Auto-ingest toggle */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="autoIngest"
-                  checked={autoIngest}
-                  onChange={(e) => setAutoIngest(e.target.checked)}
-                  className="w-4 h-4 rounded border-gray-300"
-                />
-                <label htmlFor="autoIngest" className="text-sm">
-                  <span className="font-medium">Auto-ingest to AI Vector DB</span>
-                  <span className="text-muted-foreground ml-2">(Enables student chatbot queries)</span>
-                </label>
-              </div>
-
-              <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload {autoIngest && "& Ingest"}
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 🔹 Uploaded Courses List */}
-      {courses.length === 0 ? (
-        <p className="text-sm text-gray-500">No syllabus uploaded yet.</p>
-      ) : (
-        <>
-          {/* Extraction Controls */}
-          <Card className="mb-4 bg-gray-50">
-            <CardHeader className="py-3">
-              <CardTitle className="text-base">Extract Syllabus Data</CardTitle>
-              <CardDescription>Select student's year and semester to extract relevant subjects</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 items-end">
+        {/* 🔹 Upload Form */}
+        {showForm && (
+          <Card className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm shadow-xl">
+            <CardHeader className="pb-4 border-b border-zinc-800">
+              <div className="flex items-center justify-between">
                 <div>
-                  <label className="block text-sm mb-1">Student Year</label>
-                  <Select onValueChange={setExtractYear}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Select year" />
+                  <CardTitle className="text-xl text-zinc-100">Upload New Syllabus</CardTitle>
+                  <CardDescription className="text-zinc-400 mt-1">
+                    Upload a syllabus PDF and optionally ingest it to the AI Vector Database
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowForm(false)}
+                  className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Course Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Course Department</label>
+                  <Select onValueChange={setCourseName}>
+                    <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-blue-500 focus:ring-blue-500/20">
+                      <SelectValue placeholder="Select course department" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="First">First Year</SelectItem>
-                      <SelectItem value="Second">Second Year</SelectItem>
-                      <SelectItem value="Third">Third Year</SelectItem>
-                      <SelectItem value="Fourth">Fourth Year</SelectItem>
+                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                      <SelectItem value="Mechanical" className="text-zinc-100 focus:bg-zinc-700">Mechanical Engineering</SelectItem>
+                      <SelectItem value="Electrical" className="text-zinc-100 focus:bg-zinc-700">Electrical Engineering</SelectItem>
+                      <SelectItem value="Computer" className="text-zinc-100 focus:bg-zinc-700">Computer Engineering</SelectItem>
+                      <SelectItem value="IT" className="text-zinc-100 focus:bg-zinc-700">Information Technology</SelectItem>
+                      <SelectItem value="ENTC" className="text-zinc-100 focus:bg-zinc-700">Electronics & Telecommunication</SelectItem>
+                      <SelectItem value="Civil" className="text-zinc-100 focus:bg-zinc-700">Civil Engineering</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Year Selector */}
                 <div>
-                  <label className="block text-sm mb-1">Current Semester</label>
-                  <Select onValueChange={setExtractSemester}>
-                    <SelectTrigger className="w-[150px]">
-                      <SelectValue placeholder="Select semester" />
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Academic Year</label>
+                  <Select onValueChange={(val) => setYear(new Date(parseInt(val), 0, 1))}>
+                    <SelectTrigger className="w-full bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-blue-500 focus:ring-blue-500/20">
+                      <SelectValue placeholder="Select academic year" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {["I", "II", "III", "IV", "V", "VI", "VII", "VIII"].map((sem) => (
-                        <SelectItem key={sem} value={sem}>
-                          Semester {sem}
+                    <SelectContent className="bg-zinc-800 border-zinc-700">
+                      {Array.from({ length: 6 }, (_, i) => 2020 + i).map((yr) => (
+                        <SelectItem key={yr} value={yr.toString()} className="text-zinc-100 focus:bg-zinc-700">
+                          {yr}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+
+                {/* File Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Syllabus Document</label>
+                  <Input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.json"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="bg-zinc-800 border-zinc-700 text-zinc-100 file:bg-zinc-700 file:text-zinc-100 file:border-0 file:mr-4 file:py-2 file:px-4 file:rounded-md hover:file:bg-zinc-600"
+                  />
+                  <p className="text-xs text-zinc-500 mt-2">Supported formats: PDF, DOC, DOCX, JSON</p>
+                </div>
+
+                {/* Auto-ingest toggle */}
+                <div className="flex items-start gap-3 p-4 bg-zinc-800/50 rounded-lg border border-zinc-700">
+                  <input
+                    type="checkbox"
+                    id="autoIngest"
+                    checked={autoIngest}
+                    onChange={(e) => setAutoIngest(e.target.checked)}
+                    className="w-5 h-5 mt-0.5 rounded border-zinc-600 bg-zinc-700 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900"
+                  />
+                  <label htmlFor="autoIngest" className="text-sm cursor-pointer">
+                    <span className="font-semibold text-zinc-200 block">Auto-ingest to AI Vector Database</span>
+                    <span className="text-zinc-400 mt-1 block">Automatically process and index this syllabus for AI-powered student queries</span>
+                  </label>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium shadow-lg shadow-blue-900/30"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload {autoIngest && "& Ingest to AI"}
+                    </>
+                  )}
+                </Button>
+              </form>
             </CardContent>
           </Card>
+        )}
 
-          <ul className="space-y-3">
+        {/* 🔹 Uploaded Courses List */}
+        {courses.length === 0 ? (
+          <Card className="border-zinc-800 bg-zinc-900/30">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <FileText className="w-16 h-16 text-zinc-700 mb-4" />
+              <p className="text-lg font-medium text-zinc-400">No syllabuses uploaded yet</p>
+              <p className="text-sm text-zinc-500 mt-1">Upload your first course syllabus to get started</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
             {courses.map((c) => (
-              <li key={c.id} className="flex items-center justify-between border rounded-lg p-4 bg-white hover:shadow-sm transition-shadow">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{c.course_name} ({c.year})</p>
-                    {ingestResult?.courseId === c.id && ingestResult.success && (
-                      <Badge className="bg-green-100 text-green-700 border-green-200">
-                        <Database className="w-3 h-3 mr-1" />
-                        In Vector DB
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-3 mt-2">
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-blue-600 underline text-sm"
-                      onClick={() => handleViewSyllabus(c.syllab_doc, c.course_name, c.year)}
-                    >
-                      <ExternalLink className="w-3 h-3 mr-1" />
-                      View Syllabus
-                    </Button>
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-green-600 underline text-sm"
-                      onClick={() => handleDownloadSyllabus(c.syllab_doc, c.course_name, c.year)}
-                    >
-                      <Download className="w-3 h-3 mr-1" />
-                      Download PDF
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {/* Ingest to Vector DB Button */}
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleIngestToVectorDB(c)}
-                    disabled={ingesting === c.id}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    {ingesting === c.id ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        Ingesting...
-                      </>
-                    ) : (
-                      <>
-                        <Database className="w-4 h-4 mr-1" />
-                        Ingest to AI
-                      </>
-                    )}
-                  </Button>
+              <Card
+                key={c.id}
+                className="border-zinc-800 bg-zinc-900/50 backdrop-blur-sm hover:bg-zinc-900/70 transition-all duration-200 hover:shadow-lg hover:shadow-blue-900/10"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Course Info */}
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-900/30 rounded-lg border border-blue-800/50">
+                          <FileText className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-zinc-100">{c.course_name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                            <span className="text-sm text-zinc-400">Academic Year {c.year}</span>
+                          </div>
+                        </div>
+                      </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExtractSyllabus(c.id)}
-                    disabled={extracting === c.id || !extractYear || !extractSemester}
-                  >
-                    <BookOpen className="w-4 h-4 mr-1" />
-                    {extracting === c.id ? "Extracting..." : "Extract"}
-                  </Button>
+                      {/* Status Badge */}
+                      {ingestResult?.courseId === c.id && ingestResult.success && (
+                        <Badge className="bg-emerald-900/40 text-emerald-300 border-emerald-700/50">
+                          <Database className="w-3 h-3 mr-1.5" />
+                          Ingested to Vector DB
+                        </Badge>
+                      )}
 
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDelete(c.id, c)}
-                  >
-                    <Trash className="w-4 h-4 mr-1" /> Delete
-                  </Button>
-                </div>
-              </li>
+                      {/* Action Links */}
+                      <div className="flex gap-4">
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto text-blue-400 hover:text-blue-300 text-sm font-medium"
+                          onClick={() => handleViewSyllabus(c.syllab_doc, c.course_name, c.year)}
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                          View Syllabus
+                        </Button>
+                        <Button
+                          variant="link"
+                          className="p-0 h-auto text-emerald-400 hover:text-emerald-300 text-sm font-medium"
+                          onClick={() => handleDownloadSyllabus(c.syllab_doc, c.course_name, c.year)}
+                        >
+                          <Download className="w-3.5 h-3.5 mr-1.5" />
+                          Download PDF
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      {/* Ingest to Vector DB Button */}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleIngestToVectorDB(c)}
+                        disabled={ingesting === c.id}
+                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-900/30"
+                      >
+                        {ingesting === c.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            Ingesting...
+                          </>
+                        ) : (
+                          <>
+                            <Database className="w-4 h-4 mr-1.5" />
+                            Ingest to AI
+                          </>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(c.id, c)}
+                        className="bg-red-600 hover:bg-red-700 shadow-md shadow-red-900/30"
+                      >
+                        <Trash className="w-4 h-4 mr-1.5" />
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </ul>
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </AdminShell>
   )
 }

@@ -53,6 +53,7 @@ type AdminShellProps = PropsWithChildren<{
   title?: string
   description?: string
   showRange?: boolean
+  rightContent?: React.ReactNode
 }>
 
 const adminNav = [
@@ -70,7 +71,7 @@ const adminNav = [
   { icon: LifeBuoy, label: "Support Center", href: "/admin/support" },
 ]
 
-export default function AdminShell({ title, description, showRange = false, children }: AdminShellProps) {
+export default function AdminShell({ title, description, showRange = false, rightContent, children }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchFocused, setSearchFocused] = useState(false)
@@ -258,25 +259,28 @@ export default function AdminShell({ title, description, showRange = false, chil
 
         {/* Main Content */}
         <main className="flex-1 p-6 lg:p-8 lg:ml-64 bg-black min-h-screen">
-          {(title || description || showRange) && (
+          {(title || description || showRange || rightContent) && (
             <div className="flex items-center justify-between mb-6">
               <div>
                 {title && <h2 className="text-3xl font-bold text-white">{title}</h2>}
                 {description && <p className="text-zinc-400 mt-1">{description}</p>}
               </div>
-              {showRange && (
-                <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                  <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700 text-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-zinc-700">
-                    <SelectItem value="24h">Last 24h</SelectItem>
-                    <SelectItem value="7d">Last 7 days</SelectItem>
-                    <SelectItem value="30d">Last 30 days</SelectItem>
-                    <SelectItem value="90d">Last 90 days</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              <div className="flex items-center gap-3">
+                {rightContent}
+                {showRange && (
+                  <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
+                    <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700 text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                      <SelectItem value="24h">Last 24h</SelectItem>
+                      <SelectItem value="7d">Last 7 days</SelectItem>
+                      <SelectItem value="30d">Last 30 days</SelectItem>
+                      <SelectItem value="90d">Last 90 days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
             </div>
           )}
           {children}
