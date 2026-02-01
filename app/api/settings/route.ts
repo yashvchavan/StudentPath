@@ -1,26 +1,33 @@
-// app/api/settings/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import pool from "@/lib/db"
+import jwt from "jsonwebtoken"
 
 // ---------------------- GET → Fetch user settings ----------------------
 export async function GET(req: NextRequest) {
+  let connection;
   try {
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get("studentData")?.value
+    const token = cookieStore.get("auth_session")?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    const { student_id, token, isAuthenticated } = studentData
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (e) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    }
 
-    if (!isAuthenticated) {
+    const { id: student_id, role: userType } = decoded;
+
+    if (!student_id || userType !== 'student') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const connection = await pool.getConnection()
+    connection = await pool.getConnection()
 
     // Fetch student profile - UPDATED to match your schema
     const [studentRows] = await connection.execute<any[]>(
@@ -37,25 +44,24 @@ export async function GET(req: NextRequest) {
     )
 
     if (!studentRows || studentRows.length === 0) {
-      connection.release()
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
     const student = studentRows[0]
 
-    // Fetch college name using token from cookie
+    // Fetch college name using college_token from student record
     let collegeName = student.college || "Not specified"
     let collegeData = null
-    
-    if (token) {
+
+    if (student.college_token) {
       const [collegeRows] = await connection.execute<any[]>(
         `SELECT id, college_name, email, phone, country, state, city, 
                 website, established_year, college_type, accreditation
          FROM colleges 
          WHERE college_token = ?`,
-        [token]
+        [student.college_token]
       )
-      
+
       if (collegeRows && collegeRows.length > 0) {
         collegeData = collegeRows[0]
         collegeName = collegeData.college_name
@@ -67,8 +73,6 @@ export async function GET(req: NextRequest) {
       `SELECT * FROM user_settings WHERE student_id = ?`,
       [student_id]
     )
-
-    connection.release()
 
     let settings = null
     if (settingsRows && settingsRows.length > 0) {
@@ -163,30 +167,39 @@ export async function GET(req: NextRequest) {
       { error: "Failed to fetch settings", details: error.message },
       { status: 500 }
     )
+  } finally {
+    if (connection) connection.release();
   }
 }
 
 // ---------------------- PUT → Update user settings ----------------------
 export async function PUT(req: NextRequest) {
+  let connection;
   try {
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get("studentData")?.value
+    const token = cookieStore.get("auth_session")?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    const { student_id, isAuthenticated } = studentData
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (e) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    }
 
-    if (!isAuthenticated) {
+    const { id: student_id, role: userType } = decoded;
+
+    if (!student_id || userType !== 'student') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
     const body = await req.json()
     const { profile, settings } = body
 
-    const connection = await pool.getConnection()
+    connection = await pool.getConnection()
 
     try {
       await connection.beginTransaction()
@@ -368,7 +381,6 @@ export async function PUT(req: NextRequest) {
       }
 
       await connection.commit()
-      connection.release()
 
       return NextResponse.json({
         success: true,
@@ -377,7 +389,6 @@ export async function PUT(req: NextRequest) {
 
     } catch (error) {
       await connection.rollback()
-      connection.release()
       throw error
     }
 
@@ -387,5 +398,7 @@ export async function PUT(req: NextRequest) {
       { error: "Failed to update settings", details: error.message },
       { status: 500 }
     )
+  } finally {
+    if (connection) connection.release();
   }
 }

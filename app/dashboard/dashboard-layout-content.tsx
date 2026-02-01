@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStudentData } from "../contexts/StudentDataContext";
+import { useAuth } from "@/hooks/use-auth";
+
+// ...
 
 export default function DashboardLayoutContent({
   children,
@@ -11,131 +14,44 @@ export default function DashboardLayoutContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isValidating, setIsValidating] = useState(true);
+  const { isAuthenticated, isLoading: isAuthLoading, role, user } = useAuth();
   const { studentData, isLoading: isDataLoading, error: dataError } = useStudentData();
 
   useEffect(() => {
-    const validateAccess = async () => {
-      try {
-        // Get user data from cookie
-        const userDataCookie = document.cookie
-          .split("; ")
-          .find((row) => row.startsWith("studentData="));
+    // If auth is loading, wait
+    if (isAuthLoading) return;
 
-        if (!userDataCookie) {
-          console.error("No user data cookie found");
-          throw new Error("No user data found");
-        }
+    if (!isAuthenticated) {
+      // Not authenticated, redirect to login
+      const loginUrl = "/login?error=" + encodeURIComponent("Please log in to access dashboard");
+      router.push(loginUrl);
+      return;
+    }
 
-        let cookieData;
-        try {
-          cookieData = JSON.parse(decodeURIComponent(userDataCookie.split("=")[1]));
-          console.log("Parsed user data:", {
-            hasToken: !!cookieData.token,
-            hasStudentId: !!cookieData.student_id,
-            userType: cookieData.userType,
-            isAuthenticated: cookieData.isAuthenticated
-          });
-        } catch (parseError) {
-          console.error("Failed to parse user data:", parseError);
-          throw new Error("Invalid user data format");
-        }
-
-        if (!cookieData.isAuthenticated) {
-          console.error("User not marked as authenticated");
-          throw new Error("Not authenticated");
-        }
-
-        // Check userType - redirect to appropriate dashboard if not a student
-        if (cookieData.userType && cookieData.userType !== 'student') {
-          console.log("Non-student user detected, redirecting to appropriate dashboard");
-          if (cookieData.userType === 'professional') {
-            window.location.href = '/professional-dashboard';
-            return;
-          } else if (cookieData.userType === 'college') {
-            window.location.href = '/admin';
-            return;
-          }
-        }
-
-        // For students, we need student_id and token
-        const studentId = cookieData.student_id || cookieData.studentId;
-        if (!studentId) {
-          console.error("No student_id found in cookie data");
-          throw new Error("Invalid student session - missing student ID");
-        }
-
-        // Get token from URL or cookie
-        const token = searchParams.get("token") || cookieData.token || cookieData.collegeToken;
-        if (!token) {
-          console.error("No token available");
-          throw new Error("No token found");
-        }
-
-        // Store the working token in the student data if different
-        if (token !== cookieData.token) {
-          cookieData.token = token;
-          document.cookie = `studentData=${encodeURIComponent(JSON.stringify(cookieData))}; path=/; max-age=86400; SameSite=Strict`;
-        }
-
-        // Verify token is still valid with the server
-        try {
-          const response = await fetch(`/api/auth/validate-token?token=${encodeURIComponent(token)}`, {
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
-            }
-          });
-
-          // Handle server errors (like connection issues)
-          if (response.status === 500) {
-            console.warn("Server error during token validation, proceeding with local validation");
-            if (cookieData.isAuthenticated && (cookieData.token === token || cookieData.collegeToken === token)) {
-              console.log("Falling back to local token validation");
-              setIsValidating(false);
-              return;
-            }
-          }
-
-          const data = await response.json();
-
-          if (!response.ok || !data.valid) {
-            console.error("Token validation failed:", { status: response.status, data });
-            throw new Error("Token validation failed");
-          }
-
-          console.log("Access validation successful");
-          setIsValidating(false);
-        } catch (error) {
-          // Handle network errors gracefully
-          if (error instanceof TypeError && error.message.includes('fetch')) {
-            console.warn("Network error during token validation, proceeding with local validation");
-            if (cookieData.isAuthenticated && (cookieData.token === token || cookieData.collegeToken === token)) {
-              setIsValidating(false);
-              return;
-            }
-          }
-          throw error;
-        }
-      } catch (error) {
-        console.error("Access validation error:", error);
-        const errorMessage = error instanceof Error ? error.message : "Authentication failed";
-        console.log("Redirecting to login due to error:", errorMessage);
-        window.location.href = "/login?error=" + encodeURIComponent(errorMessage);
+    // Role check
+    if (role !== 'student') {
+      console.log(`User is ${role}, redirecting from student dashboard`);
+      if (role === 'professional') {
+        router.push('/professional-dashboard');
+      } else if (role === 'college') {
+        router.push('/admin');
+      } else {
+        router.push('/login');
       }
-    };
+      return;
+    }
 
-    validateAccess();
-  }, [searchParams, router]);
+    // Auth is valid and role is student
+  }, [isAuthLoading, isAuthenticated, role, router]);
 
   // Show loading while validating OR while fetching student data
-  if (isValidating || isDataLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-400">
-            {isValidating ? "Validating access..." : "Loading your dashboard..."}
+            {isAuthLoading ? "Validating access..." : "Loading your dashboard..."}
           </p>
         </div>
       </div>

@@ -125,11 +125,6 @@ export default function ProfessionalLoginPage() {
         return;
       }
 
-      // The API now sets the professionalData cookie automatically
-      // Just need to clear any conflicting cookies on the client side
-      document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-      document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-
       // small delay to ensure cookie is set before redirect
       await new Promise((resolve) => setTimeout(resolve, 100));
 

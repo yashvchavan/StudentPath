@@ -1,42 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import pool from "@/lib/db";
+import jwt from "jsonwebtoken";
 
 /**
  * GET /api/professionals/chat/conversations
  * Get all conversations for the current professional
  */
 export async function GET() {
-    const connection = await pool.getConnection();
-
+    let connection;
     try {
         const cookieStore = await cookies();
-        const professionalCookie = cookieStore.get("professionalData")?.value;
+        const token = cookieStore.get("auth_session")?.value;
 
-        if (!professionalCookie) {
+        if (!token) {
             return NextResponse.json(
                 { error: "Unauthorized" },
                 { status: 401 }
             );
         }
 
-        let professionalData;
+        let decoded: any;
         try {
-            professionalData = JSON.parse(professionalCookie);
-        } catch {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
             return NextResponse.json(
                 { error: "Invalid session" },
                 { status: 401 }
             );
         }
 
-        const professionalId = professionalData?.id;
-        if (!professionalId) {
+        const professionalId = decoded?.id;
+        const userRole = decoded?.role;
+
+        if (!professionalId || userRole !== 'professional') {
             return NextResponse.json(
-                { error: "Invalid session" },
+                { error: "Unauthorized" },
                 { status: 401 }
             );
         }
+
+        connection = await pool.getConnection();
 
         const [rows]: any = await connection.execute(
             `SELECT id, title, created_at, updated_at 
@@ -47,18 +51,17 @@ export async function GET() {
             [professionalId]
         );
 
-        connection.release();
-
         return NextResponse.json({
             success: true,
             conversations: rows || [],
         });
     } catch (error) {
         console.error("Error fetching conversations:", error);
-        connection.release();
         return NextResponse.json(
             { error: "Internal server error" },
             { status: 500 }
         );
+    } finally {
+        if (connection) connection.release();
     }
 }

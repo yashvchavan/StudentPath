@@ -1,16 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { z } from 'zod';
+import { checkRateLimit } from '@/lib/rate-limit';
 import pool from "@/lib/db";
 
-export async function POST(request: NextRequest) {
-  try {
-    const { email, password } = await request.json();
+const LoginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required')
+});
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Missing email or password" }, { status: 400 });
+export async function POST(request: NextRequest) {
+  // Rate Limit
+  if (!checkRateLimit(request, 5, 60000)) {
+    return NextResponse.json({ error: 'Too many attempts' }, { status: 429 });
+  }
+
+  let connection;
+  try {
+    const body = await request.json();
+    const validation = LoginSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error.errors[0].message }, { status: 400 });
     }
 
-    const connection = await pool.getConnection();
+    const { email, password } = validation.data;
+
+    connection = await pool.getConnection();
 
     // ✅ Find professional with full profile data
     const [rows] = await connection.execute(
@@ -18,8 +35,6 @@ export async function POST(request: NextRequest) {
        FROM professionals WHERE email = ? AND is_active = 1`,
       [email]
     );
-
-    connection.release();
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
@@ -33,17 +48,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 
-    // ✅ Create professionalData for cookie
-    const professionalData = {
-      id: professional.id,
-      first_name: professional.first_name,
-      last_name: professional.last_name,
-      email: professional.email,
-      company: professional.company || "",
-      designation: professional.designation || "",
+    // ✅ Create session token
+    const token = jwt.sign(
+      { id: professional.id, role: 'professional' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '24h' }
+    );
+
+    // ✅ Create session data for cookie (minimal & opaque-ish)
+    const sessionData = {
+      sessionId: token,
+      role: 'professional',
       isAuthenticated: true,
-      isAdmin: false,
-      userType: "professional",
       timestamp: Date.now(),
     };
 
@@ -61,15 +77,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // ✅ Set professionalData cookie (24 hours)
-    response.cookies.set("professionalData", JSON.stringify(professionalData), {
+    // ✅ Set opaque auth_session cookie (24 hours, httpOnly)
+    response.cookies.set("auth_session", token, {
       path: "/",
       maxAge: 86400,
       sameSite: "strict",
-      httpOnly: false, // Allow client-side access
+      httpOnly: true, // Secure: Client cannot read this
+      secure: process.env.NODE_ENV === 'production',
     });
 
-    // ✅ Clear conflicting cookies
+    // ✅ Clear legacy cookies
+    response.cookies.delete("professionalData");
     response.cookies.delete("studentData");
     response.cookies.delete("collegeData");
 
@@ -77,5 +95,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Professional login error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } finally {
+    if (connection) connection.release();
   }
 }

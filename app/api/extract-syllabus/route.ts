@@ -3,11 +3,13 @@ import { cookies } from "next/headers"
 import pool from "@/lib/db"
 import FormData from "form-data"
 import axios from "axios"
+import jwt from 'jsonwebtoken'
 
 const FLASK_API_URL = "https://studentpath-rag.onrender.com" // Flask server URL
 
 // ---------------------- POST → Send syllabus PDF to Flask ----------------------
 export async function POST(req: NextRequest) {
+  let connection;
   try {
     const body = await req.json()
     const { course_id, year, semester } = body
@@ -21,30 +23,39 @@ export async function POST(req: NextRequest) {
 
     // ✅ Get student info from cookie
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get("studentData")?.value
+    const token = cookieStore.get("auth_session")?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({ error: "Student not authenticated" }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    const { student_id, isAuthenticated } = studentData
+    let student_id: number | null = null;
+    let isAuthenticated = false;
 
-    if (!isAuthenticated) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'student') {
+        student_id = decoded.id;
+        isAuthenticated = true;
+      }
+    } catch (e) {
+      console.error("Session verification failed", e);
+    }
+
+    if (!isAuthenticated || !student_id) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 })
     }
 
     console.log(`👤 Student ID ${student_id} requested syllabus extraction for course ${course_id}`)
 
     // 🔍 Fetch course details associated with this student
-    const connection = await pool.getConnection()
+    connection = await pool.getConnection()
     const [rows] = await connection.execute<any[]>(
       `SELECT course_name, year, syllab_doc 
        FROM courses_adi 
        WHERE course_id = ?`,
       [course_id]
     )
-    connection.release()
 
     if (!rows || rows.length === 0) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 })
@@ -113,6 +124,8 @@ export async function POST(req: NextRequest) {
       { error: "Internal server error", details: error.message },
       { status: 500 }
     )
+  } finally {
+    if (connection) connection.release();
   }
 }
 
@@ -120,16 +133,26 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get("studentData")?.value
+    const token = cookieStore.get("auth_session")?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({ error: "Student not authenticated" }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    const { student_id, isAuthenticated } = studentData
+    let student_id: number | null = null;
+    let isAuthenticated = false;
 
-    if (!isAuthenticated) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'student') {
+        student_id = decoded.id;
+        isAuthenticated = true;
+      }
+    } catch (e) {
+      console.error("Session verification failed", e);
+    }
+
+    if (!isAuthenticated || !student_id) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 })
     }
 
@@ -182,9 +205,9 @@ export async function GET(req: NextRequest) {
     console.error("❌ Error fetching syllabus info:", error)
 
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: "Failed to fetch syllabus info", 
+        error: "Failed to fetch syllabus info",
         details: error.message,
         message: "Unable to connect to syllabus service. Please try again later."
       },

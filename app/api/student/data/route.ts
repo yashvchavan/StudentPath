@@ -1,14 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import jwt from 'jsonwebtoken';
 
 export async function GET(request: NextRequest) {
   let connection;
   try {
     // Get and validate query parameters
     const { searchParams } = new URL(request.url);
-    const studentId = searchParams.get('studentId');
-    const token = searchParams.get('token');
+    const cookieStore = await cookies();
+    const tokenCookie = cookieStore.get('auth_session')?.value;
+
+    let studentId = searchParams.get('studentId');
+    let token = searchParams.get('token');
+
+    if ((!studentId || !token) && tokenCookie) {
+      try {
+        const decoded = jwt.verify(tokenCookie, process.env.JWT_SECRET!) as { id: number, role: string, collegeToken?: string };
+        if (decoded.role === 'student') {
+          studentId = String(decoded.id);
+          // If collegeToken isn't in JWT, we might need to fetch it?
+          // But the previous login implementation puts it in `collegeToken` property of JWT?
+          // Let's check logic in login.ts...
+          // Yes, login.ts puts `collegeToken` in JWT payload for student.
+          if (decoded.collegeToken) {
+            token = decoded.collegeToken;
+          }
+        }
+      } catch (e) {
+        console.error("JWT verification failed", e);
+      }
+    }
+
+    // If we still don't have token but have studentId, we can fetch it from DB
+    if (studentId && !token) {
+      try {
+        // Create a temp connection to fetch token if missing
+        // Note: In the main logic below connection is created. We can use it if we move this logic down?
+        // But existing logic returns 400 immediately.
+        // We can create a quick connection or reuse pool for a simple query
+        // However, let's keep it safe. If token is missing, we fail?
+        // The frontend usually calls this with query params or relies on cookie.
+        // We can try to fetch the college_token from Students table if we have studentId.
+        const [rows]: any = await pool.query('SELECT college_token FROM Students WHERE student_id = ?', [studentId]);
+        if (rows && rows.length > 0) {
+          token = rows[0].college_token;
+        }
+      } catch (e) { console.error(e) }
+    }
 
     if (!studentId || !token) {
       return NextResponse.json(
@@ -19,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     // Get database connection
     connection = await pool.getConnection();
-    
+
     // Validate the token and get college information
     const [tokenResult] = await connection.execute<RowDataPacket[]>(
       `SELECT c.id as college_id, c.college_name, c.college_type, c.city, c.state, c.country
@@ -135,7 +175,7 @@ export async function GET(request: NextRequest) {
       last_name: student.last_name,
       email: student.email,
       phone: student.phone,
-      
+
       // College info from token
       college_id: collegeInfo.college_id,
       college_name: collegeInfo.college_name,
@@ -143,32 +183,32 @@ export async function GET(request: NextRequest) {
       city: collegeInfo.city,
       state: collegeInfo.state,
       country: collegeInfo.country,
-      
+
       // Academic profile
       program: academicProfile.program || null,
       current_year: academicProfile.currentYear || null,
       current_semester: academicProfile.currentSemester || null,
       enrollment_year: academicProfile.enrollmentYear || null,
       current_gpa: academicProfile.currentGPA || null,
-      
+
       // Academic interests (array of strings)
       academic_interests: (academicInterests || []).map((item: any) => item.interest),
-      
+
       // Career quiz answers (object)
       career_quiz_answers: quizAnswersObj,
-      
+
       // Skills (objects) - always return objects, even if empty
       technical_skills: technicalSkills || {},
       soft_skills: softSkills || {},
       language_skills: languageSkills || {},
-      
+
       // Career goals
       primary_goal: careerGoal.primaryGoal || null,
       secondary_goal: careerGoal.secondaryGoal || null,
       timeline: careerGoal.timeline || null,
       location_preference: careerGoal.locationPreference || null,
       intensity_level: careerGoal.intensityLevel || null,
-      
+
       // Industry focus (array of strings)
       industry_focus: (industryFocus || []).map((item: any) => item.industry)
     };
@@ -182,9 +222,9 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching student data:', error);
     return NextResponse.json(
-      { 
-        error: 'Internal server error', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

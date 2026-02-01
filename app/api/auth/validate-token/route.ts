@@ -13,6 +13,7 @@ interface ExtendedCollegeRow extends CollegeRow {
 }
 
 export async function GET(request: NextRequest) {
+  let connection;
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -24,8 +25,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const connection = await pool.getConnection();
-    
+    connection = await pool.getConnection();
+
     const [result] = await connection.execute<ExtendedCollegeRow[]>(
       `SELECT c.id, c.college_name, c.college_type, c.city, c.state, c.country,
               ct.usage_count, ct.max_usage, ct.is_active, ct.expires_at
@@ -34,8 +35,6 @@ export async function GET(request: NextRequest) {
        WHERE ct.token = ? AND ct.is_active = TRUE AND c.is_active = TRUE`,
       [token]
     );
-
-    connection.release();
 
     if (!result || result.length === 0) {
       return NextResponse.json(
@@ -80,5 +79,7 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    if (connection) connection.release();
   }
 }

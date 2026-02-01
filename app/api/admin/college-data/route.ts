@@ -31,31 +31,49 @@ interface DepartmentRow extends RowDataPacket {
   count: number
 }
 
+import jwt from 'jsonwebtoken'
+
+// ...
+
 export async function GET(req: NextRequest) {
   try {
     // Get college data from cookies
     const cookieStore = req.cookies
-    const collegeData = cookieStore.get('collegeData')?.value
-    
-    console.log('API: College cookie exists:', !!collegeData)
-    
-    if (!collegeData) {
-      return NextResponse.json({ 
+    const token = cookieStore.get('auth_session')?.value
+
+    if (!token) {
+      return NextResponse.json({
         success: false,
-        error: 'Unauthorized - College authentication required' 
+        error: 'Unauthorized - College authentication required'
       }, { status: 401 })
     }
 
-    const college = JSON.parse(collegeData)
-    console.log('API: Parsed college data:', { id: college.id, type: college.type })
-    
-    const collegeToken = college.token
+    let collegeToken: string | undefined;
+    let collegeId: number | undefined;
+    let collegeName: string | undefined;
+    let collegeEmail: string | undefined;
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'college') {
+        collegeId = decoded.id;
+        // Fetch token directly from DB
+        const [rows]: any = await pool.query('SELECT college_token, college_name, email FROM colleges WHERE id = ?', [collegeId]);
+        if (rows.length > 0) {
+          collegeToken = rows[0].college_token;
+          collegeName = rows[0].college_name;
+          collegeEmail = rows[0].email;
+        }
+      }
+    } catch (e) {
+      console.error("Session parse error", e);
+    }
 
     if (!collegeToken) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        error: 'Invalid college ID' 
-      }, { status: 400 })
+        error: 'Invalid college session'
+      }, { status: 401 })
     }
 
     // 1. Get total and active students count
@@ -67,7 +85,7 @@ export async function GET(req: NextRequest) {
       WHERE college_token = ?`,
       [collegeToken]
     )
-    
+
     const stats = statsRows[0]
 
     // 2. Get unique programs (departments) from academic_profiles
@@ -79,7 +97,7 @@ export async function GET(req: NextRequest) {
       ORDER BY ap.program`,
       [collegeToken]
     )
-    
+
     const programs = programRows.map(row => row.program)
 
     // 3. Get recent registrations (last 10 students) with program from academic_profiles
@@ -145,7 +163,7 @@ export async function GET(req: NextRequest) {
 
     console.log('API: Successfully fetched college data')
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       totalStudents: Number(stats.total_students),
       activeStudents: Number(stats.active_students),
@@ -154,16 +172,16 @@ export async function GET(req: NextRequest) {
       tokenUsage,
       departmentStats,
       collegeInfo: {
-        id: college.id,
-        name: college.name,
-        email: college.email,
-        token: college.token
+        id: collegeId,
+        name: collegeName,
+        email: collegeEmail,
+        token: collegeToken
       }
     })
 
   } catch (error) {
     console.error('Error fetching college data:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'

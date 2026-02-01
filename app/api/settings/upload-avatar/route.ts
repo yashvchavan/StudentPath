@@ -1,8 +1,8 @@
-// app/api/settings/upload-avatar/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import pool from "@/lib/db"
 import { v2 as cloudinary } from "cloudinary"
+import jwt from "jsonwebtoken"
 
 // Configure Cloudinary
 cloudinary.config({
@@ -12,36 +12,33 @@ cloudinary.config({
 })
 
 export async function POST(req: NextRequest) {
+  let connection;
   try {
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get("studentData")?.value
+    const token = cookieStore.get("auth_session")?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    console.log("📋 Parsed cookie data:", studentData)
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (e) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    }
 
-    // Determine if this is a student or professional
-    const isStudent = !!studentData.student_id
-    const isProfessional = !!studentData.id && !studentData.student_id
+    const userId = decoded.id;
+    const userType = decoded.role; // 'student' or 'professional'
 
-    const userId = isStudent ? studentData.student_id : studentData.id
-    const userType = isStudent ? 'student' : 'professional'
+    if (!userId || !userType) {
+      return NextResponse.json({ error: "Invalid session data" }, { status: 401 })
+    }
 
     console.log(`👤 User type: ${userType}, ID: ${userId}`)
 
-    if (!userId) {
-      return NextResponse.json({ 
-        error: "Invalid user ID",
-        debug: { studentData, isStudent, isProfessional, userId }
-      }, { status: 400 })
-    }
-
-    if (!studentData.isAuthenticated) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
-    }
+    const isStudent = userType === 'student'
+    const isProfessional = userType === 'professional'
 
     const formData = await req.formData()
     const file = formData.get("avatar") as File
@@ -100,8 +97,8 @@ export async function POST(req: NextRequest) {
     console.log("✅ Cloudinary upload successful:", uploadResult.secure_url)
 
     // Update database based on user type
-    const connection = await pool.getConnection()
-    
+    connection = await pool.getConnection()
+
     if (isStudent) {
       console.log(`🔄 Updating Students table for student_id: ${userId}`)
       await connection.execute(
@@ -121,8 +118,6 @@ export async function POST(req: NextRequest) {
         [uploadResult.secure_url, 'image/url', userId]
       )
     }
-    
-    connection.release()
 
     console.log("✅ Database updated successfully")
 
@@ -139,5 +134,7 @@ export async function POST(req: NextRequest) {
       { error: "Failed to upload avatar", details: error.message },
       { status: 500 }
     )
+  } finally {
+    if (connection) connection.release();
   }
 }

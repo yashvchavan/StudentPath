@@ -270,7 +270,7 @@ export default function LoginPage() {
     try {
       if (isAdminLogin) {
         // Handle admin login separately
-        const response = await fetch('/api/auth/login-admin', {
+        const response = await fetch('/api/auth/login-college', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
@@ -282,22 +282,7 @@ export default function LoginPage() {
           throw new Error(data.error || 'Admin login failed');
         }
 
-        // Store admin data in cookie with secure settings
-        const adminData = {
-          ...data.admin,
-          token: data.token,
-          isAuthenticated: true,
-          isAdmin: true,
-          timestamp: Date.now() // Add timestamp to prevent stale cookies
-        };
-
-        // Clear any existing cookies first
-        document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-
-        // Set the new cookie
-        document.cookie = `studentData=${encodeURIComponent(JSON.stringify(adminData))}; path=/; max-age=86400; SameSite=Strict`;
-
-        // Give a small delay to ensure cookie is set
+        // Give a small delay to ensure server-side cookie is processed
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Force a full page reload to ensure proper cookie handling
@@ -320,28 +305,12 @@ export default function LoginPage() {
           throw new Error(data.error || 'Student login failed');
         }
 
-        // Store student data in cookie with secure settings
-        const studentData = {
-          ...data.student,
-          token: data.token || collegeToken,
-          isAuthenticated: true,
-          isAdmin: false,
-          userType: 'student', // Explicit user type for RBAC
-          timestamp: Date.now() // Add timestamp to prevent stale cookies
-        };
-
-        // Clear any existing cookies first
-        document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-
-        // Set the new cookie
-        document.cookie = `studentData=${encodeURIComponent(JSON.stringify(studentData))}; path=/; max-age=86400; SameSite=Strict`;
-
-        // Give a small delay to ensure cookie is set
+        // Give a small delay to ensure server-side cookie is processed
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Redirect to dashboard with token
-        const token = studentData.token || collegeToken;
+        // Redirect to dashboard
+        const token = collegeToken || ''; // Or valid token from response if needed for URL param but not cookie
+        // Note: New flow relies on httpOnly cookie, passing token in URL is optional (legacy)
         window.location.replace(`/dashboard?token=${encodeURIComponent(token)}`);
       }
     } catch (err) {
@@ -659,7 +628,7 @@ export default function LoginPage() {
                       }
                     </Button>
 
-                    <div className="relative">
+                    {/* <div className="relative">
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-white/20"></div>
                       </div>
@@ -668,9 +637,9 @@ export default function LoginPage() {
                           Or continue with
                         </span>
                       </div>
-                    </div>
+                    </div> */}
 
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* <div className="grid grid-cols-2 gap-4">
                       <Button
                         variant="outline"
                         type="button"
@@ -707,7 +676,7 @@ export default function LoginPage() {
                         </svg>
                         Microsoft
                       </Button>
-                    </div>
+                    </div> */}
 
 
                   </form>

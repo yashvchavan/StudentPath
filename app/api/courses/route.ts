@@ -7,95 +7,54 @@ const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
+import jwt from 'jsonwebtoken';
+
+// ...
+
+// ...
 export async function GET() {
   try {
     const cookieStore = await cookies();
+    const token = cookieStore.get("auth_session")?.value;
 
-    // Check for both student and admin (college) cookies
-    const studentCookie = cookieStore.get("studentData")?.value;
-    const collegeCookie = cookieStore.get("collegeData")?.value;
+    let tenantId: number | null = null;
 
-    let collegeToken: string | null = null;
-
-    // Handle admin/college authentication
-    if (collegeCookie) {
+    if (token) {
       try {
-        const collegeData = JSON.parse(collegeCookie);
-        collegeToken = collegeData?.token;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+        const { id, role } = decoded;
 
-        if (!collegeToken) {
-          if (process.env.NODE_ENV !== "production") {
-            console.warn("⚠️ No college token in collegeData cookie");
+        if (role === 'college') {
+          tenantId = id;
+        } else if (role === 'student') {
+          const [studentRows]: any = await pool.query(
+            `SELECT college_id FROM Students WHERE student_id = ?`,
+            [id]
+          );
+          if (studentRows && studentRows.length > 0) {
+            tenantId = studentRows[0].college_id;
           }
-          return NextResponse.json({ courses: [] });
         }
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("❌ Invalid collegeData cookie:", err);
-        }
-        return NextResponse.json({ courses: [] });
+      } catch (e) {
+        console.error("Values session check failed", e);
       }
     }
-    // Handle student authentication
-    else if (studentCookie) {
-      try {
-        const studentData = JSON.parse(studentCookie);
-        const studentId = studentData?.student_id;
 
-        if (!studentId) {
-          if (process.env.NODE_ENV !== "production") {
-            console.warn("⚠️ Missing student_id in cookie");
-          }
-          return NextResponse.json({ courses: [] });
-        }
-
-        // Get student's college_token
-        const [studentRows]: any = await pool.query(
-          `SELECT college_token FROM Students WHERE student_id = ?`,
-          [studentId]
-        );
-
-        if (!studentRows || studentRows.length === 0) {
-          if (process.env.NODE_ENV !== "production") {
-            console.warn("⚠️ Student not found:", studentId);
-          }
-          return NextResponse.json({ courses: [] });
-        }
-
-        collegeToken = studentRows[0].college_token;
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("❌ Invalid studentData cookie:", err);
-        }
-        return NextResponse.json({ courses: [] });
-      }
-    } else {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("⚠️ No authentication cookie found");
-      }
+    if (!tenantId) {
       return NextResponse.json({ courses: [] });
     }
 
-    if (!collegeToken) {
-      if (process.env.NODE_ENV !== "production") {
-        console.warn("⚠️ No college_token available");
-      }
-      return NextResponse.json({ courses: [] });
-    }
-
-    // Fetch all courses for that tenant/college
+    // Fetch all courses for that tenant
     const [courses]: any = await pool.query(
       `SELECT course_id AS id, course_name, year, syllab_doc
        FROM courses_adi
-       WHERE tenant_id = (SELECT id FROM colleges WHERE college_token = ?)`,
-      [collegeToken]
+       WHERE tenant_id = ?`,
+      [tenantId]
     );
 
     return NextResponse.json({ courses });
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("❌ Error fetching courses:", error);
-    }
+    console.error("❌ Error fetching courses:", error);
     return NextResponse.json(
       { error: "Failed to fetch courses" },
       { status: 500 }
@@ -115,48 +74,28 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const collegeCookie = cookieStore.get("collegeData")?.value;
+    const token = cookieStore.get("auth_session")?.value;
 
-    // Verify admin authentication
-    if (!collegeCookie) {
-      return NextResponse.json(
-        { error: "Unauthorized. Admin access required." },
-        { status: 401 }
-      );
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let collegeData;
+    let tenantId: number | null = null;
     try {
-      collegeData = JSON.parse(collegeCookie);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'college') {
+        tenantId = decoded.id;
+      }
     } catch (err) {
+      console.error("Session verification failed", err);
+    }
+
+    if (!tenantId) {
       return NextResponse.json(
-        { error: "Invalid session data" },
+        { error: "Invalid session" },
         { status: 401 }
       );
     }
-
-    const collegeToken = collegeData?.token;
-    if (!collegeToken) {
-      return NextResponse.json(
-        { error: "Invalid session: missing college token" },
-        { status: 401 }
-      );
-    }
-
-    // Get tenant ID from college token
-    const [collegeRows]: any = await pool.query(
-      `SELECT id FROM colleges WHERE college_token = ?`,
-      [collegeToken]
-    );
-
-    if (!collegeRows || collegeRows.length === 0) {
-      return NextResponse.json(
-        { error: "College not found" },
-        { status: 404 }
-      );
-    }
-
-    const tenantId = collegeRows[0].id;
 
     // Parse form data
     const formData = await req.formData();
@@ -224,30 +163,25 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const collegeCookie = cookieStore.get("collegeData")?.value;
+    const token = cookieStore.get("auth_session")?.value;
 
-    // Verify admin authentication
-    if (!collegeCookie) {
-      return NextResponse.json(
-        { error: "Unauthorized. Admin access required." },
-        { status: 401 }
-      );
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let collegeData;
+    let tenantId: number | null = null;
     try {
-      collegeData = JSON.parse(collegeCookie);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'college') {
+        tenantId = decoded.id;
+      }
     } catch (err) {
-      return NextResponse.json(
-        { error: "Invalid session data" },
-        { status: 401 }
-      );
+      console.error("Session verification failed", err);
     }
 
-    const collegeToken = collegeData?.token;
-    if (!collegeToken) {
+    if (!tenantId) {
       return NextResponse.json(
-        { error: "Invalid session: missing college token" },
+        { error: "Invalid session" },
         { status: 401 }
       );
     }
@@ -261,21 +195,6 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Get tenant ID from college token
-    const [collegeRows]: any = await pool.query(
-      `SELECT id FROM colleges WHERE college_token = ?`,
-      [collegeToken]
-    );
-
-    if (!collegeRows || collegeRows.length === 0) {
-      return NextResponse.json(
-        { error: "College not found" },
-        { status: 404 }
-      );
-    }
-
-    const tenantId = collegeRows[0].id;
 
     // Delete course (only if it belongs to this tenant)
     const [result]: any = await pool.query(

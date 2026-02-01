@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import pool from "@/lib/db";
 import OpenAI from "openai";
+import jwt from "jsonwebtoken";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -31,45 +32,43 @@ interface ProfessionalProfile {
 /**
  * POST /api/professionals/chat
  * Professional-specific chat endpoint that uses DB profile + query
- * 
- * Request body:
- * {
- *   "message": "How should I prepare for a senior role at Google?",
- *   "conversationId": null | number
- * }
  */
 export async function POST(req: NextRequest) {
-    const connection = await pool.getConnection();
+    let connection;
 
     try {
         const cookieStore = await cookies();
-        const professionalCookie = cookieStore.get("professionalData")?.value;
+        const token = cookieStore.get("auth_session")?.value;
 
-        // Verify professional authentication
-        if (!professionalCookie) {
+        // Verify professional authentication via auth_session
+        if (!token) {
             return NextResponse.json(
-                { error: "Unauthorized. Professional login required." },
+                { error: "Unauthorized. Login required." },
                 { status: 401 }
             );
         }
 
-        let professionalData;
+        let decoded: any;
         try {
-            professionalData = JSON.parse(professionalCookie);
-        } catch {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
             return NextResponse.json(
-                { error: "Invalid session data" },
+                { error: "Invalid session" },
                 { status: 401 }
             );
         }
 
-        const professionalId = professionalData?.id;
-        if (!professionalId) {
+        const professionalId = decoded?.id;
+        const userType = decoded?.role;
+
+        if (!professionalId || userType !== 'professional') {
             return NextResponse.json(
-                { error: "Invalid session: missing professional ID" },
+                { error: "Unauthorized. Professional access required." },
                 { status: 401 }
             );
         }
+
+        connection = await pool.getConnection();
 
         // Get professional's full profile from database
         const [profileRows]: any = await connection.execute(
@@ -84,7 +83,6 @@ export async function POST(req: NextRequest) {
         );
 
         if (!profileRows || profileRows.length === 0) {
-            connection.release();
             return NextResponse.json(
                 { error: "Professional profile not found" },
                 { status: 404 }
@@ -105,7 +103,6 @@ export async function POST(req: NextRequest) {
         const { message, conversationId } = body;
 
         if (!message) {
-            connection.release();
             return NextResponse.json(
                 { error: "Missing required field: message" },
                 { status: 400 }
@@ -199,8 +196,6 @@ Be professional and encouranging.`;
             [currentConversationId]
         );
 
-        connection.release();
-
         // Generate sources based on the query and profile
         const sources = generateSources(message, { ...profile, skills });
 
@@ -218,11 +213,12 @@ Be professional and encouranging.`;
         });
     } catch (error) {
         console.error("❌ Error in /api/professionals/chat:", error);
-        connection.release();
         return NextResponse.json(
             { error: "Internal server error" },
             { status: 500 }
         );
+    } finally {
+        if (connection) connection.release();
     }
 }
 

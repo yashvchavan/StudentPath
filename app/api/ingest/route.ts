@@ -1,47 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import jwt from 'jsonwebtoken';
+import pool from '@/lib/db';
 
 const RAG_API_URL = process.env.RAG_API_URL || "https://rag-python-service-2312.onrender.com";
 const API_SECRET_KEY = process.env.API_SECRET_KEY || "rag_studentpath_admin_2026";
 
-/**
- * POST /api/ingest
- * Admin endpoint: Ingest syllabus PDF into vector DB
- * 
- * Request body:
- * {
- *   "pdf_url": "https://res.cloudinary.com/...",
- *   "dept": "Computer Science",
- *   "year": "2024"
- * }
- * 
- * Response:
- * {
- *   "success": true,
- *   "message": "Successfully ingested syllabus",
- *   "chunks_processed": 10,
- *   "vectors_stored": 10
- * }
- */
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const collegeCookie = cookieStore.get("collegeData")?.value;
+    const token = cookieStore.get("auth_session")?.value;
 
     // Verify admin authentication
-    if (!collegeCookie) {
+    if (!token) {
       return NextResponse.json(
         { error: "Unauthorized. Admin access required." },
         { status: 401 }
       );
     }
 
-    let collegeData;
+    let collegeToken = '';
     try {
-      collegeData = JSON.parse(collegeCookie);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'college') {
+        const [rows]: any = await pool.query('SELECT college_token FROM colleges WHERE id = ?', [decoded.id]);
+        if (rows.length > 0) collegeToken = rows[0].college_token;
+      } else {
+        throw new Error('Invalid role');
+      }
     } catch (err) {
       return NextResponse.json(
-        { error: "Invalid session data" },
+        { error: "Invalid or expired session" },
         { status: 401 }
       );
     }
@@ -49,7 +38,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { pdf_url, dept, year } = body;
 
-    // Validate required fields (per the new API spec)
+    // Validate required fields
     if (!pdf_url || !dept || !year) {
       return NextResponse.json(
         { error: "Missing required fields: pdf_url, dept, year" },
@@ -57,8 +46,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Get college token for metadata
-    const collegeToken = collegeData?.token || '';
 
     console.log("📤 Sending ingest request to RAG API:", {
       url: `${RAG_API_URL}/ingest`,
@@ -127,12 +114,24 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const collegeCookie = cookieStore.get("collegeData")?.value;
+    const token = cookieStore.get("auth_session")?.value;
 
     // Verify admin authentication
-    if (!collegeCookie) {
+    if (!token) {
       return NextResponse.json(
         { error: "Unauthorized. Admin access required." },
+        { status: 401 }
+      );
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role !== 'college') {
+        throw new Error('Invalid role');
+      }
+    } catch (err) {
+      return NextResponse.json(
+        { error: "Invalid session" },
         { status: 401 }
       );
     }

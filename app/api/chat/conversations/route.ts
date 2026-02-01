@@ -4,16 +4,33 @@ import {
     createConversation,
     getConversationStats,
 } from "@/lib/chat";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
-        const userId = searchParams.get("userId");
-        const userType = searchParams.get("userType") as "student" | "professional";
         const includeArchived = searchParams.get("includeArchived") === "true";
 
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_session")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+        }
+
+        const userId = decoded.id;
+        const userType = decoded.role as "student" | "professional";
+
         if (!userId || !userType) {
-            return NextResponse.json({ error: "userId and userType are required" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid session data" }, { status: 401 });
         }
 
         const conversations = await getUserConversations(Number(userId), userType, includeArchived);
@@ -28,10 +45,27 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const { userId, userType, title } = await req.json();
+        const { title } = await req.json();
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_session")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+        }
+
+        const userId = decoded.id;
+        const userType = decoded.role as "student" | "professional";
 
         if (!userId || !userType) {
-            return NextResponse.json({ error: "userId and userType are required" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid session data" }, { status: 401 });
         }
 
         const conversationId = await createConversation(Number(userId), userType, title);

@@ -1,28 +1,39 @@
-// app/api/professionals/profile/update/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import pool from '@/lib/db'
+import jwt from 'jsonwebtoken'
 
 export async function POST(req: NextRequest) {
+  let connection;
   try {
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get('studentData')?.value
+    const token = cookieStore.get('auth_session')?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({
         success: false,
         error: 'Not authenticated'
       }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    const professionalId = studentData.id
-
-    if (!professionalId) {
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (e) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid professional ID'
-      }, { status: 400 })
+        error: 'Invalid session'
+      }, { status: 401 })
+    }
+
+    const professionalId = decoded.id
+    const userRole = decoded.role
+
+    if (!professionalId || userRole !== 'professional') {
+      return NextResponse.json({
+        success: false,
+        error: 'Unauthorized. Professional access required.'
+      }, { status: 403 })
     }
 
     const body = await req.json()
@@ -124,9 +135,8 @@ export async function POST(req: NextRequest) {
 
     console.log('🔄 Updating professional profile:', { professionalId, updates: updates.length - 1 })
 
-    const connection = await pool.getConnection()
+    connection = await pool.getConnection()
     await connection.execute(query, values)
-    connection.release()
 
     console.log('✅ Professional profile updated successfully')
 
@@ -142,5 +152,7 @@ export async function POST(req: NextRequest) {
       error: 'Failed to update profile',
       details: error.message
     }, { status: 500 })
+  } finally {
+    if (connection) connection.release();
   }
 } 

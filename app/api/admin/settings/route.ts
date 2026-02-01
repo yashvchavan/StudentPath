@@ -23,20 +23,36 @@ interface CollegeRow extends RowDataPacket {
 }
 
 // GET - Fetch college settings
+import jwt from 'jsonwebtoken'
+
+// ... (GET handler)
+// GET - Fetch college settings
 export async function GET(req: NextRequest) {
     try {
         const cookieStore = req.cookies
-        const collegeData = cookieStore.get('collegeData')?.value
+        const token = cookieStore.get('auth_session')?.value
 
-        if (!collegeData) {
+        if (!token) {
             return NextResponse.json({
                 success: false,
                 error: 'Unauthorized'
             }, { status: 401 })
         }
 
-        const college = JSON.parse(collegeData)
-        const collegeId = college.id
+        let collegeId: number | undefined;
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+            if (decoded.role === 'college') {
+                collegeId = decoded.id;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        if (!collegeId) {
+            return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
+        }
 
         const [rows] = await pool.query<CollegeRow[]>(
             `SELECT 
@@ -73,17 +89,29 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
     try {
         const cookieStore = req.cookies
-        const collegeData = cookieStore.get('collegeData')?.value
+        const token = cookieStore.get('auth_session')?.value
 
-        if (!collegeData) {
+        if (!token) {
             return NextResponse.json({
                 success: false,
                 error: 'Unauthorized'
             }, { status: 401 })
         }
 
-        const college = JSON.parse(collegeData)
-        const collegeId = college.id
+        let collegeId: number | undefined;
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+            if (decoded.role === 'college') {
+                collegeId = decoded.id;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        if (!collegeId) {
+            return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
+        }
 
         const body = await req.json()
         const {
@@ -150,26 +178,14 @@ export async function PUT(req: NextRequest) {
             ]
         )
 
-        // Update the cookie with new data
-        const updatedCollege = {
-            ...college,
-            name: college_name,
-            email: email
-        }
-
         const response = NextResponse.json({
             success: true,
             message: 'Settings updated successfully'
         })
 
-        response.cookies.set('collegeData', JSON.stringify(updatedCollege), {
-            httpOnly: false,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
-        })
-
+        // No need to update cookie as it is opaque
         return response
+
 
     } catch (error) {
         console.error('Error updating settings:', error)

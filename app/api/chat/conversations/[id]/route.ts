@@ -6,24 +6,39 @@ import {
     archiveConversation,
     updateConversationTitle,
 } from "@/lib/chat";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
 // Next.js 15+ - params is now a Promise
 export async function GET(
-    req: NextRequest, 
+    req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { searchParams } = new URL(req.url);
-        const userId = searchParams.get("userId");
-        const userType = searchParams.get("userType") as "student" | "professional";
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_session")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+        }
+
+        const userId = decoded.id;
+        const userType = decoded.role as "student" | "professional";
 
         if (!userId || !userType) {
-            return NextResponse.json({ error: "userId and userType are required" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid session data" }, { status: 401 });
         }
 
         const resolvedParams = await params;
         const conversationId = parseInt(resolvedParams.id);
-        
+
         if (isNaN(conversationId)) {
             return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 });
         }
@@ -44,19 +59,36 @@ export async function GET(
 }
 
 export async function PATCH(
-    req: NextRequest, 
+    req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { title, archive, userId, userType } = await req.json();
+        const { title, archive } = await req.json();
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_session")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+        }
+
+        const userId = decoded.id;
+        const userType = decoded.role as "student" | "professional";
 
         if (!userId || !userType) {
-            return NextResponse.json({ error: "userId and userType are required" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid session data" }, { status: 401 });
         }
 
         const resolvedParams = await params;
         const conversationId = parseInt(resolvedParams.id);
-        
+
         if (isNaN(conversationId)) {
             return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 });
         }
@@ -78,19 +110,34 @@ export async function PATCH(
 }
 
 export async function DELETE(
-    req: NextRequest, 
+    req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { userId, userType } = await req.json();
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_session")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+        }
+
+        const userId = decoded.id;
+        const userType = decoded.role as "student" | "professional";
 
         if (!userId || !userType) {
-            return NextResponse.json({ error: "userId and userType are required" }, { status: 400 });
+            return NextResponse.json({ error: "Invalid session data" }, { status: 401 });
         }
 
         const resolvedParams = await params;
         const conversationId = parseInt(resolvedParams.id);
-        
+
         if (isNaN(conversationId)) {
             return NextResponse.json({ error: "Invalid conversation ID" }, { status: 400 });
         }

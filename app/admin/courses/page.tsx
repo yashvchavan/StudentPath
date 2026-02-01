@@ -138,28 +138,8 @@ export default function AdminCoursesPage() {
     }
   }
 
-  // 🔹 Fetch existing user info
-  const fetchUserInfo = async () => {
-    try {
-      const res = await fetch("/api/extract-syllabus", {
-        method: "GET",
-        credentials: "include",
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        if (data.success) {
-          setUserInfo(data.user_info)
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching user info:", err)
-    }
-  }
-
   useEffect(() => {
     fetchCourses()
-    fetchUserInfo()
   }, [])
 
   // 🔹 Submit new syllabus

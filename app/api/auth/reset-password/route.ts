@@ -3,38 +3,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { z } from 'zod';
+import { checkRateLimit } from '@/lib/rate-limit';
 
-type UserType = 'student' | 'college' | 'professional';
+const ResetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters long'),
+  userType: z.enum(['student', 'college', 'professional'])
+});
 
 export async function POST(request: NextRequest) {
+  // Rate Limit Check (5 requests per minute)
+  if (!checkRateLimit(request, 5, 60000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
-    const { token, newPassword, userType } = body as {
-      token: string;
-      newPassword: string;
-      userType: UserType;
-    };
 
-    if (!token || !newPassword || !userType) {
+    // Zod Validation
+    const validation = ResetPasswordSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Token, new password, and user type are required' },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
 
-    if (!['student', 'college', 'professional'].includes(userType)) {
-      return NextResponse.json(
-        { error: 'Invalid user type' },
-        { status: 400 }
-      );
-    }
-
-    if (newPassword.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
-        { status: 400 }
-      );
-    }
+    const { token, newPassword, userType } = validation.data;
 
     const connection = await pool.getConnection();
 

@@ -4,97 +4,8 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, GraduationCap, Briefcase, Building, LogOut, AlertTriangle } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-type UserRole = 'student' | 'professional' | 'college' | null;
-
-interface ActiveSession {
-    role: UserRole;
-    name?: string;
-    email?: string;
-}
-
-// Parse cookies and detect active session
-function getActiveSession(): ActiveSession | null {
-    if (typeof window === 'undefined') return null;
-
-    try {
-        // Check for professional session (from new professionalData cookie)
-        const professionalDataMatch = document.cookie.match(/professionalData=([^;]+)/);
-        if (professionalDataMatch) {
-            const decoded = decodeURIComponent(professionalDataMatch[1]);
-            const data = JSON.parse(decoded);
-
-            if (data.isAuthenticated && data.timestamp) {
-                const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000;
-                if (!isExpired) {
-                    return {
-                        role: 'professional',
-                        name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
-                        email: data.email
-                    };
-                }
-            }
-        } else {
-            // Only check for student/professional session (from studentData cookie - legacy or student) if no professionalData
-            const studentDataMatch = document.cookie.match(/studentData=([^;]+)/);
-            if (studentDataMatch) {
-                const decoded = decodeURIComponent(studentDataMatch[1]);
-                const data = JSON.parse(decoded);
-
-                if (data.isAuthenticated && data.timestamp) {
-                    // Check if not expired (24 hours)
-                    const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000;
-                    if (!isExpired) {
-                        // Determine if student or professional - STRICT check
-                        // If it's a legacy cookie and says professional, we trust it IF professionalData cookie was absent
-                        if (data.userType === 'professional') {
-                            return {
-                                role: 'professional',
-                                name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
-                                email: data.email
-                            };
-                        }
-                        // Otherwise assume student
-                        if (data.userType === 'student' || data.student_id) {
-                            return {
-                                role: 'student',
-                                name: `${data.first_name || ''} ${data.last_name || ''}`.trim() || undefined,
-                                email: data.email
-                            };
-                        }
-                    }
-                }
-            }
-        }
-
-        // Check for college session (from collegeData cookie)
-        const collegeDataMatch = document.cookie.match(/collegeData=([^;]+)/);
-        if (collegeDataMatch) {
-            const decoded = decodeURIComponent(collegeDataMatch[1]);
-            const data = JSON.parse(decoded);
-
-            if ((data.token || data.id) && data.type === 'college') {
-                // Check expiration if timestamp exists
-                if (data.timestamp) {
-                    const isExpired = Date.now() - data.timestamp > 24 * 60 * 60 * 1000;
-                    if (isExpired) return null;
-                }
-                return {
-                    role: 'college',
-                    name: data.name,
-                    email: data.email
-                };
-            }
-        }
-
-        return null;
-    } catch (error) {
-        console.error('Error parsing session data:', error);
-        return null;
-    }
-}
+import { useAuth, UserRole } from "@/hooks/use-auth";
 
 // Get role display info
 function getRoleInfo(role: UserRole) {
@@ -140,33 +51,20 @@ interface ActiveSessionBlockProps {
 }
 
 export function ActiveSessionBlock({ intendedRole, pageName }: ActiveSessionBlockProps) {
-    const [activeSession, setActiveSession] = useState<ActiveSession | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const { isAuthenticated, isLoading, user, role } = useAuth();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const router = useRouter();
-
-    useEffect(() => {
-        const session = getActiveSession();
-        setActiveSession(session);
-        setIsLoading(false);
-    }, []);
 
     const handleLogout = async () => {
         setIsLoggingOut(true);
 
-        // Clear all auth cookies
-        document.cookie = "professionalData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        document.cookie = "studentData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-        document.cookie = "collegeData=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict";
-
-        // Clear localStorage
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('collegeData');
-            localStorage.removeItem('studentData');
-            localStorage.removeItem('professionalData');
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (e) {
+            console.error('Logout failed', e);
         }
 
-        // Small delay to ensure cookies are cleared
+        // Small delay to ensure cookies are cleared via server response
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Reload the page to show the login form
@@ -179,12 +77,12 @@ export function ActiveSessionBlock({ intendedRole, pageName }: ActiveSessionBloc
     }
 
     // If no active session, or same role as intended, allow access
-    if (!activeSession || activeSession.role === intendedRole) {
+    if (!isAuthenticated || !user || role === intendedRole) {
         return null;
     }
 
     // Active session with different role - BLOCK access!
-    const roleInfo = getRoleInfo(activeSession.role);
+    const roleInfo = getRoleInfo(role);
     if (!roleInfo) return null;
 
     const RoleIcon = roleInfo.icon;
@@ -227,10 +125,10 @@ export function ActiveSessionBlock({ intendedRole, pageName }: ActiveSessionBloc
                             </div>
                             <div className="flex-1 min-w-0">
                                 <p className="text-white font-semibold truncate">
-                                    {activeSession.name || roleInfo.label}
+                                    {user.name || roleInfo.label}
                                 </p>
-                                {activeSession.email && (
-                                    <p className="text-gray-400 text-sm truncate">{activeSession.email}</p>
+                                {user.email && (
+                                    <p className="text-gray-400 text-sm truncate">{user.email}</p>
                                 )}
                                 <p className={`text-xs ${roleInfo.textColor}`}>
                                     Logged in as {roleInfo.label}
@@ -279,21 +177,21 @@ export function ActiveSessionBlock({ intendedRole, pageName }: ActiveSessionBloc
 
 // Hook to check if session is blocked
 export function useSessionBlock(intendedRole: 'student' | 'professional' | 'college') {
+    const { isAuthenticated, role, isLoading } = useAuth();
     const [isBlocked, setIsBlocked] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
     const [activeRole, setActiveRole] = useState<UserRole>(null);
 
     useEffect(() => {
-        const session = getActiveSession();
-        if (session && session.role !== intendedRole) {
-            setIsBlocked(true);
-            setActiveRole(session.role);
-        } else {
-            setIsBlocked(false);
-            setActiveRole(null);
+        if (!isLoading) {
+            if (isAuthenticated && role && role !== intendedRole) {
+                setIsBlocked(true);
+                setActiveRole(role);
+            } else {
+                setIsBlocked(false);
+                setActiveRole(null);
+            }
         }
-        setIsLoading(false);
-    }, [intendedRole]);
+    }, [isAuthenticated, role, isLoading, intendedRole]);
 
     return { isBlocked, isLoading, activeRole };
 }

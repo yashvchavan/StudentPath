@@ -7,21 +7,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Loading from "@/components/loading";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function ProfilePage() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [prof, setProf] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
+      if (authLoading) return;
+
+      if (!isAuthenticated || !user) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        let cookie = document.cookie.split('; ').find(row => row.startsWith('professionalData='));
-        if (!cookie) {
-          cookie = document.cookie.split('; ').find(row => row.startsWith('studentData='));
-        }
-        if (!cookie) throw new Error('Not authenticated');
-        const session = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
-        const id = session.id;
+        const id = user.id;
         const res = await fetch(`/api/professionals/profile?professionalId=${encodeURIComponent(id)}`);
         const data = await res.json();
         if (data.success) {
@@ -35,9 +38,9 @@ export default function ProfilePage() {
     };
 
     load();
-  }, []);
+  }, [authLoading, isAuthenticated, user]);
 
-  if (isLoading) return <div className="p-6"><Loading message="Loading profile..." /></div>;
+  if (authLoading || isLoading) return <div className="p-6"><Loading message={authLoading ? "Authenticating..." : "Loading profile..."} /></div>;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 p-4">

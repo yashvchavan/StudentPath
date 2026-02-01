@@ -9,8 +9,10 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Upload, Loader2, User, Briefcase, Link2, Award, Target, Check, X, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Loading from "@/components/loading";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function SettingsPage() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -22,14 +24,16 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const load = async () => {
+      if (authLoading) return;
+
+      if (!isAuthenticated || !user) {
+        setError('Not authenticated');
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        let cookie = document.cookie.split('; ').find(row => row.startsWith('professionalData='));
-        if (!cookie) {
-          cookie = document.cookie.split('; ').find(row => row.startsWith('studentData='));
-        }
-        if (!cookie) throw new Error('Not authenticated');
-        const session = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
-        const id = session.id;
+        const id = user.id;
 
         const res = await fetch(`/api/professionals/profile?professionalId=${encodeURIComponent(id)}`);
         const data = await res.json();
@@ -69,7 +73,7 @@ export default function SettingsPage() {
     };
 
     load();
-  }, []);
+  }, [authLoading, isAuthenticated, user]);
 
   const handleChange = (key: string, value: any) => {
     setForm((s: any) => ({ ...s, [key]: value }));
@@ -177,9 +181,9 @@ export default function SettingsPage() {
     }
   };
 
-  if (isLoading) return (
+  if (authLoading || isLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-black">
-      <Loading message="Loading settings..." />
+      <Loading message={authLoading ? "Authenticating..." : "Loading settings..."} />
     </div>
   );
 

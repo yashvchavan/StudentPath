@@ -72,8 +72,8 @@ export function AdminProfileProvider({ children }: { children: ReactNode }) {
             const data = await res.json()
             console.log("✅ Admin profile fetched from API:", data)
 
-            if (data?.success && data.college) {
-                const profile = data.college
+            if (data?.authenticated && data.user && data.user.role === 'college') {
+                const profile = data.user
                 setAdminProfile(profile)
 
                 // Save to localStorage

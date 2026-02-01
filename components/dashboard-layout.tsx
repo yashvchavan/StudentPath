@@ -35,6 +35,7 @@ import {
 import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -61,9 +62,10 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   const [searchFocused, setSearchFocused] = useState(false)
   const [profileData, setProfileData] = useState<StudentProfile | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
-
+  // Use the auth hook
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   // Use the context to get student data
-  const { studentData, isLoading } = useStudentData()
+  const { studentData, isLoading: contextLoading } = useStudentData()
   const router = useRouter()
 
   const sidebarItems = [
@@ -107,24 +109,12 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     }
   }
 
-  // Get student data from cookie as fallback
-  const getStudentDataFromCookie = () => {
-    if (typeof document === 'undefined') return null
-
-    const cookie = document.cookie
-      .split("; ")
-      .find(row => row.startsWith("studentData="))
-
-    if (!cookie) return null
-
-    try {
-      return JSON.parse(decodeURIComponent(cookie.split("=")[1]))
-    } catch {
-      return null
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login')
     }
-  }
-
-  const studentDataFromCookie = getStudentDataFromCookie()
+  }, [authLoading, isAuthenticated, router])
 
   const getInitials = (firstName?: string, lastName?: string): string => {
     const first = firstName?.[0] || ""
@@ -132,20 +122,20 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     return (first + last).toUpperCase() || "U"
   }
 
-  // Use profile data if available, otherwise fall back to context data
+  // Use profile data if available, otherwise fall back to context data or user object
   const displayName = profileData
     ? `${profileData.first_name} ${profileData.last_name}`
     : studentData
       ? `${studentData.first_name} ${studentData.last_name}`
-      : "Loading..."
+      : user?.name || "Loading..."
 
-  const displayEmail = profileData?.email || studentData?.email || "Loading..."
+  const displayEmail = profileData?.email || studentData?.email || user?.email || "Loading..."
   const displayProgram = profileData?.program || studentData?.program || "Loading..."
   const displaySemester = profileData?.current_semester || studentData?.current_semester || "-"
   const displayGPA = profileData?.current_gpa || studentData?.current_gpa || null
   const displayInitials = getInitials(
-    profileData?.first_name || studentData?.first_name,
-    profileData?.last_name || studentData?.last_name
+    profileData?.first_name || studentData?.first_name || (user?.name?.split(' ')[0]),
+    profileData?.last_name || studentData?.last_name || (user?.name?.split(' ').slice(1).join(' '))
   )
   const profilePicture = profileData?.profile_picture
 
@@ -155,7 +145,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
       const res = await fetch("/api/auth/logout", { method: "POST" })
       const data = await res.json()
       if (data.success) {
-        window.location.href = `/login?token=${studentDataFromCookie?.token || ""}`
+        window.location.href = "/login"
       } else {
         console.error("Logout failed:", data.error)
       }
@@ -250,7 +240,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                   </Avatar>
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-medium text-foreground">
-                      {loadingProfile || isLoading ? "Loading..." : displayName}
+                      {loadingProfile || authLoading ? "Loading..." : displayName}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Semester {displaySemester}
@@ -262,7 +252,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {loadingProfile || isLoading ? "Loading..." : displayName}
+                      {loadingProfile || authLoading ? "Loading..." : displayName}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {displayEmail}
@@ -322,7 +312,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
-                    {loadingProfile || isLoading ? "Loading..." : displayName}
+                    {loadingProfile || authLoading ? "Loading..." : displayName}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
                     {displayProgram}

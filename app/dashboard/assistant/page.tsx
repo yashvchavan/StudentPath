@@ -13,7 +13,8 @@ import {
   ChevronUp, FileText, BookOpen, Target, TrendingUp, MessageSquare, X, Search, Zap, Lightbulb
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { useState, useRef, useEffect } from "react"
+import { useAuth } from "@/hooks/use-auth"
+import React, { useState, useRef, useEffect } from "react"
 
 interface Source {
   title?: string
@@ -41,42 +42,13 @@ interface Conversation {
   updated_at: string
 }
 
-interface StudentData {
-  student_id?: number
-  id?: number
-  first_name: string
-  last_name: string
-  email: string
-  token: string
-  isAuthenticated: boolean
-  isAdmin: boolean
-}
-
-// Helper function to get student data from cookies
-function getStudentDataFromCookie(): StudentData | null {
-  if (typeof window === 'undefined') return null
-
-  const cookies = document.cookie.split(';')
-  const studentCookie = cookies.find(cookie => cookie.trim().startsWith('studentData='))
-
-  if (!studentCookie) return null
-
-  try {
-    const cookieValue = studentCookie.split('=')[1]
-    const decodedValue = decodeURIComponent(cookieValue)
-    return JSON.parse(decodedValue)
-  } catch (error) {
-    console.error('Error parsing student cookie:', error)
-    return null
-  }
-}
-
 export default function AIAssistantPage() {
-  const [studentData, setStudentData] = useState<StudentData | null>(null)
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const [userId, setUserId] = useState<number | null>(null)
   const userType = "student"
 
   const [message, setMessage] = useState("")
+  // ... other states ...
   const [messages, setMessages] = useState<Message[]>([])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<number | null>(null)
@@ -95,22 +67,16 @@ export default function AIAssistantPage() {
   // Student-specific context
   const [showContextPanel, setShowContextPanel] = useState(false)
 
+  // Effect to set userId and handle auth
   useEffect(() => {
-    const data = getStudentDataFromCookie()
-
-    if (!data || !data.isAuthenticated) {
-      setError("Not authenticated. Please login.")
-      return
+    if (!authLoading) {
+      if (!isAuthenticated || !user) {
+        setError("Not authenticated. Please login.")
+      } else {
+        setUserId(Number(user.id))
+      }
     }
-
-    setStudentData(data)
-    const id = data.student_id || data.id
-    if (id) {
-      setUserId(id)
-    } else {
-      setError("User ID not found in session")
-    }
-  }, [])
+  }, [authLoading, isAuthenticated, user])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -122,7 +88,8 @@ export default function AIAssistantPage() {
       // We don't fetch a separate profile API like professionals do, data is in cookie/context
 
       if (messages.length === 0) {
-        const welcomeMessage = `👋 **Welcome back, ${studentData?.first_name || 'Student'}!**
+        const firstName = user?.name?.split(' ')[0] || 'Student';
+        const welcomeMessage = `👋 **Welcome back, ${firstName}!**
 
 I'm your **personalized AI learning assistant**. I have access to your complete academic profile, syllabus, skills, and career goals. I can help you with:
 
@@ -397,9 +364,13 @@ What would you like to explore today?`
     { icon: Target, label: "Skill Gap", prompt: "Identify skill gaps for my target role" },
   ]
 
-  if (!userId) {
-    return (
-      <DashboardLayout currentPage="assistant">
+  return (
+    <DashboardLayout currentPage="assistant">
+      {authLoading ? (
+        <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      ) : !userId ? (
         <div className="flex items-center justify-center h-[calc(100vh-200px)]">
           <Card className="p-6 max-w-md bg-zinc-900 border-zinc-800">
             <CardContent className="flex flex-col items-center gap-4">
@@ -411,337 +382,345 @@ What would you like to explore today?`
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
-    )
-  }
+      ) : (
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-8rem)] bg-background border rounded-xl overflow-hidden shadow-sm relative isolate">
 
-  return (
-    <DashboardLayout currentPage="assistant">
-      {/* 
-        Adjusted height to calc(100vh - 8rem) to account for top navbar (~4rem) and padding/margins.
-        This ensures the internal ScrollArea has a fixed constraint to scroll against.
-      */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-8rem)] bg-background border rounded-xl overflow-hidden shadow-sm relative isolate">
+          {/* Collapsible Sidebar */}
+          <div className={`${sidebarCollapsed ? 'w-0 opacity-0 pointer-events-none' : 'w-full lg:w-80 opacity-100'} transition-all duration-300 bg-card border-r flex flex-col overflow-hidden absolute inset-0 z-40 lg:relative lg:inset-auto lg:z-auto`}>
+            {/* Sidebar Header */}
+            <div className="p-3 border-b flex items-center justify-between bg-muted/30">
+              <div className="flex items-center gap-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSidebarCollapsed(true)}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      >
+                        <PanelLeftClose className="w-4.5 h-4.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Close Sidebar</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-        {/* Collapsible Sidebar */}
-        <div className={`${sidebarCollapsed ? 'w-0 opacity-0 lg:hidden' : 'w-full lg:w-80'} transition-all duration-300 bg-card border-r flex flex-col overflow-hidden absolute inset-0 z-40 lg:relative lg:inset-auto lg:z-auto`}>
-          {/* Sidebar Header */}
-          <div className="p-4 border-b flex items-center justify-between bg-muted/30">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-sm">Conversations</span>
-            </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={startNewConversation}
-                    className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 text-muted-foreground hover:text-blue-600"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>New Chat</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={startNewConversation}
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                      >
+                        <Plus className="w-4.5 h-4.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">New Chat</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
-          {/* Search Bar */}
-          <div className="px-4 py-2 border-b bg-card">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search chats..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 bg-muted/50 border-input text-xs focus:ring-blue-500/20 focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Conversations List */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="p-2 space-y-1">
-              {isLoadingConversations ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="text-center py-8 px-4">
-                  <History className="w-8 h-8 mx-auto mb-3 text-muted-foreground/50" />
-                  <p className="text-sm text-muted-foreground">No conversations yet</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Start a new chat!</p>
-                </div>
-              ) : (
-                conversations
-                  .filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map((conv) => (
-                    <div
-                      key={conv.id}
-                      onClick={() => loadConversation(conv.id)}
-                      className={`group p-3 mx-2 my-1 rounded-xl cursor-pointer transition-all border ${currentConversationId === conv.id
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-sm'
-                        : 'bg-transparent border-transparent hover:bg-muted/50 hover:border-border'
-                        }`}
-                    >
-                      <div className="flex flex-col gap-2">
-                        <p className={`text-sm font-semibold line-clamp-2 leading-snug transition-colors ${currentConversationId === conv.id ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
-                          {conv.title}
-                        </p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
-                            <History className="w-3 h-3" />
-                            {new Date(conv.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => deleteConversation(conv.id, e)}
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-              )}
-            </div>
-          </div>
-
-          {/* Bottom Sidebar Action */}
-          <div className="p-4 border-t bg-muted/20">
-            <Button
-              onClick={startNewConversation}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 h-10"
-            >
-              <Plus className="w-4 h-4" />
-              New Conversation
-            </Button>
-          </div>
-        </div>
-
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col bg-background min-w-0">
-          {/* Chat Header */}
-          <div className="px-4 py-3 border-b flex items-center justify-between bg-card">
-            <div className="flex items-center gap-3">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                      className="h-8 w-8 p-0 lg:hidden text-muted-foreground hover:text-foreground"
-                    >
-                      {sidebarCollapsed ? (
-                        <PanelLeft className="w-4 h-4" />
-                      ) : (
-                        <PanelLeftClose className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
-                  <Bot className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-sm md:text-base">AI Learning Assistant</h2>
-                  <p className="text-[10px] md:text-xs text-muted-foreground">Powered by GPT-4 + Your Syllabus</p>
-                </div>
+              <div className="flex items-center gap-2 pr-1">
+                <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">History</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
-                <Sparkles className="w-3 h-3 mr-1" />
-                GPT-4
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                <GraduationCap className="w-3 h-3 mr-1" />
-                Student
-              </Badge>
+            {/* Search Bar */}
+            <div className="px-4 py-2 border-b bg-card">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search chats..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 bg-muted/50 border-input text-xs focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar scroll-smooth p-4">
-            <div className="space-y-6 max-w-4xl mx-auto">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] group`}>
-                    {/* Message Content */}
-                    <div className={`p-4 rounded-2xl shadow-sm ${msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-sm'
-                      : 'bg-muted/50 border text-foreground rounded-bl-sm'
-                      }`}>
-
-                      {msg.isEditing ? (
-                        <div className="space-y-3">
-                          <Textarea
-                            defaultValue={msg.content}
-                            className="w-full min-h-[100px] bg-background border-input"
-                            id={`edit-${msg.id}`}
-                          />
-                          <div className="flex gap-2 justify-end">
+            {/* Conversations List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="p-2 space-y-1">
+                {isLoadingConversations ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="text-center py-8 px-4">
+                    <History className="w-8 h-8 mx-auto mb-3 text-muted-foreground/50" />
+                    <p className="text-sm text-muted-foreground">No conversations yet</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Start a new chat!</p>
+                  </div>
+                ) : (
+                  conversations
+                    .filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map((conv) => (
+                      <div
+                        key={conv.id}
+                        onClick={() => loadConversation(conv.id)}
+                        className={`group p-3 mx-2 my-1 rounded-xl cursor-pointer transition-all border ${currentConversationId === conv.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-sm'
+                          : 'bg-transparent border-transparent hover:bg-muted/50 hover:border-border'
+                          }`}
+                      >
+                        <div className="flex flex-col gap-2">
+                          <p className={`text-sm font-semibold line-clamp-2 leading-snug transition-colors ${currentConversationId === conv.id ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}`}>
+                            {conv.title}
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 font-medium">
+                              <History className="w-3 h-3" />
+                              {new Date(conv.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            </p>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleCancelEdit(msg.id)}
+                              onClick={(e: React.MouseEvent) => deleteConversation(conv.id, e)}
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                             >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                const textarea = document.getElementById(`edit-${msg.id}`) as HTMLTextAreaElement
-                                if (textarea) {
-                                  handleResendEdited(msg.id, textarea.value)
-                                }
-                              }}
-                              className="bg-blue-600 hover:bg-blue-700 text-white"
-                            >
-                              <RotateCcw className="w-3 h-3 mr-1" />
-                              Resend
+                              <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
                         </div>
-                      ) : (
-                        <div className="whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none">
-                          {msg.role === 'assistant' ? formatMessageContent(msg.content) : (
-                            <p className="leading-relaxed">{msg.content}</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
 
-                    {/* Message Actions & Sources */}
-                    {!msg.isEditing && (
-                      <div className="flex items-center justify-between mt-1 px-1">
-                        <span className="text-[10px] text-muted-foreground">
-                          {msg.created_at}
-                        </span>
+            {/* Bottom Sidebar Action */}
+            <div className="p-4 border-t bg-muted/20">
+              <Button
+                onClick={startNewConversation}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2 h-10"
+              >
+                <Plus className="w-4 h-4" />
+                New Conversation
+              </Button>
+            </div>
+          </div>
 
-                        <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                          {msg.role === 'user' && (
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col bg-background min-w-0">
+            {/* Chat Header */}
+            <div className="px-4 py-3 border-b flex items-center justify-between bg-card">
+              <div className="flex items-center gap-3">
+                {sidebarCollapsed && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSidebarCollapsed(false)}
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        >
+                          <PanelLeft className="w-4.5 h-4.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">Open Sidebar</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <Bot className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-sm md:text-base">AI Learning Assistant</h2>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">Powered by GPT-4 + Your Syllabus</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  GPT-4
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  <GraduationCap className="w-3 h-3 mr-1" />
+                  Student
+                </Badge>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar scroll-smooth p-4">
+              <div className="space-y-6 max-w-4xl mx-auto">
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] group`}>
+                      {/* Message Content */}
+                      <div className={`p-4 rounded-2xl shadow-sm ${msg.role === 'user'
+                        ? 'bg-blue-600 text-white rounded-br-sm'
+                        : 'bg-muted/50 border text-foreground rounded-bl-sm'
+                        }`}>
+
+                        {msg.isEditing ? (
+                          <div className="space-y-3">
+                            <Textarea
+                              defaultValue={msg.content}
+                              className="w-full min-h-[100px] bg-background border-input"
+                              id={`edit-${msg.id}`}
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleCancelEdit(msg.id)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  const textarea = document.getElementById(`edit-${msg.id}`) as HTMLTextAreaElement
+                                  if (textarea) {
+                                    handleResendEdited(msg.id, textarea.value)
+                                  }
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                <RotateCcw className="w-3 h-3 mr-1" />
+                                Resend
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="whitespace-pre-wrap break-words prose prose-sm dark:prose-invert max-w-none">
+                            {msg.role === 'assistant' ? formatMessageContent(msg.content) : (
+                              <p className="leading-relaxed">{msg.content}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Message Actions & Sources */}
+                      {!msg.isEditing && (
+                        <div className="flex items-center justify-between mt-1 px-1">
+                          <span className="text-[10px] text-muted-foreground">
+                            {msg.created_at}
+                          </span>
+
+                          <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                            {msg.role === 'user' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleEditMessage(msg.id)}
+                                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Edit & Resend</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={() => handleEditMessage(msg.id)}
+                                    onClick={() => handleCopyMessage(msg.id, msg.content)}
                                     className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                                   >
-                                    <Edit3 className="w-3 h-3" />
+                                    {copiedMessageId === msg.id ? (
+                                      <Check className="w-3 h-3 text-green-500" />
+                                    ) : (
+                                      <Copy className="w-3 h-3" />
+                                    )}
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>Edit & Resend</TooltipContent>
+                                <TooltipContent>Copy</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          )}
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleCopyMessage(msg.id, msg.content)}
-                                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                                >
-                                  {copiedMessageId === msg.id ? (
-                                    <Check className="w-3 h-3 text-green-500" />
-                                  ) : (
-                                    <Copy className="w-3 h-3" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Copy</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] p-4 rounded-2xl bg-muted/50 border rounded-bl-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                      </div>
-                      <span className="text-muted-foreground text-xs font-medium">Thinking...</span>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} className="h-4" />
-            </div>
-          </div>
+                ))}
 
-          {/* Input Area */}
-          <div className="p-4 border-t bg-card">
-            <div className="max-w-4xl mx-auto space-y-4">
-              {/* Quick Suggestions - Only show when no messages or empty chat */}
-              {messages.length <= 1 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
-                  {quickSuggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSendMessage(s.prompt)}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted border border-transparent hover:border-blue-200 dark:hover:border-blue-800 transition-all text-center group"
-                    >
-                      <div className="p-2 rounded-full bg-background group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 text-blue-600 transition-colors">
-                        <s.icon className="w-4 h-4" />
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] p-4 rounded-2xl bg-muted/50 border rounded-bl-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                        <span className="text-muted-foreground text-xs font-medium">Thinking...</span>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">{s.label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="relative flex gap-2 items-end bg-muted/30 p-2 rounded-xl border focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
-                <Textarea
-                  ref={inputRef}
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSendMessage()
-                    }
-                  }}
-                  placeholder="Ask focused questions about your studies..."
-                  className="min-h-[50px] max-h-[200px] border-0 focus-visible:ring-0 resize-none bg-transparent placeholder:text-muted-foreground py-3"
-                />
-                <Button
-                  onClick={() => handleSendMessage()}
-                  disabled={!message.trim() || isLoading}
-                  className="mb-1 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} className="h-4" />
               </div>
-              <div className="flex justify-between items-center text-[10px] text-muted-foreground px-1">
-                <p>AI can make mistakes. Verify important info.</p>
+            </div>
+
+            {/* Input Area */}
+            <div className="p-4 border-t bg-card">
+              <div className="max-w-4xl mx-auto space-y-4">
+                {/* Quick Suggestions - Only show when no messages or empty chat */}
+                {messages.length <= 1 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+                    {quickSuggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleSendMessage(s.prompt)}
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted/50 hover:bg-muted border border-transparent hover:border-blue-200 dark:hover:border-blue-800 transition-all text-center group"
+                      >
+                        <div className="p-2 rounded-full bg-background group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 text-blue-600 transition-colors">
+                          <s.icon className="w-4 h-4" />
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="relative flex gap-2 items-end bg-muted/30 p-2 rounded-xl border focus-within:border-blue-500/50 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
+                  <Textarea
+                    ref={inputRef}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSendMessage()
+                      }
+                    }}
+                    placeholder="Ask focused questions about your studies..."
+                    className="min-h-[50px] max-h-[200px] border-0 focus-visible:ring-0 resize-none bg-transparent placeholder:text-muted-foreground py-3"
+                  />
+                  <Button
+                    onClick={() => handleSendMessage()}
+                    disabled={!message.trim() || isLoading}
+                    className="mb-1 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="flex justify-between items-center text-[10px] text-muted-foreground px-1">
+                  <p>AI can make mistakes. Verify important info.</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </DashboardLayout>
   )
 }

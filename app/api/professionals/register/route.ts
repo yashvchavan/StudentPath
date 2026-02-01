@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 
+import { checkRateLimit } from '@/lib/rate-limit';
+
 export async function POST(request: NextRequest) {
+  // Rate Limit
+  if (!checkRateLimit(request, 3, 60000)) {
+    return NextResponse.json({ error: 'Too many registration attempts' }, { status: 429 });
+  }
+
+  let connection;
   try {
     const body = await request.json();
     const {
@@ -34,7 +42,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const connection = await pool.getConnection();
+    connection = await pool.getConnection();
 
     // ✅ Check if email exists
     const [existing] = await connection.execute(
@@ -43,7 +51,6 @@ export async function POST(request: NextRequest) {
     );
 
     if (Array.isArray(existing) && existing.length > 0) {
-      connection.release();
       return NextResponse.json(
         { error: "Professional with this email already exists" },
         { status: 409 }
@@ -83,8 +90,6 @@ export async function POST(request: NextRequest) {
       ]
     );
 
-    connection.release();
-
     return NextResponse.json({
       success: true,
       message: "Professional registered successfully",
@@ -96,5 +101,7 @@ export async function POST(request: NextRequest) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    if (connection) connection.release();
   }
 }

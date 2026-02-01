@@ -1,144 +1,25 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose';
 
-// Helper function to safely parse JSON
-function safeJsonParse(str: string) {
-  try {
-    return JSON.parse(str);
-  } catch {
-    return null;
-  }
-}
+// Define secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const key = new TextEncoder().encode(JWT_SECRET);
 
 // User types for RBAC
 type UserType = 'student' | 'professional' | 'college' | null;
 
-interface AuthData {
-  isAuthenticated?: boolean;
-  isAdmin?: boolean;
-  token?: string;
-  userType?: UserType;
-  type?: string;
-  timestamp?: number;
-  student_id?: string | number;
-  college_id?: string | number;
-  id?: number;
-}
-
-// Get the user type from cookie data
-function getUserType(studentData: AuthData | null, collegeData: AuthData | null): UserType {
-  if (collegeData && validateCollegeData(JSON.stringify(collegeData))) {
-    return 'college';
-  }
-
-  if (studentData) {
-    // Check for explicit userType field
-    if (studentData.userType === 'professional') {
-      return 'professional';
-    }
-    if (studentData.userType === 'student' || studentData.student_id) {
-      return 'student';
-    }
-    // Legacy support: if isAdmin is false and no student_id, might be professional
-    if (studentData.isAuthenticated && !studentData.isAdmin && !studentData.student_id && studentData.id) {
-      return 'professional';
-    }
-  }
-
-  return null;
-}
-
-// Helper function to validate student data
-function validateStudentData(data: string | undefined): boolean {
-  if (!data) return false;
+// Helper to verify session
+async function verifyAuth(token: string | undefined): Promise<{ id: number; role: UserType } | null> {
+  if (!token) return null;
   try {
-    const parsed = safeJsonParse(decodeURIComponent(data)) as AuthData;
-
-    if (!parsed) return false;
-
-    // Check required fields
-    if (!parsed.isAuthenticated || !parsed.timestamp) return false;
-
-    // Check if the authentication is not expired (24 hours)
-    const isExpired = Date.now() - (parsed.timestamp || 0) > 24 * 60 * 60 * 1000;
-    if (isExpired) {
-      console.log('Student authentication expired');
-      return false;
-    }
-
-    // Must have student_id for students
-    if (!parsed.student_id) return false;
-
-    // Verify student-specific data
-    if (parsed.isAdmin) return false; // Students shouldn't have admin flag
-
-    // Check userType if present
-    if (parsed.userType && parsed.userType !== 'student') return false;
-
-    return true;
-  } catch (error) {
-    console.error('Error validating student data:', error);
-    return false;
-  }
-}
-
-// Helper function to validate professional data
-function validateProfessionalData(data: string | undefined): boolean {
-  if (!data) return false;
-  try {
-    const parsed = safeJsonParse(decodeURIComponent(data)) as AuthData;
-
-    if (!parsed) return false;
-
-    // Check required fields
-    if (!parsed.isAuthenticated || !parsed.timestamp) return false;
-
-    // Check if the authentication is not expired (24 hours)
-    const isExpired = Date.now() - (parsed.timestamp || 0) > 24 * 60 * 60 * 1000;
-    if (isExpired) {
-      console.log('Professional authentication expired');
-      return false;
-    }
-
-    // Check userType - must be professional
-    if (parsed.userType === 'professional') return true;
-
-    // Legacy support: if studentData cookie contains a professional
-    if (parsed.id && !parsed.student_id && !parsed.isAdmin) return true;
-
-    return false;
-  } catch (error) {
-    console.error('Error validating professional data:', error);
-    return false;
-  }
-}
-
-// Helper function to validate college data
-function validateCollegeData(data: string | undefined): boolean {
-  if (!data) return false;
-  try {
-    const parsed = safeJsonParse(decodeURIComponent(data)) as AuthData;
-
-    if (!parsed) return false;
-
-    // Check required fields for college access
-    // College data should have either token or id
-    if (!parsed.token && !parsed.id) return false;
-    if (parsed.type && parsed.type !== 'college') return false;
-
-    // If timestamp exists, check expiration
-    if (parsed.timestamp) {
-      const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000;
-      if (isExpired) {
-        console.log('College authentication expired');
-        return false;
-      }
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error validating college data:', error);
-    return false;
+    const { payload } = await jwtVerify(token, key);
+    return {
+      id: payload.id as number,
+      role: payload.role as UserType
+    };
+  } catch (e) {
+    return null;
   }
 }
 
@@ -156,21 +37,7 @@ function getRedirectUrl(userType: UserType): string {
   }
 }
 
-// Get login URL based on user type
-function getLoginUrl(userType: UserType): string {
-  switch (userType) {
-    case 'student':
-      return '/login';
-    case 'professional':
-      return '/professional-login';
-    case 'college':
-      return '/college-login';
-    default:
-      return '/login';
-  }
-}
-
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   try {
     const path = request.nextUrl.pathname;
 
@@ -196,41 +63,20 @@ export function middleware(request: NextRequest) {
     const isCollegeDashboardPath = collegeDashboardPaths.some(p => path.startsWith(p));
     const isApiPath = path.startsWith('/api/');
 
-    // Get cookies
-    const studentDataRaw = request.cookies.get('studentData')?.value;
-    const professionalDataRaw = request.cookies.get('professionalData')?.value;
-    const collegeDataRaw = request.cookies.get('collegeData')?.value;
-
-    // Parse cookie data - decode URIComponent for consistency
-    const studentData = studentDataRaw ? safeJsonParse(decodeURIComponent(studentDataRaw)) : null;
-    const professionalData = professionalDataRaw ? safeJsonParse(decodeURIComponent(professionalDataRaw)) : null;
-    const collegeData = collegeDataRaw ? safeJsonParse(decodeURIComponent(collegeDataRaw)) : null;
+    // Get auth token
+    const token = request.cookies.get('auth_session')?.value;
+    const session = await verifyAuth(token);
+    const currentUserType = session?.role || null;
 
     console.log('Path:', path);
-    console.log('Has studentData:', !!studentData);
-    console.log('Has professionalData:', !!professionalData);
-    console.log('Has collegeData:', !!collegeData);
-
-    // Determine current user type
-    const isValidStudent = validateStudentData(studentDataRaw);
-    const isValidProfessional = validateProfessionalData(professionalDataRaw) || validateProfessionalData(studentDataRaw);
-    const isValidCollege = validateCollegeData(collegeDataRaw);
-
-    let currentUserType: UserType = null;
-    if (isValidCollege) {
-      currentUserType = 'college';
-    } else if (isValidProfessional) {
-      currentUserType = 'professional';
-    } else if (isValidStudent) {
-      currentUserType = 'student';
-    }
-
     console.log('Current user type:', currentUserType);
 
     // Create response for clearing invalid cookies
     const clearCookiesResponse = (redirectUrl: string) => {
       console.log('Clearing cookies and redirecting to:', redirectUrl);
       const response = NextResponse.redirect(new URL(redirectUrl, request.url));
+      response.cookies.delete('auth_session');
+      // Legacy cleanup
       response.cookies.delete('studentData');
       response.cookies.delete('professionalData');
       response.cookies.delete('collegeData');
@@ -271,7 +117,7 @@ export function middleware(request: NextRequest) {
       // Protect professional endpoints
       if (path.startsWith('/api/professionals') && !path.includes('/login') && !path.includes('/register')) {
         console.log('Validating professional access for:', path);
-        // Allow both professionals and students to access some professional APIs (like profile viewing)
+        // Allow both professionals and students to access some professional APIs
         if (currentUserType !== 'professional' && currentUserType !== 'student') {
           console.log('Professional validation failed');
           return new NextResponse(JSON.stringify({ error: 'Unauthorized - Professional access required' }), {
@@ -282,10 +128,13 @@ export function middleware(request: NextRequest) {
         console.log('Professional validation passed');
       }
 
-      // Protect student profile endpoints (but NOT student/list)
+      // Protect student profile endpoints (but NOT student/list which is for colleges)
       if (path.startsWith('/api/student') && !path.startsWith('/api/student/list')) {
         console.log('Validating student access for:', path);
         if (currentUserType !== 'student') {
+          // Check if it's 'list' which is handled above, but here we cover others
+          // Is it possible a college accesses other student endpoints?
+          // Usually student endpoints are for the student themselves.
           console.log('Student validation failed');
           return new NextResponse(JSON.stringify({ error: 'Unauthorized - Student access required' }), {
             status: 401,
@@ -295,10 +144,14 @@ export function middleware(request: NextRequest) {
         console.log('Student validation passed');
       }
 
-      // Protect settings endpoints - allow students and professionals
+      // Protect settings endpoints - allow all authorized roles? 
+      // Original logic allowed student & professional. Let's verify.
       if (path.startsWith('/api/settings')) {
         console.log('Validating access for settings:', path);
         if (currentUserType !== 'student' && currentUserType !== 'professional') {
+          // What about college? Colleges have /api/admin/settings usually. 
+          // If /api/settings is shared, we should allow college too?
+          // Checking original code: originally allowed student and professional.
           console.log('Settings validation failed');
           return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
             status: 401,
@@ -316,32 +169,15 @@ export function middleware(request: NextRequest) {
       console.log('Student dashboard access - user type:', currentUserType);
 
       if (currentUserType === 'professional') {
-        // Professional trying to access student dashboard - redirect to professional dashboard
-        console.log('Professional trying to access student dashboard, redirecting');
         return NextResponse.redirect(new URL('/professional-dashboard', request.url));
       }
 
       if (currentUserType === 'college') {
-        // College admin trying to access student dashboard - redirect to admin
-        console.log('College admin trying to access student dashboard, redirecting');
         return NextResponse.redirect(new URL('/admin', request.url));
       }
 
       if (currentUserType !== 'student') {
         return clearCookiesResponse('/login?redirect=' + encodeURIComponent(path));
-      }
-
-      // Add token to URL if missing
-      try {
-        if (!request.nextUrl.searchParams.has('token') &&
-          studentData &&
-          studentData.token) {
-          return NextResponse.redirect(
-            new URL(`${path}?token=${studentData.token}`, request.url)
-          );
-        }
-      } catch (error) {
-        console.error('Error parsing student data:', error);
       }
     }
 
@@ -350,14 +186,10 @@ export function middleware(request: NextRequest) {
       console.log('Professional dashboard access - user type:', currentUserType);
 
       if (currentUserType === 'student') {
-        // Student trying to access professional dashboard - redirect to student dashboard
-        console.log('Student trying to access professional dashboard, redirecting');
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
       if (currentUserType === 'college') {
-        // College admin trying to access professional dashboard - redirect to admin
-        console.log('College admin trying to access professional dashboard, redirecting');
         return NextResponse.redirect(new URL('/admin', request.url));
       }
 
@@ -371,14 +203,10 @@ export function middleware(request: NextRequest) {
       console.log('Admin route access - user type:', currentUserType);
 
       if (currentUserType === 'student') {
-        // Student trying to access admin - redirect to student dashboard
-        console.log('Student trying to access admin, redirecting');
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
 
       if (currentUserType === 'professional') {
-        // Professional trying to access admin - redirect to professional dashboard
-        console.log('Professional trying to access admin, redirecting');
         return NextResponse.redirect(new URL('/professional-dashboard', request.url));
       }
 
@@ -390,17 +218,14 @@ export function middleware(request: NextRequest) {
       console.log('Admin access granted');
     }
 
-    // Allow auth pages to load - client-side ActiveSessionBlock handles displaying
-    // the "already logged in" message with proper logout/dashboard options
-    // instead of silently redirecting users
+    // Public auth pages - redirect if already logged in
     if (isPublicPath && !path.startsWith('/api/')) {
-      // Log for debugging purposes
-      const authPages = ['/login', '/register', '/college-login', '/professional-login', '/register-other'];
+      const authPages = ['/login', '/register', '/college-login', '/professional-login'];
       const isAuthPage = authPages.some(p => path === p || path.startsWith(p + '/'));
 
       if (isAuthPage && currentUserType) {
-        console.log(`Authenticated ${currentUserType} accessing ${path} - client-side will handle blocking`);
-        // Allow the page to load; ActiveSessionBlock component will show appropriate message
+        console.log(`Authenticated ${currentUserType} accessing ${path} - redirecting to dashboard`);
+        return NextResponse.redirect(new URL(getRedirectUrl(currentUserType), request.url));
       }
     }
 
@@ -409,8 +234,7 @@ export function middleware(request: NextRequest) {
     console.error('Middleware error:', error);
     // On error, clear cookies and redirect to login
     const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.delete('studentData');
-    response.cookies.delete('collegeData');
+    response.cookies.delete('auth_session');
     return response;
   }
 }

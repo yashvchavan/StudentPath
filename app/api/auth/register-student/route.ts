@@ -3,7 +3,15 @@ import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { UserRow, StudentRow, SuccessResult } from '@/lib/db-types';
 
+import { checkRateLimit } from '@/lib/rate-limit';
+
 export async function POST(request: NextRequest) {
+  // Rate Limit
+  if (!checkRateLimit(request, 3, 60000)) {
+    return NextResponse.json({ error: 'Too many registration attempts' }, { status: 429 });
+  }
+
+  let connection;
   try {
     const body = await request.json();
     const {
@@ -43,11 +51,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    connection = await pool.getConnection();
+
     // Validate college token if provided
     let collegeId = null;
     if (collegeToken) {
-      const connection = await pool.getConnection();
-      
       const [tokenResult] = await connection.execute(
         `SELECT c.id, c.college_name, ct.usage_count, ct.max_usage, ct.is_active 
          FROM colleges c 
@@ -57,7 +65,6 @@ export async function POST(request: NextRequest) {
       );
 
       if (Array.isArray(tokenResult) && tokenResult.length === 0) {
-        connection.release();
         return NextResponse.json(
           { error: 'Invalid or expired college token' },
           { status: 400 }
@@ -65,10 +72,9 @@ export async function POST(request: NextRequest) {
       }
 
       const tokenData = (tokenResult as any[])[0];
-      
+
       // Check if token usage limit exceeded
       if (tokenData.usage_count >= tokenData.max_usage) {
-        connection.release();
         return NextResponse.json(
           { error: 'College token usage limit exceeded' },
           { status: 400 }
@@ -82,20 +88,15 @@ export async function POST(request: NextRequest) {
         'UPDATE college_tokens SET usage_count = usage_count + 1 WHERE token = ?',
         [collegeToken]
       );
-
-      connection.release();
     }
 
     // Check if email already exists
-    const connection = await pool.getConnection();
-    
     const [existingStudent] = await connection.execute(
       'SELECT student_id FROM Students WHERE email = ?',
       [email]
     );
 
     if (Array.isArray(existingStudent) && existingStudent.length > 0) {
-      connection.release();
       return NextResponse.json(
         { error: 'Student with this email already exists' },
         { status: 409 }
@@ -149,8 +150,6 @@ export async function POST(request: NextRequest) {
 
     const studentId_result = (result as any).insertId;
 
-    connection.release();
-
     return NextResponse.json({
       success: true,
       message: 'Student registered successfully',
@@ -164,5 +163,7 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    if (connection) connection.release();
   }
 }

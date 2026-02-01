@@ -2,38 +2,39 @@ import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
 export async function POST(request: Request) {
-  const payload = await request.json();
-
-  const {
-    student_id,
-    program,
-    currentYear,
-    currentSemester,
-    enrollmentYear,
-    currentGPA,
-    academicInterests,
-    careerQuizAnswers,
-    technicalSkills,
-    softSkills,
-    languageSkills,
-    primaryGoal,
-    secondaryGoal,
-    timeline,
-    locationPreference,
-    industryFocus,
-    intensityLevel,
-  } = payload;
-
-  // Required fields check
-  if (!student_id || !program || !currentYear) {
-    return NextResponse.json(
-      { error: 'Please provide all required fields: student_id, program, currentYear' },
-      { status: 400 }
-    );
-  }
-
-  const connection = await pool.getConnection();
+  let connection;
   try {
+    const payload = await request.json();
+
+    const {
+      student_id,
+      program,
+      currentYear,
+      currentSemester,
+      enrollmentYear,
+      currentGPA,
+      academicInterests,
+      careerQuizAnswers,
+      technicalSkills,
+      softSkills,
+      languageSkills,
+      primaryGoal,
+      secondaryGoal,
+      timeline,
+      locationPreference,
+      industryFocus,
+      intensityLevel,
+    } = payload;
+
+    // Required fields check
+    if (!student_id || !program || !currentYear) {
+      return NextResponse.json(
+        { error: 'Please provide all required fields: student_id, program, currentYear' },
+        { status: 400 }
+      );
+    }
+
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
     // 1️⃣ Check student exists
@@ -43,7 +44,6 @@ export async function POST(request: Request) {
     );
     if (!Array.isArray(students) || (students as any).length === 0) {
       await connection.rollback();
-      connection.release();
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
@@ -127,21 +127,23 @@ export async function POST(request: Request) {
 
     // Commit transaction
     await connection.commit();
-    connection.release();
 
     return NextResponse.json({ message: 'Profile completed successfully', success: true });
   } catch (dbError: any) {
-    try {
-      await connection.rollback();
-    } catch (e) {
-      /* ignore rollback errors */
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (e) {
+        /* ignore rollback errors */
+      }
     }
-    connection.release();
     console.error('DB Error:', dbError?.message, dbError?.sql);
 
     return NextResponse.json(
       { error: dbError?.message || 'Something went wrong while completing the profile' },
       { status: 500 }
     );
+  } finally {
+    if (connection) connection.release();
   }
 }

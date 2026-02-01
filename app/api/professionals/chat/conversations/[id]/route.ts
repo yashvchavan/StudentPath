@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import pool from "@/lib/db";
+import jwt from "jsonwebtoken";
 
 /**
  * GET /api/professionals/chat/conversations/[id]
@@ -10,8 +11,7 @@ export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const connection = await pool.getConnection();
-
+    let connection;
     try {
         const { id } = await params;
         const conversationId = parseInt(id, 10);
@@ -24,32 +24,36 @@ export async function GET(
         }
 
         const cookieStore = await cookies();
-        const professionalCookie = cookieStore.get("professionalData")?.value;
+        const token = cookieStore.get("auth_session")?.value;
 
-        if (!professionalCookie) {
+        if (!token) {
             return NextResponse.json(
                 { error: "Unauthorized" },
                 { status: 401 }
             );
         }
 
-        let professionalData;
+        let decoded: any;
         try {
-            professionalData = JSON.parse(professionalCookie);
-        } catch {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
             return NextResponse.json(
                 { error: "Invalid session" },
                 { status: 401 }
             );
         }
 
-        const professionalId = professionalData?.id;
-        if (!professionalId) {
+        const professionalId = decoded?.id;
+        const userRole = decoded?.role;
+
+        if (!professionalId || userRole !== 'professional') {
             return NextResponse.json(
-                { error: "Invalid session" },
+                { error: "Unauthorized" },
                 { status: 401 }
             );
         }
+
+        connection = await pool.getConnection();
 
         // Verify conversation belongs to this professional
         const [convRows]: any = await connection.execute(
@@ -59,7 +63,6 @@ export async function GET(
         );
 
         if (!convRows || convRows.length === 0) {
-            connection.release();
             return NextResponse.json(
                 { error: "Conversation not found" },
                 { status: 404 }
@@ -75,8 +78,6 @@ export async function GET(
             [conversationId]
         );
 
-        connection.release();
-
         return NextResponse.json({
             success: true,
             conversation: convRows[0],
@@ -84,11 +85,12 @@ export async function GET(
         });
     } catch (error) {
         console.error("Error fetching conversation:", error);
-        connection.release();
         return NextResponse.json(
             { error: "Internal server error" },
             { status: 500 }
         );
+    } finally {
+        if (connection) connection.release();
     }
 }
 
@@ -100,7 +102,7 @@ export async function DELETE(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const connection = await pool.getConnection();
+    let connection;
 
     try {
         const { id } = await params;
@@ -114,32 +116,36 @@ export async function DELETE(
         }
 
         const cookieStore = await cookies();
-        const professionalCookie = cookieStore.get("professionalData")?.value;
+        const token = cookieStore.get("auth_session")?.value;
 
-        if (!professionalCookie) {
+        if (!token) {
             return NextResponse.json(
                 { error: "Unauthorized" },
                 { status: 401 }
             );
         }
 
-        let professionalData;
+        let decoded: any;
         try {
-            professionalData = JSON.parse(professionalCookie);
-        } catch {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
             return NextResponse.json(
                 { error: "Invalid session" },
                 { status: 401 }
             );
         }
 
-        const professionalId = professionalData?.id;
-        if (!professionalId) {
+        const professionalId = decoded?.id;
+        const userRole = decoded?.role;
+
+        if (!professionalId || userRole !== 'professional') {
             return NextResponse.json(
-                { error: "Invalid session" },
+                { error: "Unauthorized" },
                 { status: 401 }
             );
         }
+
+        connection = await pool.getConnection();
 
         // Delete messages first
         await connection.execute(
@@ -154,18 +160,17 @@ export async function DELETE(
             [conversationId, professionalId]
         );
 
-        connection.release();
-
         return NextResponse.json({
             success: true,
             message: "Conversation deleted",
         });
     } catch (error) {
         console.error("Error deleting conversation:", error);
-        connection.release();
         return NextResponse.json(
             { error: "Internal server error" },
             { status: 500 }
         );
+    } finally {
+        if (connection) connection.release();
     }
 }

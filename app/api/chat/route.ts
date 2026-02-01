@@ -8,6 +8,8 @@ import {
     generateConversationTitle,
     getConversation,
 } from "@/lib/chat";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -378,7 +380,29 @@ function isEducationalQuery(message: string): boolean {
 
 export async function POST(req: NextRequest) {
     try {
-        const { message, conversationId, userId, userType } = await req.json();
+        const body = await req.json();
+        const { message, conversationId } = body;
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_session")?.value;
+
+        if (!token) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        let decoded: any;
+        try {
+            decoded = jwt.verify(token, process.env.JWT_SECRET!);
+        } catch (e) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+        }
+
+        const userId = decoded.id;
+        const userType = decoded.role as "student" | "professional";
+
+        if (!userId || !userType) {
+            return NextResponse.json({ error: "Invalid session data" }, { status: 401 });
+        }
 
         console.log("=== UNIFIED CHAT API REQUEST ===");
         console.log("Message:", message);

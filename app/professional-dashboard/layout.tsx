@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   LayoutDashboard,
   Brain,
@@ -53,53 +54,28 @@ export default function DashboardLayout({
   const [initials, setInitials] = useState<string | null>(null);
   const router = useRouter();
 
+  const { isAuthenticated, isLoading, user, role } = useAuth();
+
   useEffect(() => {
-    try {
-      // First try professionalData cookie (new format)
-      let cookie = document.cookie
-        .split('; ')
-        .find((row) => row.startsWith('professionalData='));
-
-      // Fallback to studentData with userType check (legacy support)
-      if (!cookie) {
-        cookie = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('studentData='));
-      }
-
-      if (!cookie) {
-        // No cookie, redirect to login
+    if (!isLoading) {
+      if (!isAuthenticated) {
         router.push('/professional-login');
-        return;
-      }
-
-      const data = JSON.parse(decodeURIComponent(cookie.split('=')[1]));
-
-      // Verify this is a professional user
-      if (data.userType && data.userType !== 'professional') {
-        // Wrong user type, redirect to appropriate dashboard
-        if (data.userType === 'student') {
-          router.push('/dashboard');
-        } else if (data.userType === 'college') {
-          router.push('/admin');
-        } else {
-          router.push('/professional-login');
+      } else if (role !== 'professional') {
+        // Redirect to appropriate dashboard
+        if (role === 'student') router.push('/dashboard');
+        else if (role === 'college') router.push('/admin');
+        else router.push('/professional-login');
+      } else if (user) {
+        const name = user.name || user.email || 'Professional';
+        setDisplayName(name);
+        if (name) {
+          const parts = name.split(' ');
+          const ivals = parts.length === 1 ? parts[0].substring(0, 1) : (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1));
+          setInitials(ivals.toUpperCase());
         }
-        return;
       }
-
-      const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.email || null;
-      setDisplayName(name);
-      if (name) {
-        const parts = name.split(' ');
-        const ivals = parts.length === 1 ? parts[0].substring(0, 1) : (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1));
-        setInitials(ivals.toUpperCase());
-      }
-    } catch (e) {
-      console.error('Error parsing cookie:', e);
-      router.push('/professional-login');
     }
-  }, [router]);
+  }, [isAuthenticated, isLoading, role, user, router]);
 
   const handleLogout = async () => {
     try {

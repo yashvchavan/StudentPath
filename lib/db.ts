@@ -11,9 +11,6 @@ const dbConfig = {
   connectionLimit: 10, // Increased from 5
   queueLimit: 0,
   connectTimeout: 10000,
-  acquireTimeout: 30000, // Add timeout for acquiring connections
-  idleTimeoutMillis: 60000, // Close idle connections after 60s
-  maxIdle: 5, // Maximum idle connections
 };
 
 // Create connection pool

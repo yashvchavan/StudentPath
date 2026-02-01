@@ -14,6 +14,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { useState, useRef, useEffect } from "react"
 
+import { useAuth } from "@/hooks/use-auth"
+
 interface Source {
   title?: string
   url?: string
@@ -39,17 +41,6 @@ interface Conversation {
   updated_at: string
 }
 
-interface ProfessionalData {
-  id?: number
-  first_name?: string
-  last_name?: string
-  email?: string
-  company?: string
-  designation?: string
-  isAuthenticated?: boolean
-  userType?: string
-}
-
 interface ProfessionalProfile {
   id: number
   first_name?: string
@@ -63,39 +54,8 @@ interface ProfessionalProfile {
   career_goals?: string
 }
 
-// Get professional data from professionalData cookie (or fallback to studentData for legacy)
-function getProfessionalDataFromCookie(): ProfessionalData | null {
-  if (typeof window === 'undefined') return null
-  const cookies = document.cookie.split(';')
-
-  // Try professionalData first
-  let pCookie = cookies.find(cookie => cookie.trim().startsWith('professionalData='))
-
-  // Fallback to studentData with userType check
-  if (!pCookie) {
-    pCookie = cookies.find(cookie => cookie.trim().startsWith('studentData='))
-  }
-
-  if (!pCookie) return null
-
-  try {
-    const decoded = decodeURIComponent(pCookie.split('=')[1])
-    const data = JSON.parse(decoded)
-
-    // Verify it's a professional user
-    if (data.userType && data.userType !== 'professional') {
-      return null
-    }
-
-    return data
-  } catch (e) {
-    console.error('Error parsing cookie', e)
-    return null
-  }
-}
-
 export default function ProfessionalAssistantPage() {
-  const [profData, setProfData] = useState<ProfessionalData | null>(null)
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   const [userId, setUserId] = useState<number | null>(null)
 
   const [message, setMessage] = useState("")
@@ -119,15 +79,14 @@ export default function ProfessionalAssistantPage() {
   const [showContextPanel, setShowContextPanel] = useState(false)
 
   useEffect(() => {
-    const d = getProfessionalDataFromCookie()
-    if (!d || !d.isAuthenticated) {
-      setError('Not authenticated. Please login.')
-      return
+    if (!authLoading) {
+      if (!isAuthenticated || !user) {
+        setError('Not authenticated. Please login.')
+      } else {
+        setUserId(Number(user.id))
+      }
     }
-    setProfData(d)
-    const id = d.id
-    if (id) setUserId(id)
-  }, [])
+  }, [authLoading, isAuthenticated, user])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -139,7 +98,8 @@ export default function ProfessionalAssistantPage() {
       fetchProfessionalProfile()
 
       if (messages.length === 0) {
-        const welcomeMessage = `👋 **Welcome back, ${profData?.first_name || 'Professional'}!**
+        const firstName = user?.name?.split(' ')[0] || 'Professional';
+        const welcomeMessage = `👋 **Welcome back, ${firstName}!**
 
 I'm your AI-powered career assistant with access to your complete professional profile. I can help you with:
 
@@ -423,6 +383,14 @@ What would you like to explore today?`
     { icon: TrendingUp, label: "Career Growth", prompt: "Analyze my career trajectory and suggest next steps" },
     { icon: Target, label: "Skill Gap", prompt: "Identify skill gaps for my target role and how to fill them" },
   ]
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <Loader2 className="w-8 h-8 animate-spin text-yellow-500" />
+      </div>
+    )
+  }
 
   if (!userId) {
     return (

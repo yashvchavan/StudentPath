@@ -9,20 +9,36 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 })
 
+import jwt from 'jsonwebtoken'
+
+// ... (POST handler)
+// ... (POST handler)
 export async function POST(req: NextRequest) {
     try {
         const cookieStore = req.cookies
-        const collegeData = cookieStore.get('collegeData')?.value
+        const token = cookieStore.get('auth_session')?.value
 
-        if (!collegeData) {
+        if (!token) {
             return NextResponse.json({
                 success: false,
                 error: 'Unauthorized'
             }, { status: 401 })
         }
 
-        const college = JSON.parse(collegeData)
-        const collegeId = college.id
+        let collegeId: number | undefined;
+
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+            if (decoded.role === 'college') {
+                collegeId = decoded.id;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+
+        if (!collegeId) {
+            return NextResponse.json({ success: false, error: 'Invalid session' }, { status: 401 });
+        }
 
         const formData = await req.formData()
         const file = formData.get('logo') as File
@@ -75,26 +91,13 @@ export async function POST(req: NextRequest) {
             [logoUrl, collegeId]
         )
 
-        // Update the cookie with new logo URL
-        const updatedCollege = {
-            ...college,
-            logo_url: logoUrl
-        }
-
         const response = NextResponse.json({
             success: true,
             logoUrl: logoUrl,
             message: 'Logo uploaded successfully'
         })
 
-        response.cookies.set('collegeData', JSON.stringify(updatedCollege), {
-            httpOnly: true,
-            secure: false,
-            sameSite: 'strict',
-            path: '/',
-            maxAge: 60 * 60 * 24 * 7 // 7 days
-        })
-
+        // No need to update cookie as it is opaque
         return response
 
     } catch (error) {

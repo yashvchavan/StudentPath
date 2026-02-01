@@ -1,28 +1,35 @@
-// app/api/settings/delete-account/route.ts
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import pool from "@/lib/db"
+import jwt from "jsonwebtoken"
 
 export async function DELETE(req: NextRequest) {
+  let connection;
   try {
     const cookieStore = await cookies()
-    const studentCookie = cookieStore.get("studentData")?.value
+    const token = cookieStore.get("auth_session")?.value
 
-    if (!studentCookie) {
+    if (!token) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    const studentData = JSON.parse(studentCookie)
-    const { student_id, isAuthenticated } = studentData
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    } catch (e) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    }
 
-    if (!isAuthenticated) {
+    const { id: student_id, role: userType } = decoded;
+
+    if (!student_id || userType !== 'student') {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
     const body = await req.json()
     const { confirmEmail } = body
 
-    const connection = await pool.getConnection()
+    connection = await pool.getConnection()
 
     try {
       // Verify email matches - UPDATED to match your schema
@@ -32,20 +39,18 @@ export async function DELETE(req: NextRequest) {
       )
 
       if (!studentRows || studentRows.length === 0) {
-        connection.release()
         return NextResponse.json({ error: "Student not found" }, { status: 404 })
       }
 
       if (studentRows[0].email !== confirmEmail) {
-        connection.release()
         return NextResponse.json({ error: "Email does not match" }, { status: 400 })
       }
 
       await connection.beginTransaction()
 
       // Delete all related data (CASCADE should handle most of this)
-      // But we'll be explicit for clarity
-      
+      // but we'll be explicit for clarity
+
       // Delete user settings
       await connection.execute(
         `DELETE FROM user_settings WHERE student_id = ?`,
@@ -59,7 +64,7 @@ export async function DELETE(req: NextRequest) {
            (SELECT conversation_id FROM chat_conversations WHERE student_id = ?)`,
           [student_id]
         )
-        
+
         await connection.execute(
           `DELETE FROM chat_conversations WHERE student_id = ?`,
           [student_id]
@@ -101,9 +106,9 @@ export async function DELETE(req: NextRequest) {
       // )
 
       await connection.commit()
-      connection.release()
 
       // Clear the authentication cookie
+      cookieStore.delete("auth_session")
       cookieStore.delete("studentData")
 
       return NextResponse.json({
@@ -113,7 +118,6 @@ export async function DELETE(req: NextRequest) {
 
     } catch (error) {
       await connection.rollback()
-      connection.release()
       throw error
     }
 
@@ -123,5 +127,7 @@ export async function DELETE(req: NextRequest) {
       { error: "Failed to delete account", details: error.message },
       { status: 500 }
     )
+  } finally {
+    if (connection) connection.release();
   }
 }

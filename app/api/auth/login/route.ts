@@ -1,21 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import pool from '@/lib/db';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const LoginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+  collegeToken: z.string().min(1, 'College token is required')
+});
 
 export async function POST(request: NextRequest) {
+  // Rate Limit
+  if (!checkRateLimit(request, 5, 60000)) {
+    return NextResponse.json(
+      { error: 'Too many login attempts. Please try again later.' },
+      { status: 429 }
+    );
+  }
+
+  let connection;
   try {
     const body = await request.json();
-    const { email, password, collegeToken } = body;
 
-    // Validate required fields
-    if (!email || !password || !collegeToken) {
+    // Zod Validation
+    const validation = LoginSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Email, password, and college token are required' },
+        { error: validation.error.errors[0].message },
         { status: 400 }
       );
     }
 
-    const connection = await pool.getConnection();
+    const { email, password, collegeToken } = validation.data;
+
+    connection = await pool.getConnection();
 
     // Get student by email
     const [students] = await connection.execute(
@@ -26,7 +46,6 @@ export async function POST(request: NextRequest) {
     );
 
     if (!Array.isArray(students) || (students as any).length === 0) {
-      connection.release();
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
@@ -37,7 +56,6 @@ export async function POST(request: NextRequest) {
 
     // Verify college token
     if (student.college_token !== collegeToken) {
-      connection.release();
       return NextResponse.json(
         { error: 'Invalid college token' },
         { status: 403 }
@@ -47,30 +65,52 @@ export async function POST(request: NextRequest) {
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, student.password_hash);
     if (!isPasswordValid) {
-      connection.release();
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
 
-    connection.release();
-
     // Remove sensitive data before sending response
     const { password_hash, college_token, ...studentData } = student;
 
-    return NextResponse.json({
+    // Create JWT session
+    const token = jwt.sign(
+      {
+        id: student.student_id,
+        role: 'student'
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: '24h' }
+    );
+
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
-      redirectTo: `/dashboard?token=${collegeToken}`,
-      student: studentData
+      redirectTo: '/dashboard' // Removed token query param
     });
-    
+
+    // Set secure opaque session cookie
+    response.cookies.set('auth_session', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 86400
+    });
+
+    // Clear legacy cookies
+    response.cookies.delete('studentData');
+
+    return response;
+
   } catch (error) {
     console.error('Student login error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    if (connection) connection.release();
   }
 }

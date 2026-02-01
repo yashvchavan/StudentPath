@@ -37,31 +37,43 @@ interface AcademicInterestRow extends RowDataPacket {
   interests: string
 }
 
+import jwt from 'jsonwebtoken'
+
+// ... (GET handler)
 export async function GET(req: NextRequest) {
   try {
     // Get college data from cookies
     const cookieStore = req.cookies
-    let collegeData = cookieStore.get('collegeData')?.value
-    
-    console.log('API: College cookie exists:', !!collegeData)
-    
-    if (!collegeData) {
-      return NextResponse.json({ 
+    const token = cookieStore.get('auth_session')?.value
+
+    if (!token) {
+      return NextResponse.json({
         success: false,
-        error: 'Unauthorized - College authentication required' 
+        error: 'Unauthorized - College authentication required'
       }, { status: 401 })
     }
 
-    const college = JSON.parse(collegeData)
-    console.log('API: Parsed college data:', { id: college.id, type: college.type })
-    
-    const collegeToken = college.token
+    let collegeToken: string | undefined;
+    let collegeName: string | undefined;
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+      if (decoded.role === 'college') {
+        const [rows]: any = await pool.query('SELECT college_token, college_name FROM colleges WHERE id = ?', [decoded.id]);
+        if (rows.length > 0) {
+          collegeToken = rows[0].college_token;
+          collegeName = rows[0].college_name;
+        }
+      }
+    } catch (e) {
+      console.error("Session parse error", e);
+    }
 
     if (!collegeToken) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        error: 'Invalid college ID' 
-      }, { status: 400 })
+        error: 'Invalid college session'
+      }, { status: 401 })
     }
 
     console.log('Fetching students for college_token:', collegeToken)
@@ -107,9 +119,9 @@ export async function GET(req: NextRequest) {
 
     // Get academic interests for all students in a single query
     const studentIds = rows.map(student => student.student_id)
-    
+
     let interestsMap: Map<number, string> = new Map()
-    
+
     if (studentIds.length > 0) {
       const [interestRows] = await pool.query<AcademicInterestRow[]>(
         `SELECT 
@@ -131,7 +143,7 @@ export async function GET(req: NextRequest) {
     // Format the response - FLAT structure for easy access
     const students = rows.map(student => {
       const interests = interestsMap.get(student.student_id) || null
-      
+
       return {
         // Basic Info
         student_id: student.student_id,
@@ -147,7 +159,7 @@ export async function GET(req: NextRequest) {
         is_active: student.is_active === 1,
         created_at: student.created_at,
         updated_at: student.updated_at,
-        
+
         // Academic Information - FLAT
         program: student.program || null,
         department: student.program || null, // Alias for backward compatibility
@@ -156,18 +168,18 @@ export async function GET(req: NextRequest) {
         enrollment_year: student.enrollment_year || null,
         current_gpa: student.current_gpa ? Number(student.current_gpa) : null,
         academic_interests: interests,
-        
+
         // Career Goals - FLAT
         primary_goal: student.primary_goal || null,
         secondary_goal: student.secondary_goal || null,
         timeline: student.timeline || null,
         location_preference: student.location_preference || null,
         intensity_level: student.intensity_level || null,
-        
+
         // Stats
         total_skills: Number(student.total_skills) || 0,
         profile_completion: calculateProfileCompletion(student, interests),
-        
+
         // Formatted display fields
         year_display: student.current_year ? `Year ${student.current_year}` : 'Not Set',
         gpa_display: student.current_gpa ? Number(student.current_gpa).toFixed(2) : 'N/A',
@@ -179,19 +191,19 @@ export async function GET(req: NextRequest) {
     console.log(`Successfully formatted ${students.length} students`)
     console.log('Sample student:', students[0]) // Debug log
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       students,
       count: students.length,
       collegeInfo: {
-        token: college.token,
-        name: college.name
+        token: collegeToken,
+        name: collegeName
       }
     })
 
   } catch (error) {
     console.error('Error fetching students:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       error: 'Internal server error',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -207,13 +219,13 @@ function calculateProfileCompletion(student: StudentRow, interests?: string | nu
   // Basic info (always complete from registration)
   if (student.first_name) completedFields++
   if (student.email) completedFields++
-  
+
   // Academic profile
   if (student.program) completedFields++
   if (student.current_year) completedFields++
   if (student.current_gpa) completedFields++
   if (interests && interests.length > 0) completedFields++
-  
+
   // Career goals
   if (student.primary_goal) completedFields++
   if (student.timeline) completedFields++
