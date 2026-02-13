@@ -15,7 +15,7 @@ async function initializeDatabase() {
     await connection.execute(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'studentpath'}`);
     console.log('Database created successfully');
 
- 
+
 
     // Create colleges table
     await connection.execute(`
@@ -128,6 +128,47 @@ async function initializeDatabase() {
       )
     `);
     console.log('College tokens table created successfully');
+
+    // Create placements table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS placements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT,
+        company_name VARCHAR(255) NOT NULL,
+        logo_url VARCHAR(255),
+        role VARCHAR(255),
+        package VARCHAR(100),
+        description TEXT,
+        eligibility TEXT,
+        location VARCHAR(255),
+        drive_date DATE,
+        deadline DATE,
+        apply_link VARCHAR(255),
+        students_registered INT DEFAULT 0,
+        students_selected INT DEFAULT 0,
+        remarks TEXT,
+        file_url VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Placements table created successfully');
+
+    // Create placement_reviews table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS placement_reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        placement_id INT NOT NULL,
+        student_id INT NOT NULL,
+        rating INT CHECK (rating >= 1 AND rating <= 5),
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (placement_id) REFERENCES placements(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+      )
+    `);
+    console.log('Placement reviews table created successfully');
 
     console.log('Database initialization completed successfully!');
   } catch (error) {

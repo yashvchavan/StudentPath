@@ -2,6 +2,7 @@
 
 import { useState, type PropsWithChildren } from "react"
 import { usePathname, useRouter } from "next/navigation"
+import Link from "next/link"
 import { useAdminProfile, clearAdminProfileCache } from "@/contexts/AdminProfileContext"
 import {
   BarChart3,
@@ -34,6 +35,7 @@ import {
   UserCog,
   LifeBuoy,
   LogOut,
+  Briefcase,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,6 +62,7 @@ const adminNav = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: UsersRound, label: "Student Management", href: "/admin/students" },
   { icon: Library, label: "Course Catalog", href: "/admin/courses" },
+  { icon: Briefcase, label: "Placements", href: "/admin/placements" },
   { icon: School, label: "Program Management", href: "/admin/programs" },
   { icon: BrainCircuit, label: "AI Configuration", href: "/admin/ai" },
   { icon: Wallet, label: "Affiliate Dashboard", href: "/admin/affiliate" },
@@ -230,7 +233,7 @@ export default function AdminShell({ title, description, showRange = false, righ
                   const active = pathname === item.href
                   return (
                     <li key={item.href}>
-                      <a
+                      <Link
                         href={item.href}
                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${active
                           ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/30"
@@ -239,7 +242,7 @@ export default function AdminShell({ title, description, showRange = false, righ
                       >
                         <item.icon className="w-5 h-5 transition-colors duration-200" />
                         <span className="truncate">{item.label}</span>
-                      </a>
+                      </Link>
                     </li>
                   )
                 })
