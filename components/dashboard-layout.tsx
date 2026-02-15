@@ -37,6 +37,7 @@ import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import { ProfileModal } from "./profile-modal"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -45,16 +46,40 @@ interface DashboardLayoutProps {
 
 interface StudentProfile {
   student_id: number
+  name: string
   first_name: string
   last_name: string
   email: string
   phone?: string
   college?: string
+  college_details?: any
   program?: string
-  current_semester?: number
+  department?: string
+  current_year?: number
+  semester?: number
+  current_semester?: number // Keeping for backward compatibility if used elsewhere
   current_gpa?: number
-  profile_picture?: string | null
+  enrollment_year?: number
+  gender?: string
+  date_of_birth?: string
+  country?: string
   bio?: string
+  profile_picture?: string | null
+  academic_interests?: string
+  technical_skills?: string
+  soft_skills?: string
+  language_skills?: string
+  primary_goal?: string
+  secondary_goal?: string
+  timeline?: string
+  location_preference?: string
+  industry_focus?: string
+  intensity_level?: string
+  role?: string
+  status?: string
+  is_active?: number
+  created_at?: string
+  updated_at?: string
 }
 
 export default function DashboardLayout({ children, currentPage = "dashboard" }: DashboardLayoutProps) {
@@ -63,6 +88,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   const [searchFocused, setSearchFocused] = useState(false)
   const [profileData, setProfileData] = useState<StudentProfile | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
   // Use the auth hook
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   // Use the context to get student data
@@ -262,11 +288,9 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="flex items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </Link>
+                <DropdownMenuItem onSelect={() => setIsProfileOpen(true)} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/settings" className="flex items-center">
@@ -367,6 +391,12 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
         {/* Main Content */}
         <main className="flex-1 p-6 lg:p-8 transition-all duration-300">{children}</main>
       </div>
+
+      <ProfileModal
+        student={profileData}
+        open={isProfileOpen}
+        onOpenChange={setIsProfileOpen}
+      />
     </div>
   )
 }

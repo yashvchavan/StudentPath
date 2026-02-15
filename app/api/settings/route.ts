@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
               academic_interests, career_quiz_answers, technical_skills,
               soft_skills, language_skills, primary_goal, secondary_goal,
               timeline, location_preference, industry_focus, intensity_level,
-              created_at, updated_at, profile_picture
+              created_at, updated_at, profile_picture, enrollment_year, 
+              is_active, role, status
        FROM Students 
        WHERE student_id = ?`,
       [student_id]
@@ -121,11 +122,12 @@ export async function GET(req: NextRequest) {
         current_year: student.current_year || 1,
         semester: student.current_semester || 1,
         current_gpa: student.current_gpa || null,
+        enrollment_year: student.enrollment_year || null,
         gender: student.gender || "",
         date_of_birth: student.date_of_birth || null,
         country: student.country || "",
         bio: student.academic_interests || "",
-        profile_picture: student.profile_picture || null, // You don't have this column, will need to add it
+        profile_picture: student.profile_picture || null,
         academic_interests: student.academic_interests || "",
         technical_skills: student.technical_skills || "",
         soft_skills: student.soft_skills || "",
@@ -136,6 +138,9 @@ export async function GET(req: NextRequest) {
         location_preference: student.location_preference || "",
         industry_focus: student.industry_focus || "",
         intensity_level: student.intensity_level || "",
+        role: student.role || "Student",
+        status: student.status || "Active",
+        is_active: student.is_active,
         created_at: student.created_at,
         updated_at: student.updated_at
       },
