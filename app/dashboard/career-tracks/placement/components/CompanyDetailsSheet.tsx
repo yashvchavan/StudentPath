@@ -13,10 +13,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea"; // Assuming exists
-import { Label } from "@/components/ui/label"; // Assuming exists
-import { useToast } from "@/hooks/use-toast"; // Assuming exists
-import { Star, MessageSquare, User, Calendar, Clock, MapPin, IndianRupee } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Star, MessageSquare, User, Calendar, Clock, MapPin, IndianRupee, Mail, GraduationCap } from "lucide-react";
 import type { OnCampusProgram, Company } from "@/lib/career-tracks/companies";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -36,6 +41,8 @@ interface Review {
     created_at: string;
     is_anonymous: boolean;
     current_year?: number;
+    program?: string;
+    email?: string;
 }
 
 export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyDetailsSheetProps) {
@@ -279,9 +286,46 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
                                         <CardContent className="p-4 space-y-3">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                                        <User className="w-4 h-4 text-primary" />
-                                                    </div>
+                                                    {review.is_anonymous ? (
+                                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                                            <User className="w-4 h-4 text-primary" />
+                                                        </div>
+                                                    ) : (
+                                                        <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <button className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer">
+                                                                    <User className="w-4 h-4 text-primary" />
+                                                                </button>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-72" side="right">
+                                                                <div className="space-y-3">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                                                                            <User className="w-6 h-6 text-primary" />
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-semibold">{review.first_name} {review.last_name}</p>
+                                                                            {review.current_year && (
+                                                                                <p className="text-xs text-muted-foreground">Year {review.current_year}</p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    {review.program && (
+                                                                        <div className="flex items-center gap-2 text-sm">
+                                                                            <GraduationCap className="w-4 h-4 text-muted-foreground" />
+                                                                            <span>{review.program}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {review.email && (
+                                                                        <div className="flex items-center gap-2 text-sm">
+                                                                            <Mail className="w-4 h-4 text-muted-foreground" />
+                                                                            <span className="text-xs break-all">{review.email}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </PopoverContent>
+                                                        </Popover>
+                                                    )}
                                                     <div>
                                                         <p className="text-sm font-medium leading-none">
                                                             {review.is_anonymous ? "Anonymous Student" : `${review.first_name} ${review.last_name}${review.current_year ? ` (Year ${review.current_year})` : ""}`}

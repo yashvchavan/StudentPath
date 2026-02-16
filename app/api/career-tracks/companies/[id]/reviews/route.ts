@@ -15,6 +15,7 @@ export async function GET(
         const { id } = await params;
         const placementId = parseInt(id);
 
+
         if (isNaN(placementId)) {
             return NextResponse.json({ error: "Invalid placement ID" }, { status: 400 });
         }
@@ -22,11 +23,18 @@ export async function GET(
         const connection = await pool.getConnection();
 
         try {
-            // Fetch reviews with student names
+            // Fetch reviews with student names and profile info
+            // Using LEFT JOIN so reviews display even if student record is missing
             const [rows]: any = await connection.execute(`
-                SELECT pr.*, s.first_name, s.last_name, s.current_year 
+                SELECT 
+                    pr.*, 
+                    COALESCE(s.first_name, 'Student') as first_name, 
+                    COALESCE(s.last_name, CAST(pr.student_id AS CHAR)) as last_name, 
+                    s.current_year,
+                    s.program,
+                    s.email
                 FROM placement_reviews pr
-                JOIN students s ON pr.student_id = s.student_id
+                LEFT JOIN Students s ON pr.student_id = s.student_id
                 WHERE pr.placement_id = ?
                 ORDER BY pr.created_at DESC
             `, [placementId]);
