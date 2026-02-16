@@ -21,7 +21,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { Star, MessageSquare, User, Calendar, Clock, MapPin, IndianRupee, Mail, GraduationCap } from "lucide-react";
+import { Star, MessageSquare, User, Calendar, Clock, MapPin, IndianRupee, Mail, GraduationCap, Trash2 } from "lucide-react";
 import type { OnCampusProgram, Company } from "@/lib/career-tracks/companies";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -34,6 +34,7 @@ interface CompanyDetailsSheetProps {
 
 interface Review {
     id: number;
+    student_id: number;
     rating: number;
     comment: string;
     first_name: string;
@@ -112,6 +113,28 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
             toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleDeleteReview = async (reviewId: number) => {
+        if (!company?.id) return;
+        if (!confirm("Are you sure you want to delete this review?")) return;
+
+        try {
+            const res = await fetch(`/api/career-tracks/companies/${company.id}/reviews?reviewId=${reviewId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast({ title: "Deleted", description: "Review deleted successfully" });
+                setReviews(prev => prev.filter(r => r.id !== reviewId));
+            } else {
+                toast({ title: "Error", description: data.error || "Failed to delete review", variant: "destructive" });
+            }
+        } catch (error) {
+            console.error("Error deleting review", error);
+            toast({ title: "Error", description: "Failed to delete review", variant: "destructive" });
         }
     };
 
@@ -335,9 +358,20 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-0.5 bg-yellow-500/10 px-2 py-1 rounded text-yellow-600">
-                                                    <span className="text-xs font-bold">{review.rating}</span>
-                                                    <Star className="w-3 h-3 fill-current" />
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-0.5 bg-yellow-500/10 px-2 py-1 rounded text-yellow-600">
+                                                        <span className="text-xs font-bold">{review.rating}</span>
+                                                        <Star className="w-3 h-3 fill-current" />
+                                                    </div>
+                                                    {user && String(user.id) === String(review.student_id) && (
+                                                        <button
+                                                            onClick={() => handleDeleteReview(review.id)}
+                                                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                                            title="Delete review"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
 

@@ -100,3 +100,54 @@ export async function POST(
         return NextResponse.json({ error: "Failed to add review" }, { status: 500 });
     }
 }
+
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const user = await getAuthUser();
+        if (!user || user.role !== "student") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const reviewId = parseInt(searchParams.get("reviewId") || "");
+
+        if (isNaN(reviewId)) {
+            return NextResponse.json({ error: "Invalid review ID" }, { status: 400 });
+        }
+
+        const connection = await pool.getConnection();
+
+        try {
+            // Verify the review belongs to the current user
+            const [rows]: any = await connection.execute(
+                `SELECT id, student_id FROM placement_reviews WHERE id = ?`,
+                [reviewId]
+            );
+
+            if (rows.length === 0) {
+                return NextResponse.json({ error: "Review not found" }, { status: 404 });
+            }
+
+            if (rows[0].student_id !== parseInt(String(user.id))) {
+                return NextResponse.json({ error: "You can only delete your own reviews" }, { status: 403 });
+            }
+
+            await connection.execute(
+                `DELETE FROM placement_reviews WHERE id = ?`,
+                [reviewId]
+            );
+
+            return NextResponse.json({ success: true, message: "Review deleted successfully" });
+
+        } finally {
+            connection.release();
+        }
+
+    } catch (error) {
+        console.error("Error deleting review:", error);
+        return NextResponse.json({ error: "Failed to delete review" }, { status: 500 });
+    }
+}
