@@ -4,6 +4,17 @@ import pool from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import jwt from 'jsonwebtoken';
 
+// Helper to safely parse JSON stored in text columns
+function safeJsonParse(value: any, fallback: any = {}) {
+  if (!value) return fallback;
+  if (typeof value === 'object') return value; // already parsed
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 export async function GET(request: NextRequest) {
   let connection;
   try {
@@ -20,10 +31,6 @@ export async function GET(request: NextRequest) {
         const decoded = jwt.verify(tokenCookie, process.env.JWT_SECRET!) as { id: number, role: string, collegeToken?: string };
         if (decoded.role === 'student') {
           studentId = String(decoded.id);
-          // If collegeToken isn't in JWT, we might need to fetch it?
-          // But the previous login implementation puts it in `collegeToken` property of JWT?
-          // Let's check logic in login.ts...
-          // Yes, login.ts puts `collegeToken` in JWT payload for student.
           if (decoded.collegeToken) {
             token = decoded.collegeToken;
           }
@@ -36,13 +43,6 @@ export async function GET(request: NextRequest) {
     // If we still don't have token but have studentId, we can fetch it from DB
     if (studentId && !token) {
       try {
-        // Create a temp connection to fetch token if missing
-        // Note: In the main logic below connection is created. We can use it if we move this logic down?
-        // But existing logic returns 400 immediately.
-        // We can create a quick connection or reuse pool for a simple query
-        // However, let's keep it safe. If token is missing, we fail?
-        // The frontend usually calls this with query params or relies on cookie.
-        // We can try to fetch the college_token from Students table if we have studentId.
         const [rows]: any = await pool.query('SELECT college_token FROM Students WHERE student_id = ?', [studentId]);
         if (rows && rows.length > 0) {
           token = rows[0].college_token;
@@ -78,14 +78,15 @@ export async function GET(request: NextRequest) {
 
     const collegeInfo = tokenResult[0];
 
-    // 1. Get basic student data
+    // Single query to get ALL student data from Students table
     const [students] = await connection.execute<RowDataPacket[]>(
       `SELECT 
-        student_id,
-        first_name,
-        last_name,
-        email,
-        phone
+        student_id, first_name, last_name, email, phone,
+        program, current_year, current_semester, enrollment_year, current_gpa,
+        academic_interests, career_quiz_answers,
+        technical_skills, soft_skills, language_skills,
+        primary_goal, secondary_goal, timeline, location_preference,
+        industry_focus, intensity_level
        FROM Students
        WHERE student_id = ?`,
       [studentId]
@@ -100,72 +101,13 @@ export async function GET(request: NextRequest) {
 
     const student = students[0];
 
-    // 2. Get academic profile
-    const [academicProfiles] = await connection.execute<RowDataPacket[]>(
-      `SELECT program, currentYear, currentSemester, enrollmentYear, currentGPA
-       FROM academic_profiles
-       WHERE student_id = ?`,
-      [studentId]
-    );
-
-    const academicProfile = (academicProfiles && academicProfiles[0]) || {};
-
-    // 3. Get academic interests
-    const [academicInterests] = await connection.execute<RowDataPacket[]>(
-      `SELECT interest FROM academic_interests WHERE student_id = ?`,
-      [studentId]
-    );
-
-    // 4. Get career quiz answers
-    const [careerQuizAnswers] = await connection.execute<RowDataPacket[]>(
-      `SELECT questionId, answer FROM career_quiz_answers WHERE student_id = ?`,
-      [studentId]
-    );
-
-    const quizAnswersObj = (careerQuizAnswers || []).reduce((acc: any, row: any) => {
-      acc[row.questionId] = row.answer;
-      return acc;
-    }, {});
-
-    // 5. Get skills (technical, soft, language)
-    const [skills] = await connection.execute<RowDataPacket[]>(
-      `SELECT skillType, skillName, proficiencyLevel 
-       FROM skills 
-       WHERE student_id = ?`,
-      [studentId]
-    );
-
-    const technicalSkills: any = {};
-    const softSkills: any = {};
-    const languageSkills: any = {};
-
-    if (skills && Array.isArray(skills)) {
-      skills.forEach((skill: any) => {
-        if (skill.skillType === 'technical') {
-          technicalSkills[skill.skillName] = skill.proficiencyLevel;
-        } else if (skill.skillType === 'soft') {
-          softSkills[skill.skillName] = skill.proficiencyLevel;
-        } else if (skill.skillType === 'language') {
-          languageSkills[skill.skillName] = skill.proficiencyLevel;
-        }
-      });
-    }
-
-    // 6. Get career goals
-    const [careerGoals] = await connection.execute<RowDataPacket[]>(
-      `SELECT primaryGoal, secondaryGoal, timeline, locationPreference, intensityLevel
-       FROM career_goals
-       WHERE student_id = ?`,
-      [studentId]
-    );
-
-    const careerGoal = (careerGoals && careerGoals[0]) || {};
-
-    // 7. Get industry focus
-    const [industryFocus] = await connection.execute<RowDataPacket[]>(
-      `SELECT industry FROM industry_focus WHERE student_id = ?`,
-      [studentId]
-    );
+    // Parse JSON fields from the Students table
+    const academicInterests = safeJsonParse(student.academic_interests, []);
+    const careerQuizAnswers = safeJsonParse(student.career_quiz_answers, {});
+    const technicalSkills = safeJsonParse(student.technical_skills, {});
+    const softSkills = safeJsonParse(student.soft_skills, {});
+    const languageSkills = safeJsonParse(student.language_skills, {});
+    const industryFocus = safeJsonParse(student.industry_focus, []);
 
     // Combine all data
     const processedData = {
@@ -184,33 +126,33 @@ export async function GET(request: NextRequest) {
       state: collegeInfo.state,
       country: collegeInfo.country,
 
-      // Academic profile
-      program: academicProfile.program || null,
-      current_year: academicProfile.currentYear || null,
-      current_semester: academicProfile.currentSemester || null,
-      enrollment_year: academicProfile.enrollmentYear || null,
-      current_gpa: academicProfile.currentGPA || null,
+      // Academic profile (from Students table)
+      program: student.program || null,
+      current_year: student.current_year || null,
+      current_semester: student.current_semester || null,
+      enrollment_year: student.enrollment_year || null,
+      current_gpa: student.current_gpa || null,
 
-      // Academic interests (array of strings)
-      academic_interests: (academicInterests || []).map((item: any) => item.interest),
+      // Academic interests (parsed from JSON)
+      academic_interests: Array.isArray(academicInterests) ? academicInterests : [],
 
-      // Career quiz answers (object)
-      career_quiz_answers: quizAnswersObj,
+      // Career quiz answers (parsed from JSON)
+      career_quiz_answers: careerQuizAnswers,
 
-      // Skills (objects) - always return objects, even if empty
+      // Skills (parsed from JSON) - always return objects, even if empty
       technical_skills: technicalSkills || {},
       soft_skills: softSkills || {},
       language_skills: languageSkills || {},
 
-      // Career goals
-      primary_goal: careerGoal.primaryGoal || null,
-      secondary_goal: careerGoal.secondaryGoal || null,
-      timeline: careerGoal.timeline || null,
-      location_preference: careerGoal.locationPreference || null,
-      intensity_level: careerGoal.intensityLevel || null,
+      // Career goals (from Students table)
+      primary_goal: student.primary_goal || null,
+      secondary_goal: student.secondary_goal || null,
+      timeline: student.timeline || null,
+      location_preference: student.location_preference || null,
+      intensity_level: student.intensity_level || null,
 
-      // Industry focus (array of strings)
-      industry_focus: (industryFocus || []).map((item: any) => item.industry)
+      // Industry focus (parsed from JSON)
+      industry_focus: Array.isArray(industryFocus) ? industryFocus : []
     };
 
     // Return successful response

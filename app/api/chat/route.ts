@@ -78,12 +78,26 @@ async function validateUser(userId: number, userType: "student" | "professional"
     return (rows as any)[0];
 }
 
-// Helper: Get comprehensive student data
+// Helper: safely parse JSON from text column
+function safeJsonParse(value: any, fallback: any = {}) {
+    if (!value) return fallback;
+    if (typeof value === 'object') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+}
+
+// Helper: Get comprehensive student data (reads from Students table directly)
 async function getStudentContext(studentId: number): Promise<any> {
-    // Get basic student info and college
+    // Single query to get all student data including college info
     const [studentRows]: any = await pool.query(
         `SELECT 
             s.first_name, s.last_name, s.email, s.college_token,
+            s.program, s.current_year, s.current_semester, s.enrollment_year, s.current_gpa,
+            s.academic_interests, s.technical_skills, s.soft_skills,
+            s.primary_goal, s.secondary_goal, s.timeline, s.intensity_level,
             c.college_name, c.college_type, c.city, c.state
          FROM Students s
          LEFT JOIN colleges c ON s.college_token = c.college_token
@@ -94,51 +108,10 @@ async function getStudentContext(studentId: number): Promise<any> {
     if (!studentRows || studentRows.length === 0) return null;
     const student = studentRows[0];
 
-    // Get academic profile
-    const [academicRows]: any = await pool.query(
-        `SELECT program, currentYear, currentSemester, enrollmentYear, currentGPA
-         FROM academic_profiles
-         WHERE student_id = ?`,
-        [studentId]
-    );
-    const academicProfile = academicRows?.[0] || {};
-
-    // Get academic interests
-    const [interestRows]: any = await pool.query(
-        `SELECT interest FROM academic_interests WHERE student_id = ?`,
-        [studentId]
-    );
-    const academicInterests = (interestRows || []).map((row: any) => row.interest);
-
-    // Get skills
-    const [skillRows]: any = await pool.query(
-        `SELECT skillType, skillName, proficiencyLevel 
-         FROM skills 
-         WHERE student_id = ?`,
-        [studentId]
-    );
-
-    const technicalSkills: Record<string, number> = {};
-    const softSkills: Record<string, number> = {};
-
-    if (skillRows && Array.isArray(skillRows)) {
-        skillRows.forEach((skill: any) => {
-            if (skill.skillType === 'technical') {
-                technicalSkills[skill.skillName] = skill.proficiencyLevel;
-            } else if (skill.skillType === 'soft') {
-                softSkills[skill.skillName] = skill.proficiencyLevel;
-            }
-        });
-    }
-
-    // Get career goals
-    const [careerRows]: any = await pool.query(
-        `SELECT primaryGoal, secondaryGoal, timeline, intensityLevel
-         FROM career_goals
-         WHERE student_id = ?`,
-        [studentId]
-    );
-    const careerGoals = careerRows?.[0] || {};
+    // Parse JSON fields
+    const academicInterests = safeJsonParse(student.academic_interests, []);
+    const technicalSkills = safeJsonParse(student.technical_skills, {});
+    const softSkills = safeJsonParse(student.soft_skills, {});
 
     return {
         name: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
@@ -151,22 +124,22 @@ async function getStudentContext(studentId: number): Promise<any> {
             token: student.college_token
         },
         academic: {
-            program: academicProfile.program || null,
-            currentYear: academicProfile.currentYear || null,
-            currentSemester: academicProfile.currentSemester || null,
-            enrollmentYear: academicProfile.enrollmentYear || null,
-            currentGPA: academicProfile.currentGPA || null,
-            interests: academicInterests
+            program: student.program || null,
+            currentYear: student.current_year || null,
+            currentSemester: student.current_semester || null,
+            enrollmentYear: student.enrollment_year || null,
+            currentGPA: student.current_gpa || null,
+            interests: Array.isArray(academicInterests) ? academicInterests : []
         },
         skills: {
             technical: technicalSkills,
             soft: softSkills
         },
         careerGoals: {
-            primary: careerGoals.primaryGoal || null,
-            secondary: careerGoals.secondaryGoal || null,
-            timeline: careerGoals.timeline || null,
-            intensity: careerGoals.intensityLevel || null
+            primary: student.primary_goal || null,
+            secondary: student.secondary_goal || null,
+            timeline: student.timeline || null,
+            intensity: student.intensity_level || null
         }
     };
 }

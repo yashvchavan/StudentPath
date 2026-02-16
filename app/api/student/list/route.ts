@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 
     console.log('Fetching students for college_token:', collegeToken)
 
-    // Main query to get students with all related data
+    // Main query to get students with all data from Students table directly
     const [rows] = await pool.query<StudentRow[]>(
       `SELECT 
         s.student_id,
@@ -93,23 +93,19 @@ export async function GET(req: NextRequest) {
         s.is_active,
         s.created_at,
         s.updated_at,
-        -- From academic_profiles
-        ap.program,
-        ap.currentYear as current_year,
-        ap.currentSemester as current_semester,
-        ap.enrollmentYear as enrollment_year,
-        ap.currentGPA as current_gpa,
-        -- From career_goals
-        cg.primaryGoal as primary_goal,
-        cg.secondaryGoal as secondary_goal,
-        cg.timeline,
-        cg.locationPreference as location_preference,
-        cg.intensityLevel as intensity_level,
-        -- Count total skills
-        (SELECT COUNT(*) FROM skills sk WHERE sk.student_id = s.student_id) as total_skills
+        s.program,
+        s.current_year,
+        s.current_semester,
+        s.enrollment_year,
+        s.current_gpa,
+        s.primary_goal,
+        s.secondary_goal,
+        s.timeline,
+        s.location_preference,
+        s.intensity_level,
+        s.academic_interests,
+        s.technical_skills
       FROM Students s
-      LEFT JOIN academic_profiles ap ON s.student_id = ap.student_id
-      LEFT JOIN career_goals cg ON s.student_id = cg.student_id
       WHERE s.college_token = ?
       ORDER BY s.created_at DESC`,
       [collegeToken]
@@ -117,32 +113,19 @@ export async function GET(req: NextRequest) {
 
     console.log(`Found ${rows.length} students`)
 
-    // Get academic interests for all students in a single query
-    const studentIds = rows.map(student => student.student_id)
-
-    let interestsMap: Map<number, string> = new Map()
-
-    if (studentIds.length > 0) {
-      const [interestRows] = await pool.query<AcademicInterestRow[]>(
-        `SELECT 
-          student_id,
-          GROUP_CONCAT(interest SEPARATOR ', ') as interests
-        FROM academic_interests
-        WHERE student_id IN (?)
-        GROUP BY student_id`,
-        [studentIds]
-      )
-
-      interestRows.forEach(row => {
-        if (row.interests) {
-          interestsMap.set(row.student_id, row.interests)
-        }
-      })
-    }
+    // Parse JSON fields and build interests map
+    const safeJsonParse = (value: any, fallback: any = {}) => {
+      if (!value) return fallback;
+      if (typeof value === 'object') return value;
+      try { return JSON.parse(value); } catch { return fallback; }
+    };
 
     // Format the response - FLAT structure for easy access
     const students = rows.map(student => {
-      const interests = interestsMap.get(student.student_id) || null
+      const interests = safeJsonParse((student as any).academic_interests, []);
+      const interestsStr = Array.isArray(interests) ? interests.join(', ') : null;
+      const skills = safeJsonParse((student as any).technical_skills, {});
+      const totalSkills = Object.keys(skills).length;
 
       return {
         // Basic Info
@@ -167,7 +150,7 @@ export async function GET(req: NextRequest) {
         current_semester: student.current_semester || null,
         enrollment_year: student.enrollment_year || null,
         current_gpa: student.current_gpa ? Number(student.current_gpa) : null,
-        academic_interests: interests,
+        academic_interests: interestsStr,
 
         // Career Goals - FLAT
         primary_goal: student.primary_goal || null,
@@ -177,8 +160,8 @@ export async function GET(req: NextRequest) {
         intensity_level: student.intensity_level || null,
 
         // Stats
-        total_skills: Number(student.total_skills) || 0,
-        profile_completion: calculateProfileCompletion(student, interests),
+        total_skills: totalSkills,
+        profile_completion: calculateProfileCompletion(student, interestsStr),
 
         // Formatted display fields
         year_display: student.current_year ? `Year ${student.current_year}` : 'Not Set',

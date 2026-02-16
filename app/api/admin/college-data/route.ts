@@ -88,31 +88,29 @@ export async function GET(req: NextRequest) {
 
     const stats = statsRows[0]
 
-    // 2. Get unique programs (departments) from academic_profiles
+    // 2. Get unique programs (departments) from Students table
     const [programRows] = await pool.query<ProgramRow[]>(
-      `SELECT DISTINCT ap.program 
-      FROM academic_profiles ap
-      INNER JOIN Students s ON ap.student_id = s.student_id
-      WHERE s.college_token = ? AND ap.program IS NOT NULL AND ap.program != ''
-      ORDER BY ap.program`,
+      `SELECT DISTINCT program 
+      FROM Students
+      WHERE college_token = ? AND program IS NOT NULL AND program != ''
+      ORDER BY program`,
       [collegeToken]
     )
 
     const programs = programRows.map(row => row.program)
 
-    // 3. Get recent registrations (last 10 students) with program from academic_profiles
+    // 3. Get recent registrations (last 10 students) with program from Students table
     const [recentRows] = await pool.query<StudentRow[]>(
       `SELECT 
-        s.student_id,
-        s.first_name,
-        s.last_name,
-        s.email,
-        ap.program,
-        s.created_at
-      FROM Students s
-      LEFT JOIN academic_profiles ap ON s.student_id = ap.student_id
-      WHERE s.college_token = ?
-      ORDER BY s.created_at DESC
+        student_id,
+        first_name,
+        last_name,
+        email,
+        program,
+        created_at
+      FROM Students
+      WHERE college_token = ?
+      ORDER BY created_at DESC
       LIMIT 10`,
       [collegeToken]
     )
@@ -143,15 +141,14 @@ export async function GET(req: NextRequest) {
       isActive: true
     }
 
-    // 5. Get department distribution from academic_profiles
+    // 5. Get department distribution from Students table
     const [deptRows] = await pool.query<DepartmentRow[]>(
       `SELECT 
-        ap.program,
+        program,
         COUNT(*) as count
-      FROM academic_profiles ap
-      INNER JOIN Students s ON ap.student_id = s.student_id
-      WHERE s.college_token = ? AND ap.program IS NOT NULL AND ap.program != ''
-      GROUP BY ap.program
+      FROM Students
+      WHERE college_token = ? AND program IS NOT NULL AND program != ''
+      GROUP BY program
       ORDER BY count DESC`,
       [collegeToken]
     )

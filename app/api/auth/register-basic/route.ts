@@ -45,6 +45,20 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Resolve college_id from college token
+    let collegeId = null;
+    if (collegeToken) {
+      const [tokenRows] = await connection.execute(
+        `SELECT c.id FROM colleges c 
+         JOIN college_tokens ct ON c.id = ct.college_id 
+         WHERE ct.token = ? AND ct.is_active = TRUE`,
+        [collegeToken]
+      );
+      if (Array.isArray(tokenRows) && (tokenRows as any).length > 0) {
+        collegeId = (tokenRows as any)[0].id;
+      }
+    }
+
     // Create student
     const [result] = await connection.execute(
       `INSERT INTO Students (
@@ -57,12 +71,13 @@ export async function POST(request: Request) {
           gender,
           country,
           college_token,
+          college_id,
           role,
           status,
           created_at,
           updated_at,
           is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'STUDENT', 'ACTIVE', NOW(), NOW(), TRUE)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'STUDENT', 'ACTIVE', NOW(), NOW(), TRUE)`,
       [
         firstName,
         lastName,
@@ -72,7 +87,8 @@ export async function POST(request: Request) {
         dateOfBirth ? new Date(dateOfBirth) : null,
         gender || null,
         country || null,
-        collegeToken || null
+        collegeToken || null,
+        collegeId
       ]
     );
 

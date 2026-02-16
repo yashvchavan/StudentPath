@@ -84,10 +84,13 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Get comprehensive student data from database
+        // Get comprehensive student data from database (single query)
         const [studentRows]: any = await pool.query(
             `SELECT 
                 s.first_name, s.last_name, s.email, s.college_token,
+                s.program, s.current_year, s.current_semester, s.enrollment_year, s.current_gpa,
+                s.academic_interests, s.technical_skills, s.soft_skills,
+                s.primary_goal, s.secondary_goal, s.timeline, s.intensity_level,
                 c.college_name, c.college_type, c.city, c.state
              FROM Students s
              LEFT JOIN colleges c ON s.college_token = c.college_token
@@ -104,52 +107,31 @@ export async function POST(req: NextRequest) {
 
         const student = studentRows[0];
 
-        // Get academic profile
-        const [academicRows]: any = await pool.query(
-            `SELECT program, currentYear, currentSemester, enrollmentYear, currentGPA
-             FROM academic_profiles
-             WHERE student_id = ?`,
-            [studentId]
-        );
+        // Parse JSON fields from Students table
+        const safeJsonParse = (value: any, fallback: any = {}) => {
+            if (!value) return fallback;
+            if (typeof value === 'object') return value;
+            try { return JSON.parse(value); } catch { return fallback; }
+        };
 
-        const academicProfile = academicRows?.[0] || {};
+        const academicInterests = safeJsonParse(student.academic_interests, []);
+        const technicalSkills: Record<string, number> = safeJsonParse(student.technical_skills, {});
+        const softSkills: Record<string, number> = safeJsonParse(student.soft_skills, {});
 
-        // Get academic interests
-        const [interestRows]: any = await pool.query(
-            `SELECT interest FROM academic_interests WHERE student_id = ?`,
-            [studentId]
-        );
-        const academicInterests = (interestRows || []).map((row: any) => row.interest);
+        const academicProfile = {
+            program: student.program || '',
+            currentYear: student.current_year || null,
+            currentSemester: student.current_semester || null,
+            enrollmentYear: student.enrollment_year || null,
+            currentGPA: student.current_gpa || null,
+        };
 
-        // Get skills
-        const [skillRows]: any = await pool.query(
-            `SELECT skillType, skillName, proficiencyLevel 
-             FROM skills 
-             WHERE student_id = ?`,
-            [studentId]
-        );
-
-        const technicalSkills: Record<string, number> = {};
-        const softSkills: Record<string, number> = {};
-
-        if (skillRows && Array.isArray(skillRows)) {
-            skillRows.forEach((skill: any) => {
-                if (skill.skillType === 'technical') {
-                    technicalSkills[skill.skillName] = skill.proficiencyLevel;
-                } else if (skill.skillType === 'soft') {
-                    softSkills[skill.skillName] = skill.proficiencyLevel;
-                }
-            });
-        }
-
-        // Get career goals
-        const [careerRows]: any = await pool.query(
-            `SELECT primaryGoal, secondaryGoal, timeline, intensityLevel
-             FROM career_goals
-             WHERE student_id = ?`,
-            [studentId]
-        );
-        const careerGoals = careerRows?.[0] || {};
+        const careerGoals = {
+            primaryGoal: student.primary_goal || null,
+            secondaryGoal: student.secondary_goal || null,
+            timeline: student.timeline || null,
+            intensityLevel: student.intensity_level || null,
+        };
 
         // Build comprehensive student data header
         // NOTE: The token and isAuthenticated fields are required by the RAG API
