@@ -21,10 +21,26 @@ export interface Review {
 
 export async function insertPlacements(collegeId: number, placements: PlacementRow[], fileUrl: string) {
   const connection = await pool.getConnection();
+  let inserted = 0;
+  let skipped = 0;
+
   try {
     await connection.beginTransaction();
 
     for (const p of placements) {
+      // Check for duplicate: same college, company, role, and academic year
+      const [existing]: any = await connection.execute(
+        `SELECT id FROM placements 
+         WHERE college_id = ? AND company_name = ? AND role = ? AND academic_year = ?
+         LIMIT 1`,
+        [collegeId, p.company_name, p.role || "", p.academic_year || null]
+      );
+
+      if (existing.length > 0) {
+        skipped++;
+        continue; // Skip duplicate
+      }
+
       await connection.execute(
         `INSERT INTO placements (
           college_id, company_name, package, eligibility, drive_date, 
@@ -46,9 +62,11 @@ export async function insertPlacements(collegeId: number, placements: PlacementR
           p.academic_year || null
         ]
       );
+      inserted++;
     }
 
     await connection.commit();
+    return { inserted, skipped };
   } catch (error) {
     await connection.rollback();
     throw error;

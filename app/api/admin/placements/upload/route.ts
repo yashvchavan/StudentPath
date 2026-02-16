@@ -64,14 +64,18 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // Insert
+        // Insert (skips duplicates)
         console.log("[Admin Upload] Inserting into database...");
-        await insertPlacements(collegeId, parsedRows, fileUrl);
-        console.log("[Admin Upload] Database insertion complete");
+        const result = await insertPlacements(collegeId, parsedRows, fileUrl);
+        console.log(`[Admin Upload] Inserted ${result.inserted}, Skipped ${result.skipped} duplicates`);
 
         return NextResponse.json({
             success: true,
-            recordsInserted: parsedRows.length,
+            recordsInserted: result.inserted,
+            recordsSkipped: result.skipped,
+            message: result.skipped > 0
+                ? `${result.inserted} records added, ${result.skipped} duplicates skipped.`
+                : `${result.inserted} records added successfully.`
         });
     } catch (err) {
         console.error("[Admin Upload] Critical Failure:", err);
