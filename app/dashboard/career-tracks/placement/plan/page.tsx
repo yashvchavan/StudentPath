@@ -250,10 +250,10 @@ export default function PlacementPlanPage() {
                                             <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
                                                 <div
                                                     className={`h-full rounded-full transition-all duration-1000 ${gap.current >= 4
-                                                            ? "bg-green-500"
-                                                            : gap.current >= 2
-                                                                ? "bg-yellow-500"
-                                                                : "bg-red-500"
+                                                        ? "bg-green-500"
+                                                        : gap.current >= 2
+                                                            ? "bg-yellow-500"
+                                                            : "bg-red-500"
                                                         }`}
                                                     style={{ width: `${(gap.current / gap.required) * 100}%` }}
                                                 />

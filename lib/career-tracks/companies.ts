@@ -47,7 +47,15 @@ export interface OnCampusProgram {
     selectedCount?: number;        // Students selected (filled after drive)
     totalApplicants?: number;
     academicYear?: string;         // e.g. "2025-26"
+    // AI-extracted fields
+    extracted_skills?: string[];
+    extracted_rounds?: Array<{ name: string; type: string }>;
+    difficulty_level?: "Easy" | "Medium" | "Hard";
+    total_rounds?: number;
+    ai_confidence_score?: number;
+    last_ai_update?: Date | string;
 }
+
 
 // ─── Static On-Campus Data (will come from admin-uploaded Excel) ─────────────
 

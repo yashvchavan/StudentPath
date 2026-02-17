@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 
 import { CompanyDetailsSheet } from "./components/CompanyDetailsSheet";
+import { AIInsightsBadge } from "./components/AIInsightsBadge";
 
 export default function PlacementPage() {
     const router = useRouter();
@@ -51,43 +52,50 @@ export default function PlacementPage() {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState<string>("all");
     const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-    const [detailsCompany, setDetailsCompany] = useState<OnCampusProgram | Company | null>(null);
 
     // Year and Department filtering state
     const [selectedYear, setSelectedYear] = useState<string>("All");
     const [selectedDepartment, setSelectedDepartment] = useState<string>("All");
     const [availableYears, setAvailableYears] = useState<string[]>([]);
+    const [detailsCompany, setDetailsCompany] = useState<Company | OnCampusProgram | null>(null);
+    const [detailsType, setDetailsType] = useState<"on-campus" | "off-campus">("on-campus");
 
     const departments = ["All", "Computer", "IT", "ECE", "EEE", "MECH", "CIVIL", "AIDS", "AIML"];
 
-    // Fetch companies from API
-    useEffect(() => {
-        const fetchCompanies = async () => {
-            try {
-                const res = await fetch("/api/career-tracks/companies");
-                const data = await res.json();
-                if (data.success) {
-                    const onCampusData = data.data.onCampus || [];
-                    setOnCampus(onCampusData);
-                    setOffCampus(data.data.offCampus || []);
+    // Fetch companies function (can be called for refresh)
+    const fetchCompanies = async () => {
+        try {
+            const res = await fetch("/api/career-tracks/companies");
+            const data = await res.json();
+            if (data.success) {
+                const onCampusData = data.data.onCampus || [];
+                setOnCampus(onCampusData);
+                setOffCampus(data.data.offCampus || []);
+                console.log("[Placement Page] Loaded companies:", {
+                    onCampus: data.data.onCampus?.length,
+                    offCampus: data.data.offCampus?.length
+                });
 
-                    // Extract unique years
-                    const years = Array.from(new Set(onCampusData.map((p: OnCampusProgram) => p.academicYear).filter(Boolean))) as string[];
-                    // Sort years descending (newest first)
-                    years.sort().reverse();
-                    setAvailableYears(years);
+                // Extract unique years
+                const years = Array.from(new Set(onCampusData.map((p: OnCampusProgram) => p.academicYear).filter(Boolean))) as string[];
+                // Sort years descending (newest first)
+                years.sort().reverse();
+                setAvailableYears(years);
 
-                    // Select first year by default if available
-                    if (years.length > 0) {
-                        setSelectedYear(years[0]);
-                    }
+                // Select first year by default if available
+                if (years.length > 0) {
+                    setSelectedYear(years[0]);
                 }
-            } catch (error) {
-                console.error("Error fetching companies:", error);
-            } finally {
-                setLoading(false);
             }
-        };
+        } catch (error) {
+            console.error("Error fetching companies:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch on mount
+    useEffect(() => {
         fetchCompanies();
     }, []);
 
@@ -350,8 +358,18 @@ export default function PlacementPage() {
                                                     </div>
                                                 </div>
 
-                                                {/* Applicants count */}
-                                                {program.totalApplicants && (
+                                                {/* AI Insights */}
+                                                <AIInsightsBadge
+                                                    extractedSkills={program.extracted_skills}
+                                                    extractedRounds={program.extracted_rounds}
+                                                    difficultyLevel={program.difficulty_level}
+                                                    totalRounds={program.total_rounds}
+                                                    confidenceScore={program.ai_confidence_score}
+                                                    lastAIUpdate={program.last_ai_update}
+                                                />
+
+                                                {/* Applicants count - only show if exists and > 0 */}
+                                                {program.totalApplicants && program.totalApplicants > 0 && (
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         <Users className="w-4 h-4" />
                                                         <span>{program.totalApplicants} applicants</span>
@@ -517,11 +535,13 @@ export default function PlacementPage() {
                     </TabsContent>
                 </Tabs>
 
+                {/* Company Details Sheet */}
                 <CompanyDetailsSheet
                     isOpen={!!detailsCompany}
                     onClose={() => setDetailsCompany(null)}
                     company={detailsCompany}
-                    type="on-campus" // Currently strictly linking to on-campus for reviews as per user context (placed student)
+                    type={detailsType}
+                    onRefresh={fetchCompanies} // Refresh data after AI extraction
                 />
             </div>
         </DashboardLayout>
