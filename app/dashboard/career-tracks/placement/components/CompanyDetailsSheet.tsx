@@ -21,15 +21,18 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { Star, MessageSquare, User, Calendar, Clock, MapPin, IndianRupee, Mail, GraduationCap, Trash2 } from "lucide-react";
+import { Star, MessageSquare, User, Calendar, Clock, MapPin, IndianRupee, Mail, GraduationCap, Trash2, Layers } from "lucide-react";
 import type { OnCampusProgram, Company } from "@/lib/career-tracks/companies";
 import { useAuth } from "@/hooks/use-auth";
+import { EnhancedReviewForm } from "./EnhancedReviewForm";
+import { AIExtractionTrigger } from "./AIExtractionTrigger";
 
 interface CompanyDetailsSheetProps {
     isOpen: boolean;
     onClose: () => void;
     company: OnCampusProgram | Company | null;
     type: "on-campus" | "off-campus";
+    onRefresh?: () => void; // Callback to refresh parent data
 }
 
 interface Review {
@@ -44,15 +47,34 @@ interface Review {
     current_year?: number;
     program?: string;
     email?: string;
+    // Enhanced review fields
+    interview_experience?: string;
+    questions_asked?: string;
+    preparation_tips?: string;
+    offer_received?: boolean;
+    salary_offered?: string;
+    rounds_cleared?: number;
+    would_recommend?: boolean;
 }
 
-export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyDetailsSheetProps) {
+export function CompanyDetailsSheet({ isOpen, onClose, company, type, onRefresh }: CompanyDetailsSheetProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
-    const [newReview, setNewReview] = useState({ rating: 5, comment: "", anonymous: false });
-    const [submitting, setSubmitting] = useState(false);
+    const [expandedReviews, setExpandedReviews] = useState<Set<number>>(new Set());
+
+    const toggleReviewExpansion = (reviewId: number) => {
+        setExpandedReviews(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(reviewId)) {
+                newSet.delete(reviewId);
+            } else {
+                newSet.add(reviewId);
+            }
+            return newSet;
+        });
+    };
 
     // Fetch reviews when sheet opens
     useEffect(() => {
@@ -60,6 +82,35 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
             fetchReviews();
         }
     }, [isOpen, company?.id]);
+
+    // Auto-trigger AI extraction when reviews reach 3 (only once)
+    useEffect(() => {
+        const autoTriggerAI = async () => {
+            if (reviews.length >= 3 && company?.id) {
+                const placementId = typeof company.id === 'string' ? parseInt(company.id) : company.id;
+
+                // Check if AI extraction has already been done recently
+                const lastUpdate = (company as any).last_ai_update;
+                const shouldTrigger = !lastUpdate ||
+                    (new Date().getTime() - new Date(lastUpdate).getTime()) > 24 * 60 * 60 * 1000; // 24 hours
+
+                if (shouldTrigger) {
+                    console.log(`[Auto AI] Triggering extraction for ${reviews.length} reviews`);
+                    try {
+                        await fetch(`/api/career-tracks/companies/${placementId}/extract`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                        });
+                        onRefresh?.(); // Refresh parent to show updated data
+                    } catch (error) {
+                        console.error('[Auto AI] Failed:', error);
+                    }
+                }
+            }
+        };
+
+        autoTriggerAI();
+    }, [reviews.length, company?.id]);
 
     const fetchReviews = async () => {
         if (!company?.id) return;
@@ -82,37 +133,6 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
             console.error("Failed to fetch reviews", error);
         } finally {
             setLoadingReviews(false);
-        }
-    };
-
-    const handleSubmitReview = async () => {
-        if (!company?.id) return;
-        if (!newReview.comment.trim()) {
-            toast({ title: "Error", description: "Please enter a comment", variant: "destructive" });
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const res = await fetch(`/api/career-tracks/companies/${company.id}/reviews`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(newReview),
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                toast({ title: "Success", description: "Review submitted successfully!" });
-                setNewReview({ rating: 5, comment: "", anonymous: false });
-                fetchReviews(); // Refresh list
-            } else {
-                toast({ title: "Error", description: data.error || "Failed to submit review", variant: "destructive" });
-            }
-        } catch (error) {
-            console.error("Error submitting review", error);
-            toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
-        } finally {
-            setSubmitting(false);
         }
     };
 
@@ -230,74 +250,73 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <h4 className="text-sm font-medium">Selection Process</h4>
-                            <div className="flex flex-col gap-2">
-                                {(type === "on-campus" ? (company as OnCampusProgram).rounds : (company as Company).interviewRounds).length > 0 ?
-                                    (type === "on-campus" ? (company as OnCampusProgram).rounds : (company as Company).interviewRounds).map((round, i) => (
-                                        <div key={i} className="flex items-center gap-2 text-sm p-2 border rounded">
-                                            <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
-                                                {i + 1}
-                                            </span>
-                                            <span>{round.name}</span>
-                                            <Badge variant="outline" className="ml-auto text-xs">{round.type}</Badge>
-                                        </div>
-                                    )) : <p className="text-sm text-muted-foreground">Details not available</p>}
-                            </div>
+                        {/* Selection Process */}
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-medium flex items-center gap-2">
+                                <Layers className="w-4 h-4 text-muted-foreground" /> Selection Process
+                            </h4>
+                            {(() => {
+                                // Get rounds based on type
+                                const rounds = type === "on-campus"
+                                    ? (company as OnCampusProgram).rounds
+                                    : (company as Company).interviewRounds;
+
+                                // Deduplicate rounds based on name and type
+                                const uniqueRounds = rounds?.reduce((acc: any[], round: any) => {
+                                    const exists = acc.some(r =>
+                                        r.name.toLowerCase() === round.name.toLowerCase() &&
+                                        r.type === round.type
+                                    );
+                                    if (!exists) {
+                                        acc.push(round);
+                                    }
+                                    return acc;
+                                }, []);
+
+                                return uniqueRounds && uniqueRounds.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {uniqueRounds.map((round: any, idx: number) => (
+                                            <div key={`${round.name}-${round.type}-${idx}`} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                                <span className="text-sm font-medium flex items-center gap-2">
+                                                    <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-semibold">
+                                                        {idx + 1}
+                                                    </span>
+                                                    <span>{round.name}</span>
+                                                </span>
+                                                <Badge variant="outline" className="ml-auto text-xs">{round.type}</Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : <p className="text-sm text-muted-foreground">Details not available</p>;
+                            })()}
                         </div>
 
                     </TabsContent>
 
                     {/* ── Reviews Tab ─────────────────────────────────────────── */}
                     <TabsContent value="reviews" className="space-y-6">
-                        {/* Add Review Form */}
-                        <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
-                            <h4 className="text-sm font-medium flex items-center gap-2">
-                                <MessageSquare className="w-4 h-4" /> Share Your Experience
-                            </h4>
+                        {/* Enhanced Review Form */}
+                        <EnhancedReviewForm
+                            placementId={typeof company.id === 'string' ? parseInt(company.id) : company.id}
+                            onSuccess={fetchReviews}
+                        />
 
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <button
-                                            key={star}
-                                            type="button"
-                                            onClick={() => setNewReview(prev => ({ ...prev, rating: star }))}
-                                            className={`${star <= newReview.rating ? "text-yellow-500" : "text-gray-300"} hover:text-yellow-600 transition-colors`}
-                                        >
-                                            <Star className="w-5 h-5 fill-current" />
-                                        </button>
-                                    ))}
-                                    <span className="text-xs text-muted-foreground ml-2">Rating</span>
-                                </div>
-
-                                <Textarea
-                                    placeholder="Share your interview experience, questions asked, or general feedback..."
-                                    value={newReview.comment}
-                                    onChange={(e) => setNewReview(prev => ({ ...prev, comment: e.target.value }))}
-                                    className="min-h-[100px] text-sm"
-                                />
-
-                                <div className="flex items-center justify-between">
-                                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={newReview.anonymous}
-                                            onChange={(e) => setNewReview(prev => ({ ...prev, anonymous: e.target.checked }))}
-                                            className="rounded border-gray-300"
-                                        />
-                                        Post Anonymously
-                                    </label>
-                                    <Button size="sm" onClick={handleSubmitReview} disabled={submitting}>
-                                        {submitting ? "Posting..." : "Post Review"}
-                                    </Button>
-                                </div>
-                            </div>
+                        {/* AI Extraction Trigger */}
+                        <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium">Recent Experiences ({reviews.length})</h4>
+                            <AIExtractionTrigger
+                                placementId={typeof company.id === 'string' ? parseInt(company.id) : company.id}
+                                onSuccess={() => {
+                                    fetchReviews();
+                                    onRefresh?.(); // Refresh parent to show updated AI data
+                                }}
+                                variant="ghost"
+                                size="sm"
+                            />
                         </div>
 
                         {/* Reviews List */}
                         <div className="space-y-4">
-                            <h4 className="text-sm font-medium">Recent Experiences ({reviews.length})</h4>
 
                             {loadingReviews ? (
                                 <div className="flex justify-center p-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div></div>
@@ -375,9 +394,98 @@ export function CompanyDetailsSheet({ isOpen, onClose, company, type }: CompanyD
                                                 </div>
                                             </div>
 
-                                            <p className="text-sm text-foreground/90 whitespace-pre-wrap">
-                                                {review.comment}
-                                            </p>
+                                            {/* Review Comment with Read More */}
+                                            <div className="space-y-3">
+                                                {/* Main Comment */}
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-foreground leading-relaxed">
+                                                        {expandedReviews.has(review.id) || review.comment.length <= 200
+                                                            ? review.comment
+                                                            : `${review.comment.substring(0, 200)}...`}
+                                                    </p>
+                                                </div>
+
+                                                {/* Expanded Details */}
+                                                {expandedReviews.has(review.id) && (
+                                                    <div className="space-y-3 pt-3 border-t">
+                                                        {/* Interview Experience */}
+                                                        {(review as any).interview_experience && (
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Interview Experience</p>
+                                                                <p className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg">
+                                                                    {(review as any).interview_experience}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Questions Asked */}
+                                                        {(review as any).questions_asked && (
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Questions Asked</p>
+                                                                <p className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg whitespace-pre-wrap">
+                                                                    {(review as any).questions_asked}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Preparation Tips */}
+                                                        {(review as any).preparation_tips && (
+                                                            <div className="space-y-1">
+                                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preparation Tips</p>
+                                                                <p className="text-sm text-foreground/90 bg-muted/30 p-3 rounded-lg">
+                                                                    {(review as any).preparation_tips}
+                                                                </p>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Additional Details */}
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            {(review as any).offer_received !== null && (
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs font-semibold text-muted-foreground">Offer Status</p>
+                                                                    <Badge variant={(review as any).offer_received ? "default" : "secondary"}>
+                                                                        {(review as any).offer_received ? "✓ Received" : "✗ Not Received"}
+                                                                    </Badge>
+                                                                </div>
+                                                            )}
+                                                            {(review as any).salary_offered && (
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs font-semibold text-muted-foreground">Salary Offered</p>
+                                                                    <p className="text-sm font-medium">{(review as any).salary_offered}</p>
+                                                                </div>
+                                                            )}
+                                                            {(review as any).rounds_cleared && (
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs font-semibold text-muted-foreground">Rounds Cleared</p>
+                                                                    <p className="text-sm font-medium">{(review as any).rounds_cleared} rounds</p>
+                                                                </div>
+                                                            )}
+                                                            {(review as any).would_recommend !== null && (
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs font-semibold text-muted-foreground">Recommendation</p>
+                                                                    <Badge variant={(review as any).would_recommend ? "default" : "secondary"}>
+                                                                        {(review as any).would_recommend ? "👍 Yes" : "👎 No"}
+                                                                    </Badge>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Read More Button */}
+                                                {(review.comment.length > 200 || (review as any).interview_experience || (review as any).questions_asked) && (
+                                                    <button
+                                                        onClick={() => toggleReviewExpansion(review.id)}
+                                                        className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
+                                                    >
+                                                        {expandedReviews.has(review.id) ? (
+                                                            <>Show less ↑</>
+                                                        ) : (
+                                                            <>Read full review ↓</>
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </CardContent>
                                     </Card>
                                 ))

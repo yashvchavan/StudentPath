@@ -68,7 +68,20 @@ export async function POST(
         }
 
         const body = await req.json();
-        const { rating, comment, anonymous } = body;
+        const {
+            rating,
+            comment,
+            anonymous,
+            interviewDate,
+            offerReceived,
+            salaryOffered,
+            interviewExperience,
+            questionsAsked,
+            preparationTips,
+            overallExperience,
+            wouldRecommend,
+            roundsCleared
+        } = body;
 
         if (!rating || !comment) {
             return NextResponse.json({ error: "Rating and comment are required" }, { status: 400 });
@@ -77,17 +90,40 @@ export async function POST(
         const connection = await pool.getConnection();
 
         try {
-            // Check if already reviewed (optional, maybe allow multiple?)
-            // For now, let's just insert.
-
-            // Convert user.id to string or number matching `student_id` type in DB schema
-            // In DB, student_id in reviews is likely VARCHAR matching students table, or INT id?
-            // Checking lib/db.ts will confirm. Assuming student_id from auth is correct.
-
+            // Insert comprehensive review
             await connection.execute(`
-                INSERT INTO placement_reviews (placement_id, student_id, rating, comment, is_anonymous)
-                VALUES (?, ?, ?, ?, ?)
-             `, [placementId, user.id, rating, comment, anonymous ? 1 : 0]);
+                INSERT INTO placement_reviews (
+                    placement_id, student_id, rating, comment, is_anonymous,
+                    interview_date, offer_received, salary_offered,
+                    interview_experience, questions_asked, preparation_tips,
+                    overall_experience, would_recommend, rounds_cleared
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             `, [
+                placementId,
+                user.id,
+                rating,
+                comment,
+                anonymous ? 1 : 0,
+                interviewDate || null,
+                offerReceived !== undefined ? (offerReceived ? 1 : 0) : null,
+                salaryOffered || null,
+                interviewExperience || null,
+                questionsAsked || null,
+                preparationTips || null,
+                overallExperience || null,
+                wouldRecommend !== undefined ? (wouldRecommend ? 1 : 0) : null,
+                roundsCleared || null
+            ]);
+
+            // Trigger AI extraction in background (don't wait for it)
+            // We'll do this asynchronously to not block the response
+            fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/career-tracks/companies/${placementId}/extract`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            }).catch(err => console.error('Background AI extraction failed:', err));
 
             return NextResponse.json({ success: true, message: "Review added successfully" });
 

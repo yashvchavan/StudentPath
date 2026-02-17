@@ -7,6 +7,12 @@ export interface Placement extends PlacementRow {
   logo_url?: string;
   created_at: Date;
   updated_at: Date;
+  extracted_skills?: string[];
+  extracted_rounds?: Array<{ name: string; type: string }>;
+  difficulty_level?: "Easy" | "Medium" | "Hard";
+  total_rounds?: number;
+  ai_confidence_score?: number;
+  last_ai_update?: Date;
 }
 
 export interface Review {
@@ -78,7 +84,14 @@ export async function insertPlacements(collegeId: number, placements: PlacementR
 export async function getPlacements(collegeId?: number): Promise<Placement[]> {
   const connection = await pool.getConnection();
   try {
-    let query = `SELECT * FROM placements`;
+    let query = `SELECT 
+      id, college_id, company_name, logo_url, role, package, description,
+      eligibility, location, drive_date, deadline, apply_link,
+      students_registered, students_selected, remarks, file_url,
+      academic_year, created_at, updated_at,
+      extracted_skills, extracted_rounds, difficulty_level,
+      total_rounds, ai_confidence_score, last_ai_update
+    FROM placements`;
     const params: any[] = [];
 
     if (collegeId) {
@@ -132,4 +145,46 @@ export async function getReviews(placementId: number): Promise<Review[]> {
     ...r,
     student_name: `${r.first_name} ${r.last_name}`
   }));
+}
+
+export async function updateAIExtractedData(
+  placementId: number,
+  data: {
+    extracted_skills?: string[];
+    extracted_rounds?: Array<{ name: string; type: string }>;
+    difficulty_level?: "Easy" | "Medium" | "Hard";
+    total_rounds?: number;
+    ai_confidence_score?: number;
+  }
+) {
+  await pool.execute(
+    `UPDATE placements 
+     SET extracted_skills = ?, 
+         extracted_rounds = ?, 
+         difficulty_level = ?, 
+         total_rounds = ?, 
+         ai_confidence_score = ?,
+         last_ai_update = NOW()
+     WHERE id = ?`,
+    [
+      JSON.stringify(data.extracted_skills || []),
+      JSON.stringify(data.extracted_rounds || []),
+      data.difficulty_level || null,
+      data.total_rounds || null,
+      data.ai_confidence_score || null,
+      placementId,
+    ]
+  );
+}
+
+export async function getReviewsForAI(placementId: number) {
+  const [rows]: any = await pool.execute(
+    `SELECT rating, comment, interview_experience, questions_asked, 
+            preparation_tips, overall_experience
+     FROM placement_reviews
+     WHERE placement_id = ?
+     ORDER BY created_at DESC`,
+    [placementId]
+  );
+  return rows;
 }
