@@ -32,6 +32,7 @@ import {
   HelpCircle,
   LogOut,
   Compass,
+  FileText,
 } from "lucide-react"
 import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
@@ -104,6 +105,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     { icon: Lightbulb, label: "Recommendations", href: "/dashboard/recommendations", key: "recommendations" },
     { icon: TrendingUp, label: "Progress Reports", href: "/dashboard/reports", key: "reports" },
     { icon: Bot, label: "AI Assistant", href: "/dashboard/assistant", key: "assistant" },
+    { icon: FileText, label: "Resume Analyzer", href: "/dashboard/resume", key: "resume" },
     { icon: Bell, label: "Notifications", href: "/dashboard/notifications", key: "notifications" },
     { icon: Settings, label: "Settings", href: "/dashboard/settings", key: "settings" },
   ]

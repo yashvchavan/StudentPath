@@ -232,6 +232,59 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Create resumes table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS resumes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        file_url TEXT NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        file_type ENUM('pdf', 'docx') NOT NULL,
+        parsed_text LONGTEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_resume_student (student_id)
+      )
+    `);
+
+    // Create resume_analyses table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS resume_analyses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        resume_id INT NOT NULL,
+        student_id INT NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        company_id VARCHAR(100),
+        target_role VARCHAR(255) NOT NULL,
+        ats_score INT DEFAULT 0,
+        section_scores JSON,
+        feedback_json JSON,
+        rejection_reasons JSON,
+        skill_gaps JSON,
+        improvement_steps JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_analysis_resume (resume_id),
+        INDEX idx_analysis_student (student_id),
+        INDEX idx_analysis_company (company_id)
+      )
+    `);
+
+    // Create company_resume_requirements table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS company_resume_requirements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        company_id VARCHAR(100) NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        role VARCHAR(255) NOT NULL,
+        required_skills JSON,
+        keywords JSON,
+        project_expectations TEXT,
+        min_experience_months INT DEFAULT 0,
+        preferred_sections JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_company_role (company_id, role)
+      )
+    `);
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {
