@@ -4,14 +4,21 @@
   "devCommand": "pnpm run dev",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "regions": ["bom1"],
+  "regions": [
+    "bom1"
+  ],
+  "crons": [
+    {
+      "path": "/api/career-tracks/cron/task-reminder",
+      "schedule": "30 14 * * *"
+    }
+  ],
   "env": {
     "DB_HOST": "studentpath-atharvabagade2312-d3eb.d.aivencloud.com",
     "DB_PORT": "26363",
     "DB_USER": "avnadmin",
     "DB_PASSWORD": "AVNS_ZlEVtgizslmXeWE4n0K",
     "DB_NAME": "StudentPath",
-    
-"NODE_ENV":"production"
+    "NODE_ENV": "production"
   }
 }
