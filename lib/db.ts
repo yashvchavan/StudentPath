@@ -285,6 +285,70 @@ export async function initializeDatabase() {
       )
     `);
 
+    // ── Career Gamification Tables ────────────────────────────────────────
+
+    // career_plans: one plan per student per target company/exam
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS career_plans (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        target_id VARCHAR(100) NOT NULL,
+        target_name VARCHAR(150) NOT NULL,
+        track_type ENUM('placement','higher-studies') DEFAULT 'placement',
+        total_xp INT DEFAULT 0,
+        current_streak INT DEFAULT 0,
+        last_completed_date DATE,
+        progress DECIMAL(5,2) DEFAULT 0,
+        difficulty_level ENUM('easy','medium','hard') DEFAULT 'medium',
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+        UNIQUE KEY uq_student_target (student_id, target_id)
+      )
+    `);
+
+    // Fix is_active default on existing tables — safe to run multiple times
+    try {
+      await connection.execute(
+        `ALTER TABLE career_plans MODIFY COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1`
+      );
+    } catch (_) { /* ignore — column already correct */ }
+
+
+    // career_tasks: daily tasks generated from the GPT plan
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS career_tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        plan_id INT NOT NULL,
+        week_number INT NOT NULL,
+        task_date DATE,
+        skill_focus VARCHAR(100),
+        morning_task TEXT,
+        evening_task TEXT,
+        difficulty ENUM('easy','medium','hard') DEFAULT 'medium',
+        xp INT DEFAULT 40,
+        is_completed BOOLEAN DEFAULT FALSE,
+        completed_at TIMESTAMP NULL,
+        FOREIGN KEY (plan_id) REFERENCES career_plans(id) ON DELETE CASCADE
+      )
+    `);
+
+    // career_rewards: badges unlocked by XP milestones
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS career_rewards (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        plan_id INT NOT NULL,
+        badge_name VARCHAR(100) NOT NULL,
+        badge_icon VARCHAR(10) DEFAULT '🏆',
+        xp_threshold INT NOT NULL,
+        unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
+        FOREIGN KEY (plan_id) REFERENCES career_plans(id) ON DELETE CASCADE,
+        UNIQUE KEY uq_student_badge (student_id, plan_id, badge_name)
+      )
+    `);
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {

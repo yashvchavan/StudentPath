@@ -37,7 +37,11 @@ import {
     RefreshCw,
     ChevronDown,
     ChevronUp,
+    Plus,
+    CheckCircle2,
+    Zap,
 } from "lucide-react";
+import PlanGeneratingLoader from "@/components/plan-generating-loader";
 
 export default function PlacementPlanPage() {
     const router = useRouter();
@@ -49,6 +53,9 @@ export default function PlacementPlanPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [expandedWeek, setExpandedWeek] = useState<number | null>(1);
+    const [addingPlan, setAddingPlan] = useState(false);
+    const [planAdded, setPlanAdded] = useState(false);
+    const [addedPlanId, setAddedPlanId] = useState<number | null>(null);
 
     // Get query params
     const companyType = searchParams.get("type") || "off-campus";
@@ -113,6 +120,36 @@ export default function PlacementPlanPage() {
         }
     };
 
+    // Add plan to DB
+    const handleAddPlan = async () => {
+        if (!plan || addingPlan) return;
+        setAddingPlan(true);
+        try {
+            const res = await fetch("/api/career-tracks/my-plan/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    targetId: companyId,
+                    targetName: companyName,
+                    trackType: "placement",
+                    milestones: plan.milestones,
+                    difficulty: "medium",
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setPlanAdded(true);
+                setAddedPlanId(data.planId);
+            } else {
+                console.error("Failed to add plan:", data.error);
+            }
+        } catch (err) {
+            console.error("Error adding plan:", err);
+        } finally {
+            setAddingPlan(false);
+        }
+    };
+
     if (authLoading || dataLoading) {
         return (
             <DashboardLayout currentPage="career-tracks">
@@ -143,37 +180,49 @@ export default function PlacementPlanPage() {
                             Personalized plan for {companyName} ({companyType})
                         </p>
                     </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={generatePlan}
-                        disabled={loading}
-                    >
-                        <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-                        Regenerate
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={generatePlan}
+                            disabled={loading}
+                        >
+                            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                            Regenerate
+                        </Button>
+                        {plan && !loading && (
+                            planAdded ? (
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-green-500/50 text-green-500 hover:bg-green-500/10"
+                                    onClick={() => router.push("/dashboard/career-tracks/my-plan")}
+                                >
+                                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                                    View My Plan
+                                </Button>
+                            ) : (
+                                <Button
+                                    size="sm"
+                                    onClick={handleAddPlan}
+                                    disabled={addingPlan}
+                                    className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0"
+                                >
+                                    {addingPlan ? (
+                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Plus className="w-4 h-4 mr-2" />
+                                    )}
+                                    Add This Plan
+                                </Button>
+                            )
+                        )}
+                    </div>
                 </div>
 
                 {/* Loading State */}
                 {loading && (
-                    <Card className="border-primary/20">
-                        <CardContent className="p-8">
-                            <div className="flex flex-col items-center justify-center space-y-4">
-                                <div className="relative">
-                                    <Sparkles className="w-12 h-12 text-primary animate-pulse" />
-                                </div>
-                                <div className="text-center space-y-2">
-                                    <h3 className="text-lg font-semibold text-foreground">Generating Your Plan...</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        AI is analyzing your skills and creating a personalized preparation plan
-                                    </p>
-                                </div>
-                                <div className="w-48 h-2 bg-muted rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary rounded-full animate-pulse" style={{ width: "60%" }} />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <PlanGeneratingLoader targetName={companyName} trackType="placement" />
                 )}
 
                 {/* Error State */}

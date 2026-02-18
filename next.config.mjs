@@ -16,6 +16,10 @@ const nextConfig = {
   // Optimize for production
   compress: true,
   productionBrowserSourceMaps: false,
+  // Enable server startup instrumentation (runs initializeDatabase on boot)
+  // experimental: {
+  //   instrumentationHook: true,
+  // },
 }
 
 export default nextConfig

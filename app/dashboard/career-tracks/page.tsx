@@ -30,6 +30,8 @@ import {
     Trophy,
     Sparkles,
     TrendingUp,
+    Zap,
+    Flame,
 } from "lucide-react";
 
 export default function CareerTracksPage() {
@@ -309,6 +311,44 @@ export default function CareerTracksPage() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* ── My Plan CTA ─────────────────────────────────────────── */}
+                <Card
+                    className="relative overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 group border-violet-500/30 bg-gradient-to-r from-violet-500/5 to-indigo-500/5"
+                    onClick={() => router.push("/dashboard/career-tracks/my-plan")}
+                >
+                    <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <CardContent className="p-6 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-violet-500/15 group-hover:bg-violet-500/25 transition-colors">
+                                <BookOpen className="w-7 h-7 text-violet-400" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                                    📘 My Career Plans
+                                    <Badge variant="outline" className="text-xs border-violet-500/40 text-violet-400">
+                                        Gamified
+                                    </Badge>
+                                </h3>
+                                <p className="text-sm text-muted-foreground mt-0.5">
+                                    Track XP, streaks, badges, skill radar & leaderboard for your saved plans
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3 text-sm">
+                                <span className="flex items-center gap-1 text-yellow-500">
+                                    <Zap className="w-4 h-4" /> XP
+                                </span>
+                                <span className="flex items-center gap-1 text-orange-500">
+                                    <Flame className="w-4 h-4" /> Streak
+                                </span>
+                                <span className="flex items-center gap-1 text-yellow-500">
+                                    <Trophy className="w-4 h-4" /> Rank
+                                </span>
+                                <ArrowRight className="w-5 h-5 text-violet-400 group-hover:translate-x-1 transition-transform" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 {/* Quick Tips Section */}
                 <Card className="border-dashed">
