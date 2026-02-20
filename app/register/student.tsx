@@ -1165,6 +1165,25 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                 </Card>
               </div>
             </div>
+
+            <div className="flex justify-between mt-6">
+              <Button
+                variant="outline"
+                onClick={prevStep}
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <Button
+                onClick={nextStep}
+                disabled={!formData.program || !formData.currentYear}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
+              >
+                Continue
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
           </StepTransition>
         );
 
@@ -1393,6 +1412,24 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   </CardContent>
                 </Card>
               </div>
+
+              <div className="flex justify-between mt-6">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <Button
+                  onClick={nextStep}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
+                >
+                  Continue
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
           </StepTransition>
         );
@@ -1587,6 +1624,24 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   </CardContent>
                 </Card>
               </div>
+
+              <div className="flex justify-between mt-6">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <Button
+                  onClick={nextStep}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
+                >
+                  Continue
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
           </StepTransition>
         );
@@ -1737,27 +1792,6 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
   return (
     <div className="space-y-8">
       {isLoading ? <RocketLaunchLoader /> : renderStep()}
-
-      {currentStep < totalSteps && !isLoading && (
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={prevStep}
-            disabled={currentStep === 1}
-            className="border-white/20 text-white hover:bg-white/10"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button
-            onClick={nextStep}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white"
-          >
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
@@ -2303,8 +2337,9 @@ const ProfessionalRegistration = () => {
 
 // === Main Register Component ===
 function RegisterPage() {
-  const [userType, setUserType] = useState<'student' | 'professional' | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 40 });
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -2317,31 +2352,12 @@ function RegisterPage() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
-  if (!userType) {
-    return (
-      // Force dark mode for the initial selection screen as well
-      <div
-        className="dark min-h-screen relative text-gray-900 dark:text-white"
-        style={{
-          background:
-            "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
-        }}
-      >
-        <UserTypeSelection onSelect={setUserType} />
-      </div>
-    );
-  }
-
-  const isStudent = userType === 'student';
-  const currentProgress = isStudent ? 50 : 33; // Simplified progress for demo
-
   return (
-    // Force dark mode for the full registration page
     <div
       className="dark min-h-screen relative text-gray-900 dark:text-white"
       style={{
         background:
-          "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
+          "radial-gradient(1200px 600px at 50% 0%, rgba(25,118,210,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(255,152,0,0.10), transparent 40%), #0b0f1a",
       }}
     >
       <AnimatedBackground />
@@ -2350,7 +2366,7 @@ function RegisterPage() {
       <div
         className="pointer-events-none fixed inset-0 z-0"
         style={{
-          background: `radial-gradient(300px 200px at ${mousePosition.x}% ${mousePosition.y}%, rgba(99,102,241,0.12), rgba(0,0,0,0) 60%)`,
+          background: `radial-gradient(300px 200px at ${mousePosition.x}% ${mousePosition.y}%, rgba(25,118,210,0.12), rgba(0,0,0,0) 60%)`,
         }}
       />
 
@@ -2360,14 +2376,6 @@ function RegisterPage() {
           <div className="max-w-5xl mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  onClick={() => setUserType(null)}
-                  className="text-white hover:bg-white/10"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Change Path
-                </Button>
                 <img
                   src="/logo.png"
                   alt="StudentPath Logo"
@@ -2375,15 +2383,11 @@ function RegisterPage() {
                 />
               </div>
               <div className="flex items-center gap-3">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${isStudent
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                  }`}>
-                  {isStudent ? 'Student' : 'Professional'} Registration
+                <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Student Registration
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
@@ -2391,7 +2395,7 @@ function RegisterPage() {
         <div className="max-w-5xl mx-auto px-4 py-8">
           <Card className="border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl">
             <CardContent className="p-8">
-              {isStudent ? <StudentRegistration collegeToken={null} collegeInfo={null} /> : <ProfessionalRegistration />}
+              <StudentRegistration collegeToken={null} collegeInfo={null} />
             </CardContent>
           </Card>
         </div>
@@ -2402,8 +2406,8 @@ function RegisterPage() {
             <p className="text-sm text-gray-300">
               Already have an account?{" "}
               <Link
-                href="/login"
-                className="text-indigo-300 hover:text-indigo-200 font-medium underline-offset-4 hover:underline"
+                href={`/login${token ? `?token=${token}` : ''}`}
+                className="text-blue-300 hover:text-blue-200 font-medium underline-offset-4 hover:underline"
               >
                 Sign in here
               </Link>
