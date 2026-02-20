@@ -2,142 +2,75 @@
 @import "tw-animate-css";
 
 :root {
-  /* Updated color tokens for StudentPath platform with blue primary and orange accent */
   --background: oklch(1 0 0);
-  /* White background */
   --foreground: oklch(0.35 0 0);
-  /* Dark gray text */
   --card: oklch(0.98 0 0);
-  /* Light gray card background */
   --card-foreground: oklch(0.35 0 0);
-  /* Dark gray card text */
   --popover: oklch(1 0 0);
-  /* White popover background */
   --popover-foreground: oklch(0.35 0 0);
-  /* Dark gray popover text */
   --primary: oklch(0.45 0.15 250);
-  /* #1976D2 blue primary */
   --primary-foreground: oklch(1 0 0);
-  /* White text on primary */
   --secondary: oklch(0.65 0.15 65);
-  /* #FF9800 orange accent */
   --secondary-foreground: oklch(1 0 0);
-  /* White text on secondary */
   --muted: oklch(0.96 0 0);
-  /* Light muted background */
   --muted-foreground: oklch(0.55 0 0);
-  /* Medium gray muted text */
   --accent: oklch(0.65 0.15 65);
-  /* #FF9800 orange accent */
   --accent-foreground: oklch(1 0 0);
-  /* White text on accent */
   --destructive: oklch(0.55 0.25 25);
-  /* Red for destructive actions */
   --destructive-foreground: oklch(1 0 0);
-  /* White text on destructive */
   --border: oklch(0.9 0 0);
-  /* Light gray borders */
   --input: oklch(0.98 0 0);
-  /* Light input background */
   --ring: oklch(0.45 0.15 250);
-  /* Blue focus ring */
   --chart-1: oklch(0.45 0.15 250);
-  /* Blue chart color */
   --chart-2: oklch(0.65 0.15 65);
-  /* Orange chart color */
   --chart-3: oklch(0.35 0 0);
-  /* Dark gray chart color */
   --chart-4: oklch(0.7 0.12 85);
-  /* Yellow chart color */
   --chart-5: oklch(0.6 0.2 35);
-  /* Red-orange chart color */
   --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
-  /* White sidebar */
   --sidebar-foreground: oklch(0.35 0 0);
-  /* Dark gray sidebar text */
   --sidebar-primary: oklch(0.45 0.15 250);
-  /* Blue sidebar primary */
   --sidebar-primary-foreground: oklch(1 0 0);
-  /* White sidebar primary text */
   --sidebar-accent: oklch(0.65 0.15 65);
-  /* Orange sidebar accent */
   --sidebar-accent-foreground: oklch(1 0 0);
-  /* White sidebar accent text */
   --sidebar-border: oklch(0.9 0 0);
-  /* Light gray sidebar border */
   --sidebar-ring: oklch(0.45 0.15 250);
-  /* Blue sidebar focus ring */
 }
 
 .dark {
   --background: oklch(0.1 0 0);
-  /* Dark background */
   --foreground: oklch(0.95 0 0);
-  /* Light text */
   --card: oklch(0.15 0 0);
-  /* Dark card background */
   --card-foreground: oklch(0.95 0 0);
-  /* Light card text */
   --popover: oklch(0.1 0 0);
-  /* Dark popover background */
   --popover-foreground: oklch(0.95 0 0);
-  /* Light popover text */
   --primary: oklch(0.55 0.15 250);
-  /* Lighter blue for dark mode */
   --primary-foreground: oklch(0.1 0 0);
-  /* Dark text on primary */
   --secondary: oklch(0.7 0.15 65);
-  /* Lighter orange for dark mode */
   --secondary-foreground: oklch(0.1 0 0);
-  /* Dark text on secondary */
   --muted: oklch(0.2 0 0);
-  /* Dark muted background */
   --muted-foreground: oklch(0.65 0 0);
-  /* Light muted text */
   --accent: oklch(0.7 0.15 65);
-  /* Lighter orange accent */
   --accent-foreground: oklch(0.1 0 0);
-  /* Dark text on accent */
   --destructive: oklch(0.6 0.25 25);
-  /* Lighter red for dark mode */
   --destructive-foreground: oklch(0.95 0 0);
-  /* Light text on destructive */
   --border: oklch(0.25 0 0);
-  /* Dark borders */
   --input: oklch(0.15 0 0);
-  /* Dark input background */
   --ring: oklch(0.55 0.15 250);
-  /* Lighter blue focus ring */
   --chart-1: oklch(0.55 0.15 250);
-  /* Lighter blue chart */
   --chart-2: oklch(0.7 0.15 65);
-  /* Lighter orange chart */
   --chart-3: oklch(0.75 0 0);
-  /* Light gray chart */
   --chart-4: oklch(0.75 0.12 85);
-  /* Lighter yellow chart */
   --chart-5: oklch(0.65 0.2 35);
-  /* Lighter red-orange chart */
   --sidebar: oklch(0.12 0 0);
-  /* Dark sidebar */
   --sidebar-foreground: oklch(0.95 0 0);
-  /* Light sidebar text */
   --sidebar-primary: oklch(0.55 0.15 250);
-  /* Lighter blue sidebar primary */
   --sidebar-primary-foreground: oklch(0.1 0 0);
-  /* Dark sidebar primary text */
   --sidebar-accent: oklch(0.7 0.15 65);
-  /* Lighter orange sidebar accent */
   --sidebar-accent-foreground: oklch(0.1 0 0);
-  /* Dark sidebar accent text */
   --sidebar-border: oklch(0.25 0 0);
-  /* Dark sidebar border */
   --sidebar-ring: oklch(0.55 0.15 250);
-  /* Lighter blue sidebar focus ring */
 }
-
-/* Removed problematic theme icon CSS that was causing conflicts */
 
 @theme inline {
   --font-sans: var(--font-geist-sans);
@@ -187,41 +120,281 @@
 
   body {
     @apply bg-background text-foreground;
-    /* Simplified transitions without forcing color-scheme */
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
-@keyframes fade-in {
+/* ============================================
+   LANDING PAGE — PREMIUM GLASS SYSTEM
+   ============================================ */
+
+/* Glass surface */
+.glass {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Dark glass surface */
+.glass-dark {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(10, 15, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* Indigo glow card */
+.glow-card {
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+
+.glow-card:hover {
+  box-shadow:
+    0 0 30px rgba(99, 102, 241, 0.25),
+    0 20px 60px rgba(0, 0, 0, 0.4);
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* Cyan glow card */
+.glow-card-cyan:hover {
+  box-shadow:
+    0 0 30px rgba(6, 182, 212, 0.25),
+    0 20px 60px rgba(0, 0, 0, 0.4);
+  border-color: rgba(6, 182, 212, 0.4) !important;
+}
+
+/* Violet glow card */
+.glow-card-violet:hover {
+  box-shadow:
+    0 0 30px rgba(139, 92, 246, 0.25),
+    0 20px 60px rgba(0, 0, 0, 0.4);
+  border-color: rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Animated gradient text */
+.gradient-text-animated {
+  background: linear-gradient(135deg, #6366f1, #06b6d4, #8b5cf6, #6366f1);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 6s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Blob animations */
+@keyframes blobFloat {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+}
+
+.animate-blob {
+  animation: blobFloat 10s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
+}
+
+/* Gradient glow button */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4, #8b5cf6);
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.btn-glow:hover::before {
+  opacity: 1;
+}
+
+.btn-glow:hover {
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: shimmer 3s infinite;
+}
+
+/* Floating animation */
+@keyframes floatY {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+.animate-float {
+  animation: floatY 4s ease-in-out infinite;
+}
+
+/* Spin animations used by orbital sphere */
+@keyframes spinSlow {
   from {
-    opacity: 0;
-    transform: translateY(-10px);
+    transform: rotate(0deg);
   }
 
   to {
-    opacity: 1;
-    transform: translateY(0);
+    transform: rotate(360deg);
   }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.5s ease-out;
+/* alias used in inline animation strings */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Hide scrollbar while maintaining scroll functionality */
+.animate-spin-slow {
+  animation: spinSlow 20s linear infinite;
+}
+
+/* Ping for outer halo pulse */
+@keyframes ping {
+
+  75%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Orbit ring */
+@keyframes orbit {
+  from {
+    transform: rotate(0deg) translateX(60px) rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg) translateX(60px) rotate(-360deg);
+  }
+}
+
+/* Glow pulse */
+@keyframes glowPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 60px rgba(99, 102, 241, 0.6), 0 0 100px rgba(139, 92, 246, 0.3);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+/* Section divider gradient */
+.section-gradient-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), rgba(6, 182, 212, 0.5), transparent);
+}
+
+/* Nav blur on scroll */
+.nav-scrolled {
+  background: rgba(5, 5, 15, 0.85) !important;
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Metric card hover */
+.metric-card {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.metric-card:hover {
+  transform: translateY(-6px) scale(1.02);
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar */
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
-    /* IE and Edge */
     scrollbar-width: none;
-    /* Firefox */
   }
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
-    /* Chrome, Safari and Opera */
   }
-    /* Custom Scrollbar styled to look like GPT/Modern AI interfaces */
+
   .custom-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
@@ -245,7 +418,6 @@
     background-color: rgba(156, 163, 175, 0.5);
   }
 
-  /* Dark mode variants for custom scrollbar */
   .dark .custom-scrollbar {
     scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
   }
