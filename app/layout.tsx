@@ -6,9 +6,17 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "StudentPath - Your Academic Journey",
-  description: "Comprehensive educational platform for students",
-  generator: "v0.app",
+  title: "StudentPath — Where Knowledge Meets Success",
+  description:
+    "AI-powered educational platform with personalized career paths, skill intelligence, and expert guidance. Join thousands of students transforming their academic journey.",
+  keywords: ["education", "AI career planning", "student platform", "career guidance", "skill development"],
+  authors: [{ name: "StudentPath Team" }],
+  openGraph: {
+    title: "StudentPath — Where Knowledge Meets Success",
+    description:
+      "AI-powered educational platform for students, colleges, and professionals. Personalized career paths, skill analytics, and expert mentorship.",
+    type: "website",
+  },
 }
 
 export default function RootLayout({
@@ -18,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
