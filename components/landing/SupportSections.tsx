@@ -78,17 +78,17 @@ function SectionLabel({ text, color }: { text: string; color: string }) {
 // ═══════════════════════════════════════════════════════════════════
 export function StatsSection() {
     const stats = [
-        { target: 10000, suffix: "+", label: "Students Guided", sub: "Across partner institutions", gradient: "from-indigo-400 to-violet-400" },
-        { target: 95, suffix: "%", label: "Success Rate", sub: "Career placement accuracy", gradient: "from-cyan-400 to-indigo-400" },
-        { target: 500, suffix: "+", label: "Partner Colleges", sub: "And growing weekly", gradient: "from-violet-400 to-pink-400" },
+        { target: 10000, suffix: "+", label: "Students Guided", sub: "Across partner institutions", colorClass: "text-indigo-400" },
+        { target: 95, suffix: "%", label: "Success Rate", sub: "Career placement accuracy", colorClass: "text-indigo-400" },
+        { target: 500, suffix: "+", label: "Partner Colleges", sub: "And growing weekly", colorClass: "text-indigo-400" },
     ];
 
     return (
-        <section className="relative py-24 px-6" style={{ background: BG }}>
+        <section id="stats-section" className="relative py-24 px-6" style={{ background: "transparent" }}>
             {/* Divider glow line */}
             <div
                 className="absolute top-0 left-0 right-0 h-px"
-                style={{ background: "linear-gradient(90deg, transparent, rgba(99,102,241,0.3), rgba(6,182,212,0.3), transparent)" }}
+                style={{ background: "linear-gradient(90deg, transparent, rgba(79,70,229,0.3), transparent)" }}
             />
 
             <div className="max-w-5xl mx-auto">
@@ -107,22 +107,23 @@ export function StatsSection() {
                             transition={{ type: "spring", stiffness: 300, damping: 24 }}
                             className="group relative p-8 rounded-2xl text-center overflow-hidden"
                             style={{
-                                background: "rgba(255,255,255,0.025)",
-                                border: "1px solid rgba(255,255,255,0.06)",
+                                background: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.09)",
+                                backdropFilter: "blur(20px)",
                             }}
                         >
                             {/* Hover glow */}
                             <div
                                 className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl"
-                                style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.08) 0%, transparent 70%)" }}
+                                style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(79,70,229,0.08) 0%, transparent 70%)" }}
                             />
                             {/* Top accent line */}
                             <div
                                 className="absolute top-0 left-8 right-8 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                                style={{ background: "linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent)" }}
+                                style={{ background: "linear-gradient(90deg, transparent, rgba(79,70,229,0.5), transparent)" }}
                             />
 
-                            <div className={`text-5xl md:text-6xl font-black bg-gradient-to-r ${s.gradient} bg-clip-text text-transparent mb-2`}>
+                            <div className={`text-5xl md:text-6xl font-black ${s.colorClass} mb-2 drop-shadow-sm`}>
                                 <AnimatedCounter target={s.target} suffix={s.suffix} />
                             </div>
                             <div className="text-white font-bold text-base tracking-tight mb-1">{s.label}</div>
@@ -163,13 +164,12 @@ export function CTASection() {
 
             {/* Blobs with parallax */}
             <motion.div
-                style={{ y, background: "radial-gradient(circle, rgba(99,102,241,0.25), transparent)" }}
-                className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-12 pointer-events-none"
-                // style={{  }}
+                style={{ y, background: "radial-gradient(circle, rgba(79,70,229,0.25), transparent)" }}
+                className="absolute top-0 left-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-10 pointer-events-none"
             />
             <motion.div
                 className="absolute bottom-0 right-1/4 w-[400px] h-[400px] rounded-full blur-3xl opacity-10 pointer-events-none"
-                style={{ background: "radial-gradient(circle, rgba(139,92,246,0.2), transparent)", animation: "blobFloat 14s ease-in-out infinite" }}
+                style={{ background: "radial-gradient(circle, rgba(79,70,229,0.15), transparent)", animation: "blobFloat 14s ease-in-out infinite" }}
             />
 
             <motion.div
@@ -190,11 +190,7 @@ export function CTASection() {
                     <br />
                     <span
                         style={{
-                            background: "linear-gradient(135deg, #818cf8 0%, #06b6d4 50%, #a78bfa 100%)",
-                            backgroundSize: "200%",
-                            WebkitBackgroundClip: "text",
-                            WebkitTextFillColor: "transparent",
-                            animation: "gradientShift 5s ease infinite",
+                            color: "#818cf8"
                         }}
                     >
                         your potential?
@@ -212,8 +208,8 @@ export function CTASection() {
                             whileTap={{ scale: 0.97 }}
                             className="group relative inline-flex items-center gap-2.5 px-10 py-4 rounded-2xl font-bold text-white text-base overflow-hidden"
                             style={{
-                                background: "linear-gradient(135deg, #4f46e5, #7c3aed, #0891b2)",
-                                boxShadow: "0 0 40px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.12)",
+                                background: "#4f46e5",
+                                boxShadow: "0 0 20px rgba(79,70,229,0.3), inset 0 1px 0 rgba(255,255,255,0.12)",
                             }}
                         >
                             <span className="relative z-10">Start Free</span>
@@ -347,8 +343,8 @@ function ContactForm() {
                 disabled={status === "loading"}
                 className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl font-bold text-white text-sm disabled:opacity-50 hover:opacity-90 transition-opacity duration-200"
                 style={{
-                    background: "linear-gradient(135deg, #4f46e5, #7c3aed, #0891b2)",
-                    boxShadow: "0 6px 28px rgba(99,102,241,0.22)",
+                    background: "#4f46e5",
+                    boxShadow: "0 6px 20px rgba(79,70,229,0.2)",
                 }}
             >
                 {status === "loading" ? (
@@ -374,7 +370,7 @@ export function ContactSection() {
             {/* top divider */}
             <div
                 className="absolute top-0 left-0 right-0 h-px"
-                style={{ background: "linear-gradient(90deg, transparent, rgba(99,102,241,0.25), rgba(6,182,212,0.25), transparent)" }}
+                style={{ background: "linear-gradient(90deg, transparent, rgba(79,70,229,0.25), transparent)" }}
             />
 
             <div className="max-w-6xl mx-auto">
@@ -443,10 +439,10 @@ export function ContactSection() {
                                         </div>
                                     </Link>
                                     <Link href="/college-login">
-                                        <div className="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 hover:border-cyan-500/30 mt-2"
-                                            style={{ background: "rgba(6,182,212,0.04)", border: "1px solid rgba(6,182,212,0.09)" }}>
+                                        <div className="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 hover:border-indigo-500/30 mt-2"
+                                            style={{ background: "rgba(79,70,229,0.04)", border: "1px solid rgba(79,70,229,0.09)" }}>
                                             <span className="text-gray-400 text-sm group-hover:text-white transition-colors">College Login</span>
-                                            <ArrowRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform duration-200" />
+                                            <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform duration-200" />
                                         </div>
                                     </Link>
                                 </div>
@@ -513,8 +509,8 @@ export function Footer() {
             className="relative py-16 px-6 overflow-hidden"
             style={{
                 background: "linear-gradient(180deg, #060610 0%, #030309 100%)",
-                borderTop: "1px solid rgba(99,102,241,0.15)",
-                boxShadow: "0 -1px 0 rgba(6,182,212,0.06), 0 -40px 80px rgba(99,102,241,0.04) inset",
+                borderTop: "1px solid rgba(79,70,229,0.12)",
+                boxShadow: "0 -1px 0 rgba(79,70,229,0.05), 0 -40px 80px rgba(79,70,229,0.04) inset",
             }}
         >
             <div className="max-w-7xl mx-auto">
@@ -526,9 +522,9 @@ export function Footer() {
                         <div className="flex items-center gap-2.5 mb-5">
                             <div className="relative w-8 h-8">
                                 <div className="absolute inset-0 rounded-lg opacity-60"
-                                    style={{ background: "linear-gradient(135deg,#4f46e5,#0891b2)", filter: "blur(4px)", transform: "rotate(6deg) scale(1.1)" }} />
+                                    style={{ background: "linear-gradient(135deg,#4f46e5,#3730a3)", filter: "blur(4px)", transform: "rotate(6deg) scale(1.1)" }} />
                                 <div className="absolute inset-0 rounded-lg flex items-center justify-center"
-                                    style={{ background: "linear-gradient(135deg, #4338ca, #0e7490)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                                    style={{ background: "linear-gradient(135deg, #4338ca, #312e81)", border: "1px solid rgba(255,255,255,0.12)" }}>
                                     <div className="w-3 h-3 rounded-[3px] rotate-45"
                                         style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.3))" }} />
                                 </div>

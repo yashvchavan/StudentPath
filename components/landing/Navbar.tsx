@@ -7,8 +7,8 @@ import { ArrowRight, GraduationCap, Building2, Briefcase } from "lucide-react";
 
 const navItems = [
     { label: "Students", icon: GraduationCap, id: "students-section", color: "#818cf8" },
-    { label: "Colleges", icon: Building2, id: "colleges-section", color: "#22d3ee" },
-    { label: "Professionals", icon: Briefcase, id: "professionals-section", color: "#c4b5fd" },
+    { label: "Colleges", icon: Building2, id: "colleges-section", color: "#818cf8" },
+    { label: "Professionals", icon: Briefcase, id: "professionals-section", color: "#818cf8" },
 ];
 
 export default function Navbar() {
@@ -59,7 +59,7 @@ export default function Navbar() {
                             <div
                                 className="absolute inset-0 rounded-lg"
                                 style={{
-                                    background: "linear-gradient(135deg, #4f46e5, #0891b2)",
+                                    background: "linear-gradient(135deg, #4f46e5, #3730a3)",
                                     filter: "blur(5px)",
                                     opacity: 0.7,
                                     transform: "rotate(6deg) scale(1.1)",
@@ -68,7 +68,7 @@ export default function Navbar() {
                             <div
                                 className="absolute inset-0 rounded-lg flex items-center justify-center"
                                 style={{
-                                    background: "linear-gradient(135deg, #4338ca 0%, #0e7490 100%)",
+                                    background: "linear-gradient(135deg, #4338ca 0%, #312e81 100%)",
                                     border: "1px solid rgba(255,255,255,0.15)",
                                 }}
                             >
@@ -150,8 +150,8 @@ export default function Navbar() {
                         whileTap={{ scale: 0.97 }}
                         className="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white overflow-hidden"
                         style={{
-                            background: "linear-gradient(135deg, #4f46e5 0%, #6d28d9 55%, #0891b2 100%)",
-                            boxShadow: "0 0 20px rgba(99,102,241,0.35), inset 0 1px 0 rgba(255,255,255,0.12)",
+                            background: "#4f46e5",
+                            boxShadow: "0 0 20px rgba(79,70,229,0.2), inset 0 1px 0 rgba(255,255,255,0.12)",
                         }}
                     >
                         <span className="relative z-10">Get Started</span>

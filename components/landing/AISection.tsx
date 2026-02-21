@@ -88,9 +88,7 @@ export function AISection() {
                                 Powered by{" "}
                                 <span
                                     style={{
-                                        background: "linear-gradient(135deg,#818cf8,#06b6d4,#a78bfa)",
-                                        WebkitBackgroundClip: "text",
-                                        WebkitTextFillColor: "transparent",
+                                        color: "#818cf8",
                                     }}
                                 >
                                     next-gen AI
@@ -144,14 +142,14 @@ export function AISection() {
                                 <div className="flex items-center gap-3 mb-4">
                                     <div
                                         className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                        style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)" }}
+                                        style={{ background: "linear-gradient(135deg, #4f46e5, #3730a3)" }}
                                     >
                                         <Cpu className="w-4 h-4 text-white" />
                                     </div>
                                     <span className="text-white font-semibold text-sm tracking-tight">AI Assistant</span>
                                     <div className="ml-auto flex items-center gap-1.5">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span className="text-emerald-400 text-xs font-bold tracking-wide">Live</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                                        <span className="text-indigo-400 text-xs font-bold tracking-wide">Live</span>
                                     </div>
                                 </div>
                                 {/* Separator inside card */}
@@ -203,9 +201,9 @@ export function AISection() {
                                 {/* Separator */}
                                 <div className="h-px mt-3 mb-4" style={{ background: "rgba(255,255,255,0.04)" }} />
                                 {[
-                                    { skill: "React / Next.js", pct: 78, color: "#6366f1" },
-                                    { skill: "System Design", pct: 42, color: "#8b5cf6" },
-                                    { skill: "Cloud (AWS)", pct: 30, color: "#06b6d4" },
+                                    { skill: "React / Next.js", pct: 78, color: "#4f46e5" },
+                                    { skill: "System Design", pct: 42, color: "#6366f1" },
+                                    { skill: "Cloud (AWS)", pct: 30, color: "#818cf8" },
                                 ].map((s, idx, arr) => (
                                     <div
                                         key={s.skill}
@@ -243,13 +241,13 @@ export function AISection() {
                                 whileHover={{ y: -4 }}
                                 className="rounded-2xl p-4 flex items-center gap-4"
                                 style={{
-                                    background: "rgba(16,185,129,0.05)",
-                                    border: "1px solid rgba(16,185,129,0.12)",
+                                    background: "rgba(79,70,229,0.05)",
+                                    border: "1px solid rgba(79,70,229,0.12)",
                                 }}
                             >
                                 <div
                                     className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                                    style={{ background: "linear-gradient(135deg, #10b981, #065f46)" }}
+                                    style={{ background: "linear-gradient(135deg, #4338ca, #312e81)" }}
                                 >
                                     <Zap className="w-6 h-6 text-white" />
                                 </div>
@@ -258,8 +256,8 @@ export function AISection() {
                                     <div className="text-gray-600 text-xs mt-0.5">Software Engineer @ Google — 94% compatibility</div>
                                 </div>
                                 <div
-                                    className="text-emerald-400 font-black text-xl pl-4"
-                                    style={{ borderLeft: "1px solid rgba(16,185,129,0.15)" }}
+                                    className="text-indigo-400 font-black text-xl pl-4"
+                                    style={{ borderLeft: "1px solid rgba(79,70,229,0.15)" }}
                                 >
                                     94%
                                 </div>
@@ -270,7 +268,7 @@ export function AISection() {
             </section>
 
             {/* ── Bottom separator ── */}
-            <Separator color="rgba(6,182,212,0.2)" />
+            <Separator color="rgba(79,70,229,0.2)" />
         </>
     );
 }
