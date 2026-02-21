@@ -47,7 +47,9 @@ export default function HeroSection() {
                         <span
                             className="block text-5xl md:text-7xl xl:text-8xl"
                             style={{
-                                color: "#818cf8"
+                                background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)",
+                                WebkitBackgroundClip: "text",
+                                WebkitTextFillColor: "transparent"
                             }}
                         >
                             Knowledge
@@ -56,7 +58,9 @@ export default function HeroSection() {
                             Meets{" "}
                             <span
                                 style={{
-                                    color: "#818cf8"
+                                    background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)",
+                                    WebkitBackgroundClip: "text",
+                                    WebkitTextFillColor: "transparent"
                                 }}
                             >
                                 Success
@@ -79,8 +83,8 @@ export default function HeroSection() {
                                 whileTap={{ scale: 0.97 }}
                                 className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-white text-base overflow-hidden"
                                 style={{
-                                    background: "#4f46e5",
-                                    border: "1px solid rgba(255,255,255,0.1)",
+                                    background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)",
+                                    border: "1px solid rgba(255,255,255,0.2)",
                                 }}
                             >
                                 <span className="relative z-10">Start Your Journey</span>

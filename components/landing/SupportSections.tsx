@@ -208,8 +208,7 @@ export function CTASection() {
                             whileTap={{ scale: 0.97 }}
                             className="group relative inline-flex items-center gap-2.5 px-10 py-4 rounded-2xl font-bold text-white text-base overflow-hidden"
                             style={{
-                                background: "#4f46e5",
-                                boxShadow: "0 0 20px rgba(79,70,229,0.3), inset 0 1px 0 rgba(255,255,255,0.12)",
+                                background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)",
                             }}
                         >
                             <span className="relative z-10">Start Free</span>
@@ -343,8 +342,7 @@ function ContactForm() {
                 disabled={status === "loading"}
                 className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl font-bold text-white text-sm disabled:opacity-50 hover:opacity-90 transition-opacity duration-200"
                 style={{
-                    background: "#4f46e5",
-                    boxShadow: "0 6px 20px rgba(79,70,229,0.2)",
+                    background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)",
                 }}
             >
                 {status === "loading" ? (
@@ -522,9 +520,9 @@ export function Footer() {
                         <div className="flex items-center gap-2.5 mb-5">
                             <div className="relative w-8 h-8">
                                 <div className="absolute inset-0 rounded-lg opacity-60"
-                                    style={{ background: "linear-gradient(135deg,#4f46e5,#3730a3)", filter: "blur(4px)", transform: "rotate(6deg) scale(1.1)" }} />
+                                    style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)", filter: "blur(4px)", transform: "rotate(6deg) scale(1.1)" }} />
                                 <div className="absolute inset-0 rounded-lg flex items-center justify-center"
-                                    style={{ background: "linear-gradient(135deg, #4338ca, #312e81)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                                    style={{ background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)", border: "1px solid rgba(255,255,255,0.12)" }}>
                                     <div className="w-3 h-3 rounded-[3px] rotate-45"
                                         style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.3))" }} />
                                 </div>

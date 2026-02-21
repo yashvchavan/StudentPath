@@ -25,10 +25,9 @@ function FeatureIcon({ icon: Icon, colors }: { icon: React.ElementType; colors: 
             style={{
                 background: `linear-gradient(135deg, ${colors[0]}15, ${colors[1]}15)`,
                 border: `1px solid ${colors[0]}30`,
-                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05)`
             }}
         >
-            <div className="absolute inset-0 rounded-xl" style={{ boxShadow: `0 0 20px ${colors[0]}10` }} />
+            <div className="absolute inset-0 rounded-xl" />
             <Icon className="w-5 h-5 relative z-10" style={{ color: colors[0] }} />
         </div>
     );
@@ -181,7 +180,6 @@ function StudentMockup() {
             style={{
                 background: "rgba(8,8,22,0.95)",
                 border: "1px solid rgba(255,255,255,0.07)",
-                boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
             }}
         >
             {/* Window bar */}
@@ -247,7 +245,6 @@ function CollegeMockup() {
             style={{
                 background: "rgba(6,6,18,0.96)",
                 border: "1px solid rgba(255,255,255,0.07)",
-                boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
             }}
         >
             <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5">
@@ -261,7 +258,7 @@ function CollegeMockup() {
                     {[
                         { l: "Students", v: "1,248", c: "#818cf8" },
                         { l: "Placement", v: "94%", c: "#6366f1" },
-                        { l: "Tokens", v: "316 active", c: "#4f46e5" },
+                        { l: "Tokens", v: "316 active", c: "#2563eb" },
                         { l: "Avg Score", v: "8.4 / 10", c: "#a5b4fc" },
                     ].map((s) => (
                         <div key={s.l} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
@@ -295,7 +292,6 @@ function ProfessionalMockup() {
             style={{
                 background: "rgba(10,6,22,0.96)",
                 border: "1px solid rgba(255,255,255,0.07)",
-                boxShadow: "0 30px 70px rgba(0,0,0,0.5)",
             }}
         >
             <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5">
@@ -346,42 +342,42 @@ const studentCards: CardData[] = [
         number: "01 — Pathfinding",
         title: "AI Career Planning",
         desc: "Advanced algorithms map your strengths to market demand, building precise career pathways.",
-        accent: ["#4f46e5", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Compass,
     },
     {
         number: "02 — Intelligence",
         title: "Skill Gap Analysis",
         desc: "Real-time tracking of what you know vs. what your target role demands, with adaptive micro-recommendations.",
-        accent: ["#6366f1", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Target,
     },
     {
         number: "03 — Growth",
         title: "Progress Analytics",
         desc: "Live dashboards showing academic milestones, skill velocity, and projected career trajectory.",
-        accent: ["#4338ca", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: TrendingUp,
     },
     {
         number: "04 — Learning",
         title: "Curated Resources",
         desc: "Hand-picked courses and projects matched to your current level and target goals.",
-        accent: ["#4f46e5", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: BookOpen,
     },
     {
         number: "05 — Network",
         title: "Expert Connections",
         desc: "Matched with industry mentors and career counselors who have walked your exact target path.",
-        accent: ["#6366f1", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Users,
     },
     {
         number: "06 — Foresight",
         title: "Future Insights",
         desc: "Forecasted job market shifts, emerging tech stacks, and upcoming hiring trends in your field.",
-        accent: ["#4338ca", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Sparkles,
     },
 ];
@@ -391,42 +387,42 @@ const collegeCards: CardData[] = [
         number: "01 — Control",
         title: "Admin Dashboard",
         desc: "Centralised command center for managing students, programs, and placements in real time.",
-        accent: ["#4f46e5", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: SlidersHorizontal,
     },
     {
         number: "02 — Insight",
         title: "Deep Analytics",
         desc: "Student performance, cohort engagement, and career readiness scoring at a glance.",
-        accent: ["#6366f1", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: PieChart,
     },
     {
         number: "03 — Outcome",
         title: "Placement Tracker",
         desc: "Full placement pipeline — from first offer to final acceptance — with live status boards.",
-        accent: ["#4338ca", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: CheckCircle,
     },
     {
         number: "04 — Access",
         title: "Token Management",
         desc: "Per-college access tokens with configurable usage limits, expiry, and tracking.",
-        accent: ["#4f46e5", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Key,
     },
     {
         number: "05 — Content",
         title: "Curriculum Upload",
         desc: "Ingest syllabi to power AI-driven recommendations and skill gap mapping for students.",
-        accent: ["#6366f1", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: FileText,
     },
     {
         number: "06 — Connect",
         title: "Integrations",
         desc: "Plug seamlessly into your existing ERP, LMS, and third-party tools. No rip-and-replace.",
-        accent: ["#4338ca", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Plug,
     },
 ];
@@ -436,28 +432,28 @@ const proCards: CardData[] = [
         number: "01 — Overview",
         title: "Growth Dashboard",
         desc: "Track mentorship impact, professional milestones, and skill development in one command center.",
-        accent: ["#4f46e5", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: LayoutDashboard,
     },
     {
         number: "02 — Mentorship",
         title: "Student Matching",
         desc: "AI-matched connections with students who align with your expertise and availability.",
-        accent: ["#6366f1", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: UserPlus,
     },
     {
         number: "03 — Learning",
         title: "Upskilling Hub",
         desc: "Curated professional development resources to keep your edge sharp in a fast-moving market.",
-        accent: ["#4338ca", "#818cf8"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Lightbulb,
     },
     {
         number: "04 — Projects",
         title: "Collaboration Hub",
         desc: "Track open-source contributions, joint projects, and professional engagements in one place.",
-        accent: ["#4f46e5", "#a5b4fc"],
+        accent: ["#2563eb", "#7c3aed"],
         icon: Briefcase,
     },
 ];

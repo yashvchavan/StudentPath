@@ -142,7 +142,7 @@ export function AISection() {
                                 <div className="flex items-center gap-3 mb-4">
                                     <div
                                         className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                        style={{ background: "linear-gradient(135deg, #4f46e5, #3730a3)" }}
+                                        style={{ background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)" }}
                                     >
                                         <Cpu className="w-4 h-4 text-white" />
                                     </div>
@@ -201,9 +201,9 @@ export function AISection() {
                                 {/* Separator */}
                                 <div className="h-px mt-3 mb-4" style={{ background: "rgba(255,255,255,0.04)" }} />
                                 {[
-                                    { skill: "React / Next.js", pct: 78, color: "#4f46e5" },
-                                    { skill: "System Design", pct: 42, color: "#6366f1" },
-                                    { skill: "Cloud (AWS)", pct: 30, color: "#818cf8" },
+                                    { skill: "React / Next.js", pct: 78, color: "#2563eb" },
+                                    { skill: "System Design", pct: 42, color: "#7c3aed" },
+                                    { skill: "Cloud (AWS)", pct: 30, color: "#2563eb" },
                                 ].map((s, idx, arr) => (
                                     <div
                                         key={s.skill}
@@ -247,7 +247,7 @@ export function AISection() {
                             >
                                 <div
                                     className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                                    style={{ background: "linear-gradient(135deg, #4338ca, #312e81)" }}
+                                    style={{ background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)" }}
                                 >
                                     <Zap className="w-6 h-6 text-white" />
                                 </div>
