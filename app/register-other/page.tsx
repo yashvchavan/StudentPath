@@ -254,24 +254,75 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'co
 
 // === Rocket Progress ===
 const RocketProgress = ({ progress, isCollege }: { progress: number; isCollege?: boolean }) => {
+  const roundedProgress = Math.round(progress);
+  
   return (
-    <div className="relative w-full mt-4 h-3 bg-white/5 rounded-full overflow-hidden border border-white/10">
-      <motion.div
-        initial={{ width: 0 }}
-        animate={{ width: `${progress}%` }}
-        className={`h-full relative ${isCollege ? 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600' : 'bg-gradient-to-r from-amber-600 via-yellow-600 to-orange-600'}`}
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.2)_50%,transparent_100%)] animate-shimmer" />
-      </motion.div>
-      <div
-        className="absolute top-1/2 -translate-y-1/2 transition-all duration-500 ease-out"
-        style={{ left: `calc(${progress}% - 12px)` }}
-      >
-        <div className="relative">
-          <Rocket className={`w-5 h-5 text-white animate-pulse transition-colors ${isCollege ? 'fill-emerald-500' : 'fill-amber-500'}`} />
-          <div className={`absolute -inset-2 blur-lg rounded-full animate-pulse ${isCollege ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`} />
-        </div>
+    <div className="relative w-full py-8">
+      {/* Background Track */}
+      <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
+        {/* Progress Bar */}
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          className={`h-full relative ${
+            isCollege 
+              ? 'bg-gradient-to-r from-emerald-600 via-green-500 to-teal-400' 
+              : 'bg-gradient-to-r from-amber-600 via-yellow-500 to-orange-400'
+          }`}
+        >
+          {/* Shimmer Effect */}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.3)_50%,transparent_100%)] animate-shimmer" />
+        </motion.div>
       </div>
+
+      {/* Floating Rocket & Percentage */}
+      <motion.div
+        className="absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-out z-20"
+        style={{ left: `calc(${progress}% - 20px)` }}
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+      >
+        <div className="relative flex flex-col items-center group">
+          {/* Tooltip-style Percentage */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-2 px-2 py-0.5 rounded-md text-[10px] font-black tracking-tighter shadow-xl border ${
+              isCollege 
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+            }`}
+          >
+            {roundedProgress}%
+          </motion.div>
+
+          <div className="relative">
+            <Rocket 
+              className={`w-6 h-6 rotate-45 transition-colors duration-500 ${
+                isCollege ? 'text-emerald-400 fill-emerald-500/20' : 'text-amber-400 fill-amber-500/20'
+              }`} 
+            />
+            {/* Engine Flare */}
+            <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-4 blur-sm rounded-full animate-pulse ${
+              isCollege ? 'bg-emerald-500/60' : 'bg-amber-500/60'
+            }`} />
+            
+            {/* Dynamic Glow */}
+            <div className={`absolute -inset-4 blur-2xl rounded-full opacity-40 animate-pulse ${
+              isCollege ? 'bg-emerald-500' : 'bg-amber-500'
+            }`} />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Milestone Dots */}
+      {[0, 25, 50, 75, 100].map((pos) => (
+        <div 
+          key={pos}
+          className="absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-white/20"
+          style={{ left: `${pos}%` }}
+        />
+      ))}
     </div>
   );
 };
@@ -1611,7 +1662,10 @@ const StudentRegistration = () => {
 
   return (
     <div className="space-y-8">
-      {isLoading ? <RocketLaunchLoader /> : renderStep()}
+      <RocketProgress progress={progress} isCollege={true} />
+      <div className="pt-4">
+        {isLoading ? <RocketLaunchLoader /> : renderStep()}
+      </div>
 
       {currentStep < totalSteps && !isLoading && (
         <div className="flex justify-between mt-6">
@@ -2228,7 +2282,10 @@ const CollegeRegistration = () => {
 
   return (
     <div className="space-y-8">
-      {isLoading ? <RocketLaunchLoader /> : renderStep()}
+      <RocketProgress progress={progress} isCollege={true} />
+      <div className="pt-4">
+        {isLoading ? <RocketLaunchLoader /> : renderStep()}
+      </div>
 
       {currentStep < totalSteps && !isLoading && (
         <div className="flex justify-between mt-6">
@@ -2775,7 +2832,10 @@ const ProfessionalRegistration = () => {
 
   return (
     <div className="space-y-8">
-      {isLoading ? <RocketLaunchLoader /> : renderStep()}
+      <RocketProgress progress={progress} isCollege={false} />
+      <div className="pt-4">
+        {isLoading ? <RocketLaunchLoader /> : renderStep()}
+      </div>
 
       {currentStep !== 3 && !isLoading && (
         <div className="flex justify-between mt-6">
@@ -2874,7 +2934,6 @@ export default function RegisterPage() {
   }
 
   const isCollege = userType === 'college';
-  const currentProgress = isCollege ? 33 : 33; // Simplified progress for demo
 
   return (
     <div
@@ -2922,10 +2981,7 @@ export default function RegisterPage() {
         <div className="max-w-5xl mx-auto px-4 py-12">
           <Card className="border-white/10 bg-white/5 backdrop-blur-3xl shadow-2xl rounded-[2.5rem] overflow-hidden">
             <CardContent className="p-10">
-              <RocketProgress progress={currentProgress} isCollege={isCollege} />
-              <div className="mt-12">
-                {isCollege ? <CollegeRegistration /> : <ProfessionalRegistration />}
-              </div>
+              {isCollege ? <CollegeRegistration /> : <ProfessionalRegistration />}
             </CardContent>
           </Card>
         </div>
