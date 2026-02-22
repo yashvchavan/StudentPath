@@ -518,15 +518,7 @@ export function Footer() {
                     <div className="md:col-span-2">
                         {/* Logo */}
                         <div className="flex items-center gap-2.5 mb-5">
-                            <div className="relative w-8 h-8">
-                                <div className="absolute inset-0 rounded-lg opacity-60"
-                                    style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)", filter: "blur(4px)", transform: "rotate(6deg) scale(1.1)" }} />
-                                <div className="absolute inset-0 rounded-lg flex items-center justify-center"
-                                    style={{ background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                                    <div className="w-3 h-3 rounded-[3px] rotate-45"
-                                        style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.3))" }} />
-                                </div>
-                            </div>
+                            
                             <span
                                 className="text-[15px] font-black tracking-tight"
                                 style={{ background: "linear-gradient(135deg,#fff 40%,#a5b4fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
