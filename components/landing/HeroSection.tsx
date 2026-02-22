@@ -68,15 +68,28 @@ export default function HeroSection() {
                         </span>
                     </h1>
 
-                    <p
-                        className="text-lg md:text-xl leading-relaxed mb-10 max-w-2xl mx-auto"
-                        style={{ color: "rgba(209,213,219,0.85)" }}
-                    >
-                        Personalized AI career paths, skill intelligence, and expert mentorship —
-                        built for every student, college, and professional.
-                    </p>
+                    <div className="w-full max-w-4xl mx-auto mb-2 -mt-4 px-2 pointer-events-none select-none">
+                        <svg viewBox="0 0 1000 200" className="w-full h-auto overflow-visible" style={{ filter: "drop-shadow(0px 2px 4px rgba(0,0,0,0.5))" }}>
+                            {/* Top Curve */}
+                            <path id="curve1" d="M -50 30 Q 500 90 1050 30" fill="transparent" />
+                            {/* Bottom Curve */}
+                            <path id="curve2" d="M -50 70 Q 500 120 1050 70" fill="transparent" />
+
+                            <text fill="rgba(209,213,219,0.85)" fontSize="26" fontWeight="400" textAnchor="middle" letterSpacing="0.5">
+                                <textPath href="#curve1" startOffset="50%">
+                                    Personalized AI career paths, skill intelligence, and expert mentorship -
+                                </textPath>
+                            </text>
+                            <text fill="rgba(209,213,219,0.85)" fontSize="26" fontWeight="400" textAnchor="middle" letterSpacing="0.5">
+                                <textPath href="#curve2" startOffset="50%">
+                                    built for every student, college, and professional.
+                                </textPath>
+                            </text>
+                        </svg>
+                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        
                         <Link href="/register-other">
                             <motion.button
                                 whileHover={{ scale: 1.04 }}

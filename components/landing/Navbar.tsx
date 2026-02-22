@@ -55,7 +55,7 @@ export default function Navbar() {
                         className="flex items-center gap-2.5 cursor-pointer"
                     >
                         {/* Geometric mark */}
-                        <div className="relative w-8 h-8 flex-shrink-0">
+                        {/* <div className="relative w-8 h-8 flex-shrink-0">
                             <div
                                 className="absolute inset-0 rounded-lg"
                                 style={{
@@ -77,7 +77,7 @@ export default function Navbar() {
                                     style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.3))" }}
                                 />
                             </div>
-                        </div>
+                        </div> */}
 
                         <span
                             className="text-[15px] font-black tracking-tight"
