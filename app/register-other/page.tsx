@@ -180,14 +180,6 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'co
           </Card>
         </div>
 
-        <div className="text-center mt-12">
-          <p className="text-gray-400">
-            Already have an account?{" "}
-            <Link href="/login" className="text-indigo-400 hover:text-indigo-300 underline">
-              Sign in
-            </Link>
-          </p>
-        </div>
       </div>
     </div>
   );
