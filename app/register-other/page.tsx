@@ -40,57 +40,134 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/landing/Navbar";
 import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
-// === Animated Background ===
+// === Interactive Star Background ===
 const AnimatedBackground = () => {
-  const [particles, setParticles] = useState<
-    Array<{ id: number; x: number; y: number; delay: number; size: number }>
+  const [stars, setStars] = useState<
+    Array<{ id: number; x: number; y: number; vx: number; vy: number; size: number; opacity: number }>
   >([]);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [scrollPos, setScrollPos] = useState(0);
 
   useEffect(() => {
-    const newParticles = Array.from({ length: 40 }, (_, i) => ({
+    // Initialize stars
+    const newStars = Array.from({ length: 50 }, (_, i) => ({
       id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 5,
-      size: Math.random() * 2 + 1,
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
+      size: Math.random() * 1.5 + 0.5,
+      opacity: Math.random() * 0.7 + 0.3,
     }));
-    setParticles(newParticles);
+    setStars(newStars);
   }, []);
+
+  // Handle mouse movement
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+
+    const handleScroll = () => {
+      setScrollPos(window.scrollY);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  // Animate stars based on cursor and scroll
+  useEffect(() => {
+    if (stars.length === 0) return;
+
+    const animationInterval = setInterval(() => {
+      setStars((prevStars) =>
+        prevStars.map((star) => {
+          let newX = star.x + star.vx;
+          let newY = star.y + star.vy;
+          let newVx = star.vx;
+          let newVy = star.vy;
+
+          // Repel stars away from cursor
+          const dx = star.x - mousePos.x;
+          const dy = star.y - (mousePos.y + scrollPos);
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const repelDistance = 150;
+
+          if (distance < repelDistance) {
+            const angle = Math.atan2(dy, dx);
+            const force = (repelDistance - distance) / repelDistance;
+            newVx = Math.cos(angle) * force * 2;
+            newVy = Math.sin(angle) * force * 2;
+          } else {
+            // Return to slow drift
+            newVx += (Math.random() - 0.5) * 0.1;
+            newVy += (Math.random() - 0.5) * 0.1;
+            newVx *= 0.98;
+            newVy *= 0.98;
+          }
+
+          // Boundary wrapping
+          if (newX > window.innerWidth) newX = 0;
+          if (newX < 0) newX = window.innerWidth;
+          if (newY > window.innerHeight + 100) newY = -10;
+          if (newY < -10) newY = window.innerHeight + 100;
+
+          return {
+            ...star,
+            x: newX,
+            y: newY,
+            vx: newVx,
+            vy: newVy,
+          };
+        })
+      );
+    }, 50);
+
+    return () => clearInterval(animationInterval);
+  }, [stars.length, mousePos, scrollPos]);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {/* Glow effects */}
+      {/* Dark gradient background - More black and dark */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#000000] via-[#0a0a15] to-[#0d0d1f]" />
+
+      {/* Glow effects - Dark green with black shade and dark orange with black shade */}
       <div 
-        className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full opacity-20 blur-[120px]"
-        style={{ background: "radial-gradient(circle, #2563eb 0%, transparent 70%)" }}
+        className="absolute top-[-10%] left-[10%] w-[50%] h-[50%] rounded-full opacity-12 blur-[150px]"
+        style={{ background: "radial-gradient(circle, #0d7851 0%, transparent 70%)" }}
       />
       <div 
-        className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full opacity-20 blur-[120px]"
-        style={{ background: "radial-gradient(circle, #7c3aed 0%, transparent 70%)" }}
+        className="absolute bottom-[5%] right-[5%] w-[45%] h-[45%] rounded-full opacity-10 blur-[150px]"
+        style={{ background: "radial-gradient(circle, #b8651b 0%, transparent 70%)" }}
       />
 
-      {/* Particles */}
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 0.5, 0] }}
-          transition={{
-            duration: 3 + Math.random() * 2,
-            repeat: Infinity,
-            delay: p.delay,
-          }}
-          className="absolute rounded-full bg-blue-400"
+      {/* Stars */}
+      {stars.map((star) => (
+        <div
+          key={star.id}
+          className="absolute rounded-full pointer-events-none"
           style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            width: `${p.size}px`,
-            height: `${p.size}px`,
-            filter: "blur(0.5px)",
-            boxShadow: "0 0 10px rgba(96, 165, 250, 0.5)",
+            left: `${star.x}px`,
+            top: `${star.y}px`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            background: "#ffffff",
+            opacity: star.opacity,
+            boxShadow: `0 0 ${star.size * 2}px rgba(255, 255, 255, ${star.opacity * 0.5}), 0 0 ${star.size * 4}px rgba(16, 185, 129, ${star.opacity * 0.3})`,
+            filter: "blur(0.3px)",
+            transform: "translate(-50%, -50%)",
           }}
         />
       ))}
+
+      {/* Ambient light effect */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.05),rgba(255,255,255,0))]" />
     </div>
   );
 };
@@ -98,90 +175,92 @@ const AnimatedBackground = () => {
 // === User Type Selection Component ===
 const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'college') => void }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center relative bg-[#030309] overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center relative bg-[#000000] overflow-hidden">
       <AnimatedBackground />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-24 pb-12">
-        <div className="text-center mb-16">
-          <motion.div
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          {/* <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6"
             style={{
               background: "rgba(16, 185, 129, 0.1)",
               border: "1px solid rgba(16, 185, 129, 0.25)",
             }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />
+          > */}
+            {/* <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />
             <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#34d399]">
               Registration
             </span>
-          </motion.div>
+          </motion.div> */}
 
-          <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter">
+          <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tighter">
             <span className="text-white">Choose Your </span>
             <span
               style={{
-                background: "linear-gradient(135deg, #10b981 0%, #f59e0b 100%)",
+                background: "linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #000000 100%)",
+                backgroundClip: "text",
                 WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent"
+                WebkitTextFillColor: "transparent",
+                color: "transparent"
               }}
             >
               Path
             </span>
           </h1>
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-400 max-w-2xl mx-auto">
             Select the account type that best matches your needs and start your journey with StudentPath.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* College Card */}
           <motion.div
-            whileHover={{ y: -8, scale: 1.02 }}
+            whileHover={{ y: -6, scale: 1.01 }}
             className="group"
           >
             <Card
-              className="relative cursor-pointer transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-2xl overflow-hidden rounded-[2rem]"
+              className="relative cursor-pointer transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-2xl overflow-hidden rounded-2xl"
               onClick={() => onSelect('college')}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-              <CardContent className="p-10 relative z-10">
-                <div className="flex justify-center mb-8">
+              <CardContent className="p-8 relative z-10">
+                <div className="flex justify-center mb-6">
                   <motion.div 
-                    animate={{ y: [0, -10, 0] }}
+                    animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-20 h-20 bg-gradient-to-br from-emerald-600 to-green-600 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-6 transition-transform duration-500"
+                    className="w-16 h-16 bg-gradient-to-br from-emerald-600 to-green-600 rounded-xl flex items-center justify-center shadow-2xl group-hover:rotate-6 transition-transform duration-500"
                   >
-                    <Landmark className="w-10 h-10 text-white" />
+                    <Landmark className="w-8 h-8 text-white" />
                   </motion.div>
                 </div>
 
-                <h2 className="text-3xl font-bold text-center mb-4 text-white">
+                <h2 className="text-2xl font-bold text-center mb-3 text-white">
                   College / University
                 </h2>
 
-                <p className="text-gray-400 text-center mb-8 text-lg leading-relaxed">
+                <p className="text-gray-400 text-center mb-6 text-sm leading-relaxed">
                   For educational institutions to manage students, curriculum, and career guidance.
                 </p>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   <Button
-                    className="w-full h-14 rounded-xl text-white font-bold text-lg transition-all duration-300 relative overflow-hidden group"
+                    className="w-full h-12 rounded-lg text-white font-bold transition-all duration-300 relative overflow-hidden group"
                     style={{
                       background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                      boxShadow: "0 10px 20px -10px rgba(16, 185, 129, 0.5)",
+                      boxShadow: "0 8px 16px -8px rgba(16, 185, 129, 0.5)",
                     }}
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       Continue as College
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </Button>
                   
-                  <p className="text-gray-500 text-sm text-center">
+                  <p className="text-gray-500 text-xs text-center">
                     Already have an account?{" "}
                     <Link href="/college-login" className="text-emerald-400 hover:text-emerald-300 font-medium">
                       Sign in
@@ -194,49 +273,49 @@ const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'co
 
           {/* Professional Card */}
           <motion.div
-            whileHover={{ y: -8, scale: 1.02 }}
+            whileHover={{ y: -6, scale: 1.01 }}
             className="group"
           >
             <Card
-              className="relative cursor-pointer transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-2xl overflow-hidden rounded-[2rem]"
+              className="relative cursor-pointer transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-2xl overflow-hidden rounded-2xl"
               onClick={() => onSelect('professional')}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-amber-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-              <CardContent className="p-10 relative z-10">
-                <div className="flex justify-center mb-8">
+              <CardContent className="p-8 relative z-10">
+                <div className="flex justify-center mb-6">
                   <motion.div 
-                    animate={{ y: [0, -10, 0] }}
+                    animate={{ y: [0, -8, 0] }}
                     transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-                    className="w-20 h-20 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-2xl group-hover:-rotate-6 transition-transform duration-500"
+                    className="w-16 h-16 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-2xl group-hover:-rotate-6 transition-transform duration-500"
                   >
-                    <User className="w-10 h-10 text-white" />
+                    <User className="w-8 h-8 text-white" />
                   </motion.div>
                 </div>
 
-                <h2 className="text-3xl font-bold text-center mb-4 text-white">
+                <h2 className="text-2xl font-bold text-center mb-3 text-white">
                   Professional
                 </h2>
 
-                <p className="text-gray-400 text-center mb-8 text-lg leading-relaxed">
+                <p className="text-gray-400 text-center mb-6 text-sm leading-relaxed">
                   For individuals looking to boost their career, manage skills, and find opportunities.
                 </p>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   <Button
-                    className="w-full h-14 rounded-xl text-white font-bold text-lg transition-all duration-300 relative overflow-hidden group"
+                    className="w-full h-12 rounded-lg text-white font-bold transition-all duration-300 relative overflow-hidden group"
                     style={{
                       background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-                      boxShadow: "0 10px 20px -10px rgba(245, 158, 11, 0.5)",
+                      boxShadow: "0 8px 16px -8px rgba(245, 158, 11, 0.5)",
                     }}
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       Continue as Professional
-                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                      <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </Button>
 
-                  <p className="text-gray-500 text-sm text-center">
+                  <p className="text-gray-500 text-xs text-center">
                     Already have an account?{" "}
                     <Link href="/professional-login" className="text-amber-400 hover:text-amber-300 font-medium">
                       Sign in
@@ -257,9 +336,9 @@ const RocketProgress = ({ progress, isCollege }: { progress: number; isCollege?:
   const roundedProgress = Math.round(progress);
   
   return (
-    <div className="relative w-full py-8">
+    <div className="relative w-full py-6">
       {/* Background Track */}
-      <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
+      <div className="relative h-1 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
         {/* Progress Bar */}
         <motion.div
           initial={{ width: 0 }}
@@ -278,16 +357,16 @@ const RocketProgress = ({ progress, isCollege }: { progress: number; isCollege?:
       {/* Floating Rocket & Percentage */}
       <motion.div
         className="absolute top-1/2 -translate-y-1/2 transition-all duration-700 ease-out z-20"
-        style={{ left: `calc(${progress}% - 20px)` }}
+        style={{ left: `calc(${progress}% - 16px)` }}
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
       >
         <div className="relative flex flex-col items-center group">
           {/* Tooltip-style Percentage */}
           <motion.div 
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`mb-2 px-2 py-0.5 rounded-md text-[10px] font-black tracking-tighter shadow-xl border ${
+            className={`mb-1.5 px-2 py-0.5 rounded-md text-[9px] font-black tracking-tighter shadow-lg border ${
               isCollege 
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
                 : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
@@ -298,17 +377,17 @@ const RocketProgress = ({ progress, isCollege }: { progress: number; isCollege?:
 
           <div className="relative">
             <Rocket 
-              className={`w-6 h-6 rotate-45 transition-colors duration-500 ${
+              className={`w-5 h-5 rotate-45 transition-colors duration-500 ${
                 isCollege ? 'text-emerald-400 fill-emerald-500/20' : 'text-amber-400 fill-amber-500/20'
               }`} 
             />
             {/* Engine Flare */}
-            <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-4 blur-sm rounded-full animate-pulse ${
+            <div className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-3 blur-sm rounded-full animate-pulse ${
               isCollege ? 'bg-emerald-500/60' : 'bg-amber-500/60'
             }`} />
             
             {/* Dynamic Glow */}
-            <div className={`absolute -inset-4 blur-2xl rounded-full opacity-40 animate-pulse ${
+            <div className={`absolute -inset-3 blur-lg rounded-full opacity-40 animate-pulse ${
               isCollege ? 'bg-emerald-500' : 'bg-amber-500'
             }`} />
           </div>
@@ -319,7 +398,7 @@ const RocketProgress = ({ progress, isCollege }: { progress: number; isCollege?:
       {[0, 25, 50, 75, 100].map((pos) => (
         <div 
           key={pos}
-          className="absolute top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-white/20"
+          className="absolute top-1/2 -translate-y-1/2 w-0.5 h-0.5 rounded-full bg-white/20"
           style={{ left: `${pos}%` }}
         />
       ))}
@@ -617,35 +696,35 @@ const StudentRegistration = () => {
       case 1:
         return (
           <StepTransition isActive>
-            <div className="space-y-8">
+            <div className="space-y-6">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl mb-4 shadow-xl relative group"
                   style={{
                     background: "rgba(16, 185, 129, 0.1)",
                     border: "1px solid rgba(16, 185, 129, 0.25)",
                   }}
                 >
-                  <User className="w-8 h-8 text-[#10b981]" />
+                  <User className="w-7 h-7 text-[#10b981]" />
                   <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
+                <h2 className="text-3xl font-black mb-2 text-white tracking-tight">
                   Basic Information
                 </h2>
-                <p className="text-gray-400 max-w-md mx-auto">
+                <p className="text-gray-400 text-sm max-w-md mx-auto">
                   Let's start with your basic details to build your personalized profile.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="college" className="text-white font-medium">
+                  <Label htmlFor="college" className="text-white font-medium text-sm">
                     College/University *
                   </Label>
                   <Select
                     value={formData.college}
                     onValueChange={(value) => updateFormData({ college: value })}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                    <SelectTrigger className="bg-white/5 border-white/20 text-white text-sm">
                       <SelectValue placeholder="Select your college" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
@@ -663,7 +742,7 @@ const StudentRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="studentId" className="text-white font-medium">
+                  <Label htmlFor="studentId" className="text-white font-medium text-sm">
                     Student ID *
                   </Label>
                   <Input
@@ -673,12 +752,12 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ studentId: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-white font-medium">
+                  <Label htmlFor="firstName" className="text-white font-medium text-sm">
                     First Name *
                   </Label>
                   <Input
@@ -688,12 +767,12 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ firstName: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-white font-medium">
+                  <Label htmlFor="lastName" className="text-white font-medium text-sm">
                     Last Name *
                   </Label>
                   <Input
@@ -703,12 +782,12 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ lastName: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-medium">
+                  <Label htmlFor="email" className="text-white font-medium text-sm">
                     Email Address *
                   </Label>
                   <Input
@@ -719,12 +798,12 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ email: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-white font-medium">
+                  <Label htmlFor="phone" className="text-white font-medium text-sm">
                     Phone Number
                   </Label>
                   <Input
@@ -734,14 +813,14 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ phone: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="dateOfBirth"
-                    className="text-white font-medium"
+                    className="text-white font-medium text-sm"
                   >
                     Date of Birth
                   </Label>
@@ -752,19 +831,19 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ dateOfBirth: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">
+                  <Label className="text-white font-medium text-sm">
                     Gender (Optional)
                   </Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => updateFormData({ gender: value })}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
+                    <SelectTrigger className="bg-white/5 border-white/20 text-white text-sm">
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-white/20">
@@ -797,7 +876,7 @@ const StudentRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white font-medium">
+                  <Label htmlFor="password" className="text-white font-medium text-sm">
                     Password *
                   </Label>
                   <Input
@@ -808,14 +887,14 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ password: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label
                     htmlFor="confirmPassword"
-                    className="text-white font-medium"
+                    className="text-white font-medium text-sm"
                   >
                     Confirm Password *
                   </Label>
@@ -827,32 +906,32 @@ const StudentRegistration = () => {
                     onChange={(e) =>
                       updateFormData({ confirmPassword: e.target.value })
                     }
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-emerald-400 text-sm"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
+              <div className="flex items-start space-x-3 p-3 bg-white/5 rounded-lg border border-white/10">
                 <Checkbox
                   id="terms"
                   checked={formData.agreeToTerms}
                   onCheckedChange={(checked) =>
                     updateFormData({ agreeToTerms: checked as boolean })
                   }
-                  className="border-white/20 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
+                  className="border-white/20 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 mt-1"
                 />
-                <Label htmlFor="terms" className="text-sm text-gray-300">
+                <Label htmlFor="terms" className="text-xs text-gray-300">
                   I agree to the{" "}
                   <Link
                     href="/terms"
-                    className="text-indigo-400 hover:text-indigo-300 underline"
+                    className="text-emerald-400 hover:text-emerald-300 underline"
                   >
                     Terms and Conditions
                   </Link>{" "}
                   and{" "}
                   <Link
                     href="/privacy"
-                    className="text-indigo-400 hover:text-indigo-300 underline"
+                    className="text-emerald-400 hover:text-emerald-300 underline"
                   >
                     Privacy Policy
                   </Link>
@@ -2831,29 +2910,29 @@ const ProfessionalRegistration = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <RocketProgress progress={progress} isCollege={false} />
-      <div className="pt-4">
+      <div className="pt-2">
         {isLoading ? <RocketLaunchLoader /> : renderStep()}
       </div>
 
       {currentStep !== 3 && !isLoading && (
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between mt-4 gap-3">
           <Button
             variant="outline"
             onClick={prevStep}
             disabled={currentStep === 1}
-            className="border-white/20 text-white hover:bg-white/10"
+            className="border-white/20 text-white hover:bg-white/10 rounded-lg text-sm px-4 py-2"
           >
             <ChevronLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
           <Button
             onClick={nextStep}
-            className="px-8 h-12 rounded-xl text-white font-bold"
+            className="px-6 h-10 rounded-lg text-white font-bold text-sm"
             style={{
               background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-              boxShadow: "0 8px 16px -8px rgba(245, 158, 11, 0.5)",
+              boxShadow: "0 6px 12px -6px rgba(245, 158, 11, 0.5)",
             }}
           >
             Next
@@ -2925,7 +3004,7 @@ export default function RegisterPage() {
       <div
         className="dark min-h-screen relative text-white"
         style={{
-          background: "#030309",
+          background: "#000000",
         }}
       >
         <UserTypeSelection onSelect={setUserType} />
@@ -2937,29 +3016,29 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="dark min-h-screen relative text-white bg-[#030309]"
+      className="dark min-h-screen relative text-white bg-[#000000]"
     >
       <AnimatedBackground />
 
       {/* Glow effects */}
       <div 
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full opacity-10 blur-[120px] pointer-events-none"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full opacity-8 blur-[120px] pointer-events-none"
         style={{ 
           background: isCollege 
-            ? "radial-gradient(circle, #10b981 0%, transparent 70%)" 
-            : "radial-gradient(circle, #f59e0b 0%, transparent 70%)" 
+            ? "radial-gradient(circle, #0d7851 0%, transparent 70%)" 
+            : "radial-gradient(circle, #b8651b 0%, transparent 70%)" 
         }}
       />
 
-      <div className="relative z-10 pt-20">
+      <div className="relative z-10 pt-16">
         {/* Header */}
-        <div className="max-w-5xl mx-auto px-4 py-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
                   onClick={() => setUserType(null)}
-                  className="text-gray-400 hover:text-white hover:bg-white/5 rounded-xl px-4 py-2 transition-all"
+                  className="text-gray-400 hover:text-white hover:bg-white/5 rounded-lg px-3 py-1.5 text-sm transition-all"
                 >
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Change Path
@@ -2969,27 +3048,27 @@ export default function RegisterPage() {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`px-6 py-2 rounded-full text-sm font-bold tracking-wider uppercase border ${isCollege
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase border ${isCollege
+                  ? 'bg-emerald-900/20 text-emerald-400 border-emerald-900/30'
+                  : 'bg-amber-900/20 text-amber-400 border-amber-900/30'
                   }`}>
                 {isCollege ? 'College' : 'Professional'} Registration
               </motion.div>
             </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 py-12">
-          <Card className="border-white/10 bg-white/5 backdrop-blur-3xl shadow-2xl rounded-[2.5rem] overflow-hidden">
-            <CardContent className="p-10">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <Card className="border-white/10 bg-white/5 backdrop-blur-3xl shadow-2xl rounded-2xl overflow-hidden">
+            <CardContent className="p-8">
               {isCollege ? <CollegeRegistration /> : <ProfessionalRegistration />}
             </CardContent>
           </Card>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/5 bg-black/20 mt-20">
-          <div className="max-w-5xl mx-auto px-4 py-12 text-center">
-            <p className="text-gray-400">
+        <div className="border-t border-white/5 bg-black/20 mt-12">
+          <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+            <p className="text-gray-400 text-sm">
               Already have an account?{" "}
               <Link
                 href="/login"
@@ -2998,7 +3077,7 @@ export default function RegisterPage() {
                 Sign in here
               </Link>
             </p>
-            <div className="mt-8 text-gray-600 text-xs">
+            <div className="mt-6 text-gray-600 text-xs">
               © {new Date().getFullYear()} StudentPath. All rights reserved.
             </div>
           </div>
