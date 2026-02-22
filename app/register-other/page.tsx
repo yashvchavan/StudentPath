@@ -30,41 +30,64 @@ import {
   Briefcase,
   Users,
   Building,
+  Landmark,
   TrendingUp,
   Shield,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import Navbar from "@/components/landing/Navbar";
 import { ActiveSessionBlock, useSessionBlock } from "@/components/ui/active-session-block";
 
 // === Animated Background ===
 const AnimatedBackground = () => {
   const [particles, setParticles] = useState<
-    Array<{ id: number; x: number; y: number; delay: number }>
+    Array<{ id: number; x: number; y: number; delay: number; size: number }>
   >([]);
 
   useEffect(() => {
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
+    const newParticles = Array.from({ length: 40 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       delay: Math.random() * 5,
+      size: Math.random() * 2 + 1,
     }));
     setParticles(newParticles);
   }, []);
 
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {/* Stars */}
+      {/* Glow effects */}
+      <div 
+        className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full opacity-20 blur-[120px]"
+        style={{ background: "radial-gradient(circle, #2563eb 0%, transparent 70%)" }}
+      />
+      <div 
+        className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full opacity-20 blur-[120px]"
+        style={{ background: "radial-gradient(circle, #7c3aed 0%, transparent 70%)" }}
+      />
+
+      {/* Particles */}
       {particles.map((p) => (
-        <div
+        <motion.div
           key={p.id}
-          className="absolute w-1 h-1 bg-gradient-to-r from-red-400 to-yellow-400 rounded-full animate-pulse"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.5, 0] }}
+          transition={{
+            duration: 3 + Math.random() * 2,
+            repeat: Infinity,
+            delay: p.delay,
+          }}
+          className="absolute rounded-full bg-blue-400"
           style={{
             left: `${p.x}%`,
             top: `${p.y}%`,
-            animationDelay: `${p.delay}s`,
-            animationDuration: "3s",
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            filter: "blur(0.5px)",
+            boxShadow: "0 0 10px rgba(96, 165, 250, 0.5)",
           }}
         />
       ))}
@@ -74,134 +97,180 @@ const AnimatedBackground = () => {
 
 // === User Type Selection Component ===
 const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'professional' | 'college') => void }) => {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-
   return (
-    <div className="min-h-screen flex items-center justify-center relative">
+    <div className="min-h-screen flex items-center justify-center relative bg-[#030309] overflow-hidden">
       <AnimatedBackground />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <img
-            src="/logo.png"
-            alt="StudentPath Logo"
-            className="h-20 w-auto mx-auto mb-8"
-          />
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-4">
-            Welcome to Your Journey
+      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-24 pb-12">
+        <div className="text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8"
+            style={{
+              background: "rgba(16, 185, 129, 0.1)",
+              border: "1px solid rgba(16, 185, 129, 0.25)",
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#10b981" }} />
+            <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#34d399]">
+              Registration
+            </span>
+          </motion.div>
+
+          <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter">
+            <span className="text-white">Choose Your </span>
+            <span
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #f59e0b 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent"
+              }}
+            >
+              Path
+            </span>
           </h1>
-          <p className="text-xl text-gray-400">
-            Choose your path to personalized learning and career growth
+          <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            Select the account type that best matches your needs and start your journey with StudentPath.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {/* College Card */}
-          <Card
-            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${hoveredCard === 'college'
-              ? 'border-green-400 shadow-2xl shadow-green-500/20'
-              : 'border-white/20 hover:border-white/30'
-              } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
-            onMouseEnter={() => setHoveredCard('college')}
-            onMouseLeave={() => setHoveredCard(null)}
+          <motion.div
+            whileHover={{ y: -8, scale: 1.02 }}
+            className="group"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-green-600/10 to-emerald-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <Card
+              className="relative cursor-pointer transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-2xl overflow-hidden rounded-[2rem]"
+              onClick={() => onSelect('college')}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            <CardContent className="p-8 relative z-10">
-              <div className="flex justify-center mb-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl group-hover:animate-pulse">
-                  <Building className="w-12 h-12 text-white" />
+              <CardContent className="p-10 relative z-10">
+                <div className="flex justify-center mb-8">
+                  <motion.div 
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="w-20 h-20 bg-gradient-to-br from-emerald-600 to-green-600 rounded-2xl flex items-center justify-center shadow-2xl group-hover:rotate-6 transition-transform duration-500"
+                  >
+                    <Landmark className="w-10 h-10 text-white" />
+                  </motion.div>
                 </div>
-              </div>
 
-              <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
-                I'm a College
-              </h2>
+                <h2 className="text-3xl font-bold text-center mb-4 text-white">
+                  College / University
+                </h2>
 
-              <p className="text-gray-300 text-center mb-6">
-                Educational institution looking to manage students and provide career guidance
-              </p>
+                <p className="text-gray-400 text-center mb-8 text-lg leading-relaxed">
+                  For educational institutions to manage students, curriculum, and career guidance.
+                </p>
 
-              <Button
-                className="w-full mt-8 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
-                onClick={() => onSelect('college')}
-              >
-                Continue as College
-                <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <p className="text-gray-400 pt-4 text-sm text-center">
-                Already have an account?{" "}
-                <Link href="/college-login" className="text-indigo-400 hover:text-indigo-300 underline">
-                  Sign in
-                </Link>
-              </p>
-            </CardContent>
-          </Card>
-          {/* Professinal Card */}
-          <Card
-            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${hoveredCard === 'college'
-              ? 'border-orange-400 shadow-2xl shadow-orange-500/20'
-              : 'border-white/20 hover:border-white/30'
-              } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
-            onMouseEnter={() => setHoveredCard('college')}
-            onMouseLeave={() => setHoveredCard(null)}
+                <div className="flex flex-col gap-4">
+                  <Button
+                    className="w-full h-14 rounded-xl text-white font-bold text-lg transition-all duration-300 relative overflow-hidden group"
+                    style={{
+                      background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                      boxShadow: "0 10px 20px -10px rgba(16, 185, 129, 0.5)",
+                    }}
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      Continue as College
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Button>
+                  
+                  <p className="text-gray-500 text-sm text-center">
+                    Already have an account?{" "}
+                    <Link href="/college-login" className="text-emerald-400 hover:text-emerald-300 font-medium">
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Professional Card */}
+          <motion.div
+            whileHover={{ y: -8, scale: 1.02 }}
+            className="group"
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-600/10 to-orange-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            <Card
+              className="relative cursor-pointer transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-2xl overflow-hidden rounded-[2rem]"
+              onClick={() => onSelect('professional')}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-amber-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            <CardContent className="p-8 relative z-10">
-              <div className="flex justify-center mb-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center shadow-2xl group-hover:animate-pulse">
-                  <Building className="w-12 h-12 text-white" />
+              <CardContent className="p-10 relative z-10">
+                <div className="flex justify-center mb-8">
+                  <motion.div 
+                    animate={{ y: [0, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                    className="w-20 h-20 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-2xl flex items-center justify-center shadow-2xl group-hover:-rotate-6 transition-transform duration-500"
+                  >
+                    <User className="w-10 h-10 text-white" />
+                  </motion.div>
                 </div>
-              </div>
 
-              <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-yellow-500 to-orange-600 bg-clip-text text-transparent">
-                I'm a Professional
-              </h2>
+                <h2 className="text-3xl font-bold text-center mb-4 text-white">
+                  Professional
+                </h2>
 
-              <p className="text-gray-300 text-center mb-6">
-                Professional looking to improve skills and manage career
-              </p>
+                <p className="text-gray-400 text-center mb-8 text-lg leading-relaxed">
+                  For individuals looking to boost their career, manage skills, and find opportunities.
+                </p>
 
-              <Button
-                className="w-full mt-8 bg-gradient-to-r  from-yellow-500 to-orange-600  text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
-                onClick={() => onSelect('professional')}
-              >
-                Continue as Professional
-                <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              <p className="text-gray-400 pt-4 text-sm text-center">
-                Already have an account?{" "}
-                <Link href="/professional-login" className="text-indigo-400 hover:text-indigo-300 underline">
-                  Sign in
-                </Link>
-              </p>
-            </CardContent>
-          </Card>
+                <div className="flex flex-col gap-4">
+                  <Button
+                    className="w-full h-14 rounded-xl text-white font-bold text-lg transition-all duration-300 relative overflow-hidden group"
+                    style={{
+                      background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                      boxShadow: "0 10px 20px -10px rgba(245, 158, 11, 0.5)",
+                    }}
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-2">
+                      Continue as Professional
+                      <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Button>
+
+                  <p className="text-gray-500 text-sm text-center">
+                    Already have an account?{" "}
+                    <Link href="/professional-login" className="text-amber-400 hover:text-amber-300 font-medium">
+                      Sign in
+                    </Link>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
-
       </div>
     </div>
   );
 };
 
 // === Rocket Progress ===
-const RocketProgress = ({ progress }: { progress: number }) => {
+const RocketProgress = ({ progress, isCollege }: { progress: number; isCollege?: boolean }) => {
   return (
-    <div className="relative w-full mt-3">
-      <div className="absolute top-0 left-0 w-full h-2 bg-white/10 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-red-500 to-yellow-500 rounded-full transition-all duration-500 ease-out relative"
-          style={{ width: `${progress}%` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-yellow-400 rounded-full animate-pulse" />
-        </div>
-      </div>
-      <div
-        className="absolute top-[-8px] transition-all duration-500 ease-out"
-        style={{ left: `${Math.min(progress, 95)}%` }}
+    <div className="relative w-full mt-4 h-3 bg-white/5 rounded-full overflow-hidden border border-white/10">
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${progress}%` }}
+        className={`h-full relative ${isCollege ? 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600' : 'bg-gradient-to-r from-amber-600 via-yellow-600 to-orange-600'}`}
       >
-        <Rocket className="w-6 h-6 text-yellow-400 animate-bounce" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.2)_50%,transparent_100%)] animate-shimmer" />
+      </motion.div>
+      <div
+        className="absolute top-1/2 -translate-y-1/2 transition-all duration-500 ease-out"
+        style={{ left: `calc(${progress}% - 12px)` }}
+      >
+        <div className="relative">
+          <Rocket className={`w-5 h-5 text-white animate-pulse transition-colors ${isCollege ? 'fill-emerald-500' : 'fill-amber-500'}`} />
+          <div className={`absolute -inset-2 blur-lg rounded-full animate-pulse ${isCollege ? 'bg-emerald-500/20' : 'bg-amber-500/20'}`} />
+        </div>
       </div>
     </div>
   );
@@ -499,14 +568,20 @@ const StudentRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <User className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <User className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Basic Information
                 </h2>
-                <p className="text-gray-400 mt-2">
-                  Let's start with your basic details
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Let's start with your basic details to build your personalized profile.
                 </p>
               </div>
 
@@ -741,13 +816,19 @@ const StudentRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <GraduationCap className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <GraduationCap className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Academic Information
                 </h2>
-                <p className="text-gray-400 mt-2">Tell us about your academic journey</p>
+                <p className="text-gray-400 max-w-md mx-auto">Tell us about your academic journey and achievements.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -937,14 +1018,20 @@ const StudentRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <Target className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <Target className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Career Interest Assessment
                 </h2>
-                <p className="text-gray-400 mt-2">
-                  Help us understand your career preferences
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Help us understand your career preferences to suggest the best paths.
                 </p>
               </div>
 
@@ -981,7 +1068,7 @@ const StudentRegistration = () => {
                           key={option.value}
                           htmlFor={option.value}
                           className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${selected
-                            ? "bg-indigo-500/10 border-indigo-400/40"
+                            ? "bg-emerald-500/10 border-emerald-400/40"
                             : "bg-white/5 border-white/10 hover:bg-white/10"
                             }`}
                         >
@@ -1014,7 +1101,11 @@ const StudentRegistration = () => {
                         }
                       }}
                       disabled={!formData.careerQuizAnswers[currentQuestion.id]}
-                      className="bg-gradient-to-r from-red-600 to-yellow-600 text-black hover:from-blue-500 hover:to-white"
+                      className="text-white font-bold px-8"
+                      style={{
+                        background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                        boxShadow: "0 8px 16px -8px rgba(16, 185, 129, 0.5)",
+                      }}
                     >
                       {currentQuestionIndex === careerQuestions.length - 1
                         ? "Continue"
@@ -1034,13 +1125,19 @@ const StudentRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <Award className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <Award className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Skills Assessment
                 </h2>
-                <p className="text-gray-400 mt-2">Rate your current skill levels</p>
+                <p className="text-gray-400 max-w-md mx-auto">Rate your current skill levels to identify growth areas.</p>
               </div>
 
               <div className="space-y-6">
@@ -1158,13 +1255,19 @@ const StudentRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <MapPin className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <MapPin className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Career Goals
                 </h2>
-                <p className="text-gray-400 mt-2">Define your career aspirations</p>
+                <p className="text-gray-400 max-w-md mx-auto">Define your career aspirations and where you want to go.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1358,26 +1461,32 @@ const StudentRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <Calendar className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <Calendar className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Personalized Roadmap
                 </h2>
-                <p className="text-gray-400 mt-2">
-                  Your customized learning path is ready!
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Your customized learning path is ready to launch!
                 </p>
               </div>
 
               <Card className="p-6 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/20">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-red-300 to-yellow-300">
+                <div className="text-center mb-8">
+                  <h3 className="text-3xl font-black mb-3 text-white">
                     Congratulations{formData.firstName ? `, ${formData.firstName}` : ""}! 🎉
                   </h3>
-                  <p className="text-gray-300">
+                  <p className="text-gray-400 text-lg">
                     Based on your responses, we've created a personalized roadmap
                     for your journey to become a{" "}
-                    <span className="text-indigo-300">
+                    <span className="text-blue-400 font-bold">
                       {formData.primaryGoal
                         ? formData.primaryGoal.replace("-", " ")
                         : "top professional"}
@@ -1386,18 +1495,18 @@ const StudentRegistration = () => {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div className="text-2xl font-bold text-red-300">85%</div>
-                    <div className="text-sm text-gray-400">Goal Alignment</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                  <div className="text-center p-6 bg-white/5 rounded-2xl border border-white/10 group hover:border-[#10b981]/50 transition-colors">
+                    <div className="text-3xl font-black text-emerald-400 mb-1">85%</div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-gray-500">Goal Alignment</div>
                   </div>
-                  <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div className="text-2xl font-bold text-yellow-300">12</div>
-                    <div className="text-sm text-gray-400">Skills to Develop</div>
+                  <div className="text-center p-6 bg-white/5 rounded-2xl border border-white/10 group hover:border-[#10b981]/50 transition-colors">
+                    <div className="text-3xl font-black text-emerald-300 mb-1">12</div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-gray-500">Skills to Develop</div>
                   </div>
-                  <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div className="text-2xl font-bold text-red-300">24</div>
-                    <div className="text-sm text-gray-400">Months to Goal</div>
+                  <div className="text-center p-6 bg-white/5 rounded-2xl border border-white/10 group hover:border-[#10b981]/50 transition-colors">
+                    <div className="text-3xl font-black text-emerald-400 mb-1">24</div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-gray-500">Months to Goal</div>
                   </div>
                 </div>
 
@@ -1412,13 +1521,13 @@ const StudentRegistration = () => {
                       ["Project Experience", "Real-world applications"],
                       ["Career Preparation", "Interview & job readiness"],
                     ].map(([title, sub], i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-red-600 to-yellow-600 rounded-full flex items-center justify-center text-black text-sm font-bold">
+                      <div key={i} className="flex items-center gap-4 group">
+                        <div className="w-10 h-10 bg-gradient-to-br from-emerald-600 to-green-600 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg transform group-hover:scale-110 transition-transform">
                           {i + 1}
                         </div>
                         <div>
-                          <div className="font-medium text-white/90">{title}</div>
-                          <div className="text-sm text-gray-400">{sub}</div>
+                          <div className="font-bold text-white group-hover:text-emerald-400 transition-colors">{title}</div>
+                          <div className="text-sm text-gray-500">{sub}</div>
                         </div>
                       </div>
                     ))}
@@ -1477,7 +1586,11 @@ const StudentRegistration = () => {
                 <Button
                   onClick={handleSubmit}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-red-600 to-yellow-600 hover:from-blue-500 hover:to-white text-black"
+                  className="flex-1 h-14 rounded-xl text-white font-bold text-lg"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    boxShadow: "0 8px 16px -8px rgba(16, 185, 129, 0.5)",
+                  }}
                 >
                   {isLoading ? "Creating Account..." : "Create My Account"}
                 </Button>
@@ -1513,7 +1626,11 @@ const StudentRegistration = () => {
           </Button>
           <Button
             onClick={nextStep}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white"
+            className="px-8 h-12 rounded-xl text-white font-bold"
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              boxShadow: "0 8px 16px -8px rgba(16, 185, 129, 0.5)",
+            }}
           >
             Next
             <ChevronRight className="w-4 h-4 ml-2" />
@@ -1649,14 +1766,25 @@ const CollegeRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-2xl">
-                  <Building className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Landmark className="w-8 h-8 text-[#10b981]" />
+                  </motion.div>
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   College Information
                 </h2>
-                <p className="text-gray-400 mt-2">
-                  Tell us about your educational institution
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Tell us about your educational institution to get started.
                 </p>
               </div>
 
@@ -1797,14 +1925,20 @@ const CollegeRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-2xl">
-                  <Award className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(79,70,229,0.1)",
+                    border: "1px solid rgba(79,70,229,0.25)",
+                  }}
+                >
+                  <Award className="w-8 h-8 text-[#818cf8]" />
+                  <div className="absolute inset-0 bg-[#818cf8]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Institution Details
                 </h2>
-                <p className="text-gray-400 mt-2">
-                  Additional information about your institution
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Additional information about your institution's profile.
                 </p>
               </div>
 
@@ -1948,14 +2082,20 @@ const CollegeRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-2xl">
-                  <Shield className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                  }}
+                >
+                  <Shield className="w-8 h-8 text-[#10b981]" />
+                  <div className="absolute inset-0 bg-[#10b981]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Security & Access
                 </h2>
-                <p className="text-gray-400 mt-2">
-                  Set up your account credentials
+                <p className="text-gray-400 max-w-md mx-auto">
+                  Set up your account credentials for secure administration.
                 </p>
               </div>
 
@@ -1990,11 +2130,11 @@ const CollegeRegistration = () => {
               </div>
 
               <Card className="p-6 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/20">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-green-300 to-emerald-300">
+                <div className="text-center mb-8">
+                  <h3 className="text-3xl font-black mb-3 text-white">
                     Almost Ready! 🎉
                   </h3>
-                  <p className="text-gray-300">
+                  <p className="text-gray-400 text-lg">
                     After registration, you'll receive a unique token to share with your students
                     for easy registration and access to your college's platform.
                   </p>
@@ -2011,13 +2151,13 @@ const CollegeRegistration = () => {
                       ["Dashboard Setup", "Access your admin panel"],
                       ["Student Management", "Manage student registrations"],
                     ].map(([title, sub], i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                      <div key={i} className="flex items-center gap-4 group">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-lg transform group-hover:scale-110 transition-transform">
                           {i + 1}
                         </div>
                         <div>
-                          <div className="font-medium text-white/90">{title}</div>
-                          <div className="text-sm text-gray-400">{sub}</div>
+                          <div className="font-bold text-white group-hover:text-blue-400 transition-colors">{title}</div>
+                          <div className="text-sm text-gray-500">{sub}</div>
                         </div>
                       </div>
                     ))}
@@ -2034,18 +2174,18 @@ const CollegeRegistration = () => {
                   }
                   className="border-white/20 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                 />
-                <Label htmlFor="terms-college" className="text-sm text-gray-300">
+                <Label htmlFor="terms-college" className="text-sm text-gray-400">
                   I agree to the{" "}
                   <Link
                     href="/terms"
-                    className="text-green-400 hover:text-green-300 underline"
+                    className="text-blue-400 hover:text-blue-300 font-bold underline"
                   >
                     Terms and Conditions
                   </Link>{" "}
                   and{" "}
                   <Link
                     href="/privacy"
-                    className="text-green-400 hover:text-green-300 underline"
+                    className="text-blue-400 hover:text-blue-300 font-bold underline"
                   >
                     Privacy Policy
                   </Link>
@@ -2063,7 +2203,11 @@ const CollegeRegistration = () => {
                 <Button
                   onClick={handleSubmit}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white"
+                  className="flex-1 h-14 rounded-xl text-white font-bold text-lg"
+                  style={{
+                    background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                    boxShadow: "0 8px 16px -8px rgba(16, 185, 129, 0.5)",
+                  }}
                 >
                   {isLoading ? "Creating Account..." : "Create College Account"}
                 </Button>
@@ -2099,7 +2243,11 @@ const CollegeRegistration = () => {
           </Button>
           <Button
             onClick={nextStep}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white"
+            className="px-8 h-12 rounded-xl text-white font-bold"
+            style={{
+              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+              boxShadow: "0 8px 16px -8px rgba(16, 185, 129, 0.5)",
+            }}
           >
             Next
             <ChevronRight className="w-4 h-4 ml-2" />
@@ -2222,13 +2370,24 @@ const ProfessionalRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-2xl">
-                  <User className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                  }}
+                >
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <User className="w-8 h-8 text-[#f59e0b]" />
+                  </motion.div>
+                  <div className="absolute inset-0 bg-[#f59e0b]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Personal Information
                 </h2>
-                <p className="text-gray-400 mt-2">Let's start with your basic details</p>
+                <p className="text-gray-400 max-w-md mx-auto">Let's start with your professional profile details.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2348,13 +2507,19 @@ const ProfessionalRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-2xl">
-                  <Briefcase className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                  }}
+                >
+                  <Briefcase className="w-8 h-8 text-[#f59e0b]" />
+                  <div className="absolute inset-0 bg-[#f59e0b]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Professional Information
                 </h2>
-                <p className="text-gray-400 mt-2">Tell us about your professional experience</p>
+                <p className="text-gray-400 max-w-md mx-auto">Tell us about your career experience and skills.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2476,13 +2641,19 @@ const ProfessionalRegistration = () => {
           <StepTransition isActive>
             <div className="space-y-8">
               <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-2xl">
-                  <Target className="w-8 h-8 text-white" />
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-6 shadow-2xl relative group"
+                  style={{
+                    background: "rgba(245, 158, 11, 0.1)",
+                    border: "1px solid rgba(245, 158, 11, 0.25)",
+                  }}
+                >
+                  <Target className="w-8 h-8 text-[#f59e0b]" />
+                  <div className="absolute inset-0 bg-[#f59e0b]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                <h2 className="text-4xl font-black mb-3 text-white tracking-tight">
                   Career Goals & Preferences
                 </h2>
-                <p className="text-gray-400 mt-2">Help us understand your career aspirations</p>
+                <p className="text-gray-400 max-w-md mx-auto">Help us understand your aspirations for tailored guidance.</p>
               </div>
 
               <Card className="bg-white/5 border-white/20">
@@ -2496,7 +2667,7 @@ const ProfessionalRegistration = () => {
                           key={skill}
                           htmlFor={skill}
                           className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${checked
-                            ? "bg-yellow-500/10 border-yellow-400/40"
+                            ? "bg-amber-500/10 border-amber-400/40"
                             : "bg-white/5 border-white/10 hover:bg-white/10"
                             }`}
                         >
@@ -2575,10 +2746,14 @@ const ProfessionalRegistration = () => {
                 </Label>
               </div>
 
-              <Button
+               <Button
                 onClick={handleSubmit}
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white"
+                className="w-full h-14 rounded-xl text-white font-bold text-lg"
+                style={{
+                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  boxShadow: "0 8px 16px -8px rgba(245, 158, 11, 0.5)",
+                }}
               >
                 {isLoading ? "Creating Account..." : "Complete Registration"}
               </Button>
@@ -2615,7 +2790,11 @@ const ProfessionalRegistration = () => {
           </Button>
           <Button
             onClick={nextStep}
-            className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white"
+            className="px-8 h-12 rounded-xl text-white font-bold"
+            style={{
+              background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+              boxShadow: "0 8px 16px -8px rgba(245, 158, 11, 0.5)",
+            }}
           >
             Next
             <ChevronRight className="w-4 h-4 ml-2" />
@@ -2686,8 +2865,7 @@ export default function RegisterPage() {
       <div
         className="dark min-h-screen relative text-white"
         style={{
-          background:
-            "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
+          background: "#030309",
         }}
       >
         <UserTypeSelection onSelect={setUserType} />
@@ -2700,76 +2878,73 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="dark min-h-screen relative text-white"
-      style={{
-        background:
-          "radial-gradient(1200px 600px at 50% 0%, rgba(99,102,241,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(168,85,247,0.12), transparent 40%), #0b0f1a",
-      }}
+      className="dark min-h-screen relative text-white bg-[#030309]"
     >
       <AnimatedBackground />
 
-      {/* Mouse-follow spotlight */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background: `radial-gradient(300px 200px at ${mousePosition.x}% ${mousePosition.y}%, rgba(99,102,241,0.12), rgba(0,0,0,0) 60%)`,
+      {/* Glow effects */}
+      <div 
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] rounded-full opacity-10 blur-[120px] pointer-events-none"
+        style={{ 
+          background: isCollege 
+            ? "radial-gradient(circle, #10b981 0%, transparent 70%)" 
+            : "radial-gradient(circle, #f59e0b 0%, transparent 70%)" 
         }}
       />
 
-      <div className="relative z-10">
+      <div className="relative z-10 pt-20">
         {/* Header */}
-        <div className="border-b border-white/10 bg-black/30 backdrop-blur">
-          <div className="max-w-5xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
                   onClick={() => setUserType(null)}
-                  className="text-white hover:bg-white/10"
+                  className="text-gray-400 hover:text-white hover:bg-white/5 rounded-xl px-4 py-2 transition-all"
                 >
                   <ChevronLeft className="w-4 h-4 mr-2" />
                   Change Path
                 </Button>
-                <img
-                  src="/logo.png"
-                  alt="StudentPath Logo"
-                  className="h-15 w-auto"
-                />
               </div>
-              <div className="flex items-center gap-3">
-                <div className={`px-3 py-1 rounded-full text-sm font-medium ${isCollege
-                  ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                  : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+              
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`px-6 py-2 rounded-full text-sm font-bold tracking-wider uppercase border ${isCollege
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                   }`}>
-                  {isCollege ? 'College' : 'Professional'} Registration
-                </div>
-              </div>
+                {isCollege ? 'College' : 'Professional'} Registration
+              </motion.div>
             </div>
-
-          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <Card className="border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl">
-            <CardContent className="p-8">
-              {isCollege ? <CollegeRegistration /> : <ProfessionalRegistration />}
+        <div className="max-w-5xl mx-auto px-4 py-12">
+          <Card className="border-white/10 bg-white/5 backdrop-blur-3xl shadow-2xl rounded-[2.5rem] overflow-hidden">
+            <CardContent className="p-10">
+              <RocketProgress progress={currentProgress} isCollege={isCollege} />
+              <div className="mt-12">
+                {isCollege ? <CollegeRegistration /> : <ProfessionalRegistration />}
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-white/10 bg-black/30 mt-12">
-          <div className="max-w-5xl mx-auto px-4 py-6 text-center">
-            <p className="text-sm text-gray-300">
+        <div className="border-t border-white/5 bg-black/20 mt-20">
+          <div className="max-w-5xl mx-auto px-4 py-12 text-center">
+            <p className="text-gray-400">
               Already have an account?{" "}
               <Link
                 href="/login"
-                className="text-indigo-300 hover:text-indigo-200 font-medium underline-offset-4 hover:underline"
+                className={`font-bold underline-offset-4 hover:underline transition-all ${isCollege ? 'text-emerald-400 hover:text-emerald-300' : 'text-amber-400 hover:text-amber-300'}`}
               >
                 Sign in here
               </Link>
             </p>
+            <div className="mt-8 text-gray-600 text-xs">
+              © {new Date().getFullYear()} StudentPath. All rights reserved.
+            </div>
           </div>
         </div>
       </div>
