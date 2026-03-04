@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe";
 import pool from "@/lib/db";
 
@@ -82,11 +83,7 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const StripeLib = require("stripe") as typeof import("stripe");
-    event = new StripeLib.Stripe(stripe.apiKey as string, {
-      apiVersion: "2024-06-20",
-    }).webhooks.constructEvent(body, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
     console.error("[Stripe Webhook] Signature verification failed:", err);
     return NextResponse.json(
