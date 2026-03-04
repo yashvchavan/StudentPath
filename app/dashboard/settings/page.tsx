@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { User, Bell, Shield, Palette, Globe, Save, Camera, Loader2, Check, AlertCircle } from "lucide-react"
+import { StudentBillingCard } from "@/components/billing/StudentBillingCard"
 import { useTheme } from "next-themes"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
@@ -710,6 +711,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Billing & Plan (Student SaaS) */}
+          <StudentBillingCard />
 
           {/* Account Actions */}
           <Card className="lg:col-span-2 xl:col-span-3">

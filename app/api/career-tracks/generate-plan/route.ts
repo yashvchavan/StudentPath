@@ -30,6 +30,8 @@ import {
     parsePlanResponse,
     type PlanRequest,
 } from "@/lib/career-tracks/plan-generator";
+import { getAuthUser } from "@/lib/auth";
+import { checkAndConsumeLimit } from "@/lib/rate-limit";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -38,6 +40,15 @@ const openai = new OpenAI({
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+
+        // Ensure only authenticated students can generate career plans
+        const user = await getAuthUser();
+        if (!user || user.role !== "student") {
+            return NextResponse.json(
+                { error: "Only authenticated students can generate career plans." },
+                { status: 401 }
+            );
+        }
 
         // Validate required fields
         const {
@@ -62,6 +73,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 { error: "trackType must be 'placement' or 'higher-studies'" },
                 { status: 400 }
+            );
+        }
+
+        // Rate limit career track generation
+        const rl = await checkAndConsumeLimit(String(user.id), "career_track");
+        if (!rl.allowed) {
+            return NextResponse.json(
+                {
+                    error: "Career track generation limit reached for your current plan.",
+                    plan: rl.plan,
+                    limit: rl.limit,
+                    remaining: rl.remaining,
+                },
+                { status: 429 }
             );
         }
 

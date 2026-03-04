@@ -19,6 +19,7 @@ import { parseResume } from "@/lib/resume/parser";
 import { calculateATSScore, type CompanyRequirements } from "@/lib/resume/ats-scorer";
 import { generateAIFeedback, type StudentContext } from "@/lib/resume/ai-feedback";
 import { seedCompanyRequirements, getCompanyRequirements } from "@/lib/resume/requirements-seed";
+import { checkAndConsumeLimit } from "@/lib/rate-limit";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -125,6 +126,20 @@ export async function POST(req: NextRequest) {
         const user = await getAuthUser();
         if (!user || user.role !== "student") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Rate limit resume analysis
+        const rl = await checkAndConsumeLimit(String(user.id), "resume_analysis");
+        if (!rl.allowed) {
+            return NextResponse.json(
+                {
+                    error: "Resume analysis limit reached for your current plan.",
+                    plan: rl.plan,
+                    limit: rl.limit,
+                    remaining: rl.remaining,
+                },
+                { status: 429 }
+            );
         }
 
         // 2. Parse request body

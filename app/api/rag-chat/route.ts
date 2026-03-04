@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import pool from "@/lib/db";
+import { checkAndConsumeLimit } from "@/lib/rate-limit";
 
 const RAG_API_URL = process.env.RAG_API_URL || "https://rag-python-service-2312.onrender.com";
 
@@ -195,6 +196,20 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(
                 { error: "Missing required field: question" },
                 { status: 400 }
+            );
+        }
+
+        // Rate limit RAG chat as part of AI chat usage
+        const rl = await checkAndConsumeLimit(String(studentId), "ai_chat");
+        if (!rl.allowed) {
+            return NextResponse.json(
+                {
+                    error: "AI chat limit reached for your current plan.",
+                    plan: rl.plan,
+                    limit: rl.limit,
+                    remaining: rl.remaining,
+                },
+                { status: 429 }
             );
         }
 

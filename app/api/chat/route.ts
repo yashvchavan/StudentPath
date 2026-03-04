@@ -8,6 +8,7 @@ import {
     generateConversationTitle,
     getConversation,
 } from "@/lib/chat";
+import { checkAndConsumeLimit } from "@/lib/rate-limit";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -404,6 +405,22 @@ export async function POST(req: NextRequest) {
         const user = await validateUser(userId, userType);
         if (!user) {
             return NextResponse.json({ error: "Invalid user" }, { status: 401 });
+        }
+
+        // Rate limiting: count only student AI chat usage
+        if (userType === "student") {
+            const rl = await checkAndConsumeLimit(String(userId), "ai_chat");
+            if (!rl.allowed) {
+                return NextResponse.json(
+                    {
+                        error: "AI chat limit reached for your current plan.",
+                        plan: rl.plan,
+                        limit: rl.limit,
+                        remaining: rl.remaining,
+                    },
+                    { status: 429 }
+                );
+            }
         }
 
         // Get comprehensive student context

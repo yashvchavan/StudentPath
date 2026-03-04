@@ -3,6 +3,7 @@ import HeroSection from "@/components/landing/HeroSection";
 import SolarScrollAnimation from "@/components/landing/SolarScrollAnimation";
 import { StudentsSection, CollegesSection, ProfessionalsSection } from "@/components/landing/FeatureSections";
 import { AISection } from "@/components/landing/AISection";
+import { PricingSection } from "@/components/landing/PricingSection";
 import { StatsSection, ContactSection, CTASection, Footer } from "@/components/landing/SupportSections";
 
 export default function HomePage() {
@@ -17,6 +18,7 @@ export default function HomePage() {
       <CollegesSection />
       <ProfessionalsSection />
       <AISection />
+      <PricingSection />
       <CTASection />
       <ContactSection />
       <Footer />

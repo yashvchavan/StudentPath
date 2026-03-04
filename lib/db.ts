@@ -349,6 +349,99 @@ export async function initializeDatabase() {
       )
     `);
 
+    // ── Monetization & Usage Tracking Tables ──────────────────────────────
+
+    // subscriptions: Stripe-backed SaaS subscriptions per student
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        plan ENUM('free','pro','college_pro') NOT NULL DEFAULT 'free',
+        status ENUM('inactive','active','trialing','past_due','canceled') NOT NULL DEFAULT 'inactive',
+        stripe_customer_id VARCHAR(255),
+        stripe_subscription_id VARCHAR(255),
+        stripe_price_id VARCHAR(255),
+        current_period_start DATETIME NULL,
+        current_period_end DATETIME NULL,
+        cancel_at_period_end TINYINT(1) NOT NULL DEFAULT 0,
+        metadata JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+        INDEX idx_student_subscription (student_id),
+        UNIQUE KEY uq_stripe_subscription (stripe_subscription_id)
+      )
+    `);
+
+    // feature_usage: per-student, per-feature rate limiting counters
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS feature_usage (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        feature ENUM('ai_chat','resume_analysis','career_track','recommendation') NOT NULL,
+        plan ENUM('free','pro','college_pro') NOT NULL,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+        usage_count INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+        UNIQUE KEY uq_usage_period (student_id, feature, plan, period_start),
+        INDEX idx_usage_student (student_id),
+        INDEX idx_usage_student_feature (student_id, feature)
+      )
+    `);
+
+    // coupons: internal mapping of promo codes to discounts
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS coupons (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(64) NOT NULL UNIQUE,
+        description VARCHAR(255),
+        discount_type ENUM('percentage','fixed') NOT NULL,
+        discount_value DECIMAL(10,2) NOT NULL,
+        max_redemptions INT DEFAULT NULL,
+        times_redeemed INT NOT NULL DEFAULT 0,
+        college_id INT NULL,
+        valid_from DATETIME NULL,
+        valid_until DATETIME NULL,
+        stripe_coupon_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
+      )
+    `);
+
+    // coupon_redemptions: track which student used which coupon
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS coupon_redemptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        coupon_id INT NOT NULL,
+        student_id INT NOT NULL,
+        stripe_discount_id VARCHAR(255),
+        redeemed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (coupon_id) REFERENCES coupons(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+        UNIQUE KEY uq_coupon_student (coupon_id, student_id)
+      )
+    `);
+
+    // AI usage cost tracking (per-call token and cost logging)
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS ai_usage_cost (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NULL,
+        feature ENUM('ai_chat','resume_analysis','career_track','recommendation') NOT NULL,
+        tokens_used INT NOT NULL DEFAULT 0,
+        estimated_cost DECIMAL(10,6) NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE SET NULL,
+        INDEX idx_ai_usage_student (student_id),
+        INDEX idx_ai_usage_feature (feature),
+        INDEX idx_ai_usage_created_at (created_at)
+      )
+    `);
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {
