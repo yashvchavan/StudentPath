@@ -36,6 +36,7 @@ import {
   LifeBuoy,
   LogOut,
   Briefcase,
+  Laptop,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -63,6 +64,7 @@ const adminNav = [
   { icon: UsersRound, label: "Student Management", href: "/admin/students" },
   { icon: Library, label: "Course Catalog", href: "/admin/courses" },
   { icon: Briefcase, label: "Placements", href: "/admin/placements" },
+  { icon: Laptop, label: "Internships", href: "/admin/internships" },
   { icon: School, label: "Program Management", href: "/admin/programs" },
   { icon: BrainCircuit, label: "AI Configuration", href: "/admin/ai" },
   { icon: Wallet, label: "Affiliate Dashboard", href: "/admin/affiliate" },

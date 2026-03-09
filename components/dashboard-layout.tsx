@@ -33,6 +33,8 @@ import {
   LogOut,
   Compass,
   FileText,
+  Briefcase,
+  GraduationCap,
 } from "lucide-react"
 import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
@@ -101,6 +103,8 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     { icon: BookOpen, label: "My Courses", href: "/dashboard/courses", key: "courses" },
     { icon: Target, label: "Career Goals", href: "/dashboard/goals", key: "goals" },
     { icon: Compass, label: "Career Tracks", href: "/dashboard/career-tracks", key: "career-tracks" },
+    { icon: Briefcase, label: "Internships", href: "/dashboard/career-tracks/internships", key: "internships" },
+    { icon: GraduationCap, label: "Placements", href: "/dashboard/career-tracks/placement", key: "placement" },
     { icon: Award, label: "Skills Tracker", href: "/dashboard/skills", key: "skills" },
     { icon: Lightbulb, label: "Recommendations", href: "/dashboard/recommendations", key: "recommendations" },
     { icon: TrendingUp, label: "Progress Reports", href: "/dashboard/reports", key: "reports" },

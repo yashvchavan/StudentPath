@@ -442,6 +442,79 @@ export async function initializeDatabase() {
       )
     `);
 
+    // ── Internship Tables ─────────────────────────────────────────────────
+
+    // internships: college-posted internship opportunities
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS internships (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        logo_url VARCHAR(255),
+        role VARCHAR(255) NOT NULL,
+        stipend VARCHAR(100),
+        duration VARCHAR(100),
+        description TEXT,
+        eligibility TEXT,
+        location VARCHAR(255),
+        type ENUM('remote','in-office','hybrid') DEFAULT 'in-office',
+        start_date DATE,
+        application_deadline DATE,
+        apply_process TEXT,
+        rounds JSON,
+        required_skills JSON,
+        perks TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+      )
+    `);
+
+    // internship_applications: student applications for internships
+    // Drop and recreate to fix FK reference to Students(student_id)
+    await connection.execute(`DROP TABLE IF EXISTS internship_experiences`);
+    await connection.execute(`DROP TABLE IF EXISTS internship_applications`);
+
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS internship_applications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        internship_id INT NOT NULL,
+        student_id INT NOT NULL,
+        status ENUM('applied','under_review','shortlisted','rejected','selected') DEFAULT 'applied',
+        cover_letter TEXT,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (internship_id) REFERENCES internships(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+        UNIQUE KEY uq_internship_student (internship_id, student_id)
+      )
+    `);
+
+    // internship_experiences: students sharing their internship journey
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS internship_experiences (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        internship_id INT,
+        student_id INT NOT NULL,
+        company_name VARCHAR(255) NOT NULL,
+        role VARCHAR(255) NOT NULL,
+        duration VARCHAR(100),
+        stipend VARCHAR(100),
+        how_got_internship TEXT,
+        selection_rounds JSON,
+        industry_experience TEXT,
+        tips_for_applicants TEXT,
+        rating INT CHECK (rating >= 1 AND rating <= 5),
+        is_currently_interning BOOLEAN DEFAULT FALSE,
+        start_date DATE,
+        end_date DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (internship_id) REFERENCES internships(id) ON DELETE SET NULL,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE
+      )
+    `);
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {

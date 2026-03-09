@@ -32,6 +32,8 @@ import {
     TrendingUp,
     Zap,
     Flame,
+    Laptop,
+    Star,
 } from "lucide-react";
 
 export default function CareerTracksPage() {
@@ -129,7 +131,7 @@ export default function CareerTracksPage() {
                 </div>
 
                 {/* Track Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* ── Placement Track Card ───────────────────────────────── */}
                     <Card
                         className={`
@@ -214,6 +216,95 @@ export default function CareerTracksPage() {
                 `}>
                                     Explore Placements
                                     <ArrowRight className={`w-4 h-4 transition-transform duration-300 ${hoveredCard === "placement" ? "translate-x-1" : ""}`} />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* ── Internship Track Card ──────────────────────────── */}
+                    <Card
+                        className={`
+              relative overflow-hidden cursor-pointer transition-all duration-500 group
+              hover:shadow-2xl hover:-translate-y-2
+              ${hoveredCard === "internship"
+                                ? "ring-2 ring-orange-500/40 shadow-xl shadow-orange-500/10"
+                                : "hover:ring-1 hover:ring-orange-500/20"
+                            }
+            `}
+                        onClick={() => router.push("/dashboard/career-tracks/internships")}
+                        onMouseEnter={() => setHoveredCard("internship")}
+                        onMouseLeave={() => setHoveredCard(null)}
+                    >
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                        <CardContent className="p-8 relative z-10">
+                            <div className="flex flex-col items-center text-center space-y-6">
+                                {/* Icon + Title */}
+                                <div className="relative">
+                                    <div className={`
+                    p-4 rounded-2xl transition-all duration-300
+                    ${hoveredCard === "internship"
+                                            ? "bg-orange-500/20 scale-110"
+                                            : "bg-orange-500/10"
+                                        }
+                  `}>
+                                        <Laptop className="w-10 h-10 text-orange-500" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h2 className="text-2xl font-bold text-foreground">Internship Track</h2>
+                                    <p className="text-muted-foreground text-sm max-w-xs">
+                                        Find internships, apply with ease & learn from peer experiences
+                                    </p>
+                                </div>
+
+                                {/* Progress Ring */}
+                                <ProgressRing
+                                    progress={Math.min(placementReadiness + 5, 100)}
+                                    size={140}
+                                    strokeWidth={10}
+                                    color="hsl(25 95% 53%)"
+                                />
+                                <p className="text-sm text-muted-foreground -mt-2">Internship Readiness</p>
+
+                                {/* Features */}
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    <Badge variant="secondary" className="flex items-center gap-1">
+                                        <Building2 className="w-3 h-3" /> College Drives
+                                    </Badge>
+                                    <Badge variant="secondary" className="flex items-center gap-1">
+                                        <Star className="w-3 h-3" /> Peer Stories
+                                    </Badge>
+                                    <Badge variant="secondary" className="flex items-center gap-1">
+                                        <TrendingUp className="w-3 h-3" /> Track Status
+                                    </Badge>
+                                </div>
+
+                                {/* Stats row */}
+                                <div className="grid grid-cols-3 gap-4 w-full pt-4 border-t border-border/50">
+                                    <div>
+                                        <p className="text-lg font-bold text-foreground">Live</p>
+                                        <p className="text-xs text-muted-foreground">Openings</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-lg font-bold text-foreground">Apply</p>
+                                        <p className="text-xs text-muted-foreground">In-Platform</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-lg font-bold text-foreground">Peer</p>
+                                        <p className="text-xs text-muted-foreground">Insights</p>
+                                    </div>
+                                </div>
+
+                                {/* CTA */}
+                                <div className={`
+                  flex items-center gap-2 text-orange-500 font-medium transition-all duration-300
+                  ${hoveredCard === "internship" ? "translate-x-2" : ""}
+                `}>
+                                    Explore Internships
+                                    <ArrowRight className={`w-4 h-4 transition-transform duration-300 ${hoveredCard === "internship" ? "translate-x-1" : ""}`} />
                                 </div>
                             </div>
                         </CardContent>
