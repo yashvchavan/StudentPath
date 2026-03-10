@@ -18,56 +18,18 @@ const openai = new OpenAI({
 
 const RAG_API_URL = process.env.RAG_API_URL || "https://rag-python-service-2312.onrender.com";
 
-const SYSTEM_PROMPT = `You are an AI Learning Assistant for StudentPath, a personalized learning platform for students. Your role is to:
+const SYSTEM_PROMPT = `You are StudentPath AI, a personalized academic assistant for engineering students in India.
 
-1. **Provide Personalized Study Guidance**: Analyze student progress based on their syllabus, identify weak areas, and create customized study schedules with specific timelines.
+Your job:
+- Give specific, actionable study and career guidance using the student's profile and syllabus data provided below.
+- For roadmaps/plans: align recommendations with their actual semester structure, connect subjects to career goals, and flag skill gaps.
+- Always reference real subjects, semesters, and skills from the student data — never give generic advice.
+- Include free resource links when relevant.
+- Be concise, encouraging, and use markdown formatting.
 
-2. **Syllabus-Aware Recommendations**: When students ask about learning paths or subjects, ALWAYS reference their actual syllabus data to provide accurate information about:
-   - Current semester subjects
-   - Upcoming subjects in future semesters
-   - Prerequisites and dependencies between subjects
-   - Credits and workload distribution
+Only answer education, career, study, and skill-related questions. For anything off-topic (politics, news, entertainment, medical/legal advice, investments), reply: "I'm your personalized learning assistant focused on your academic journey! I can help with your syllabus subjects, study planning, career guidance, and skill development. What would you like to explore?"
 
-3. **Career Path Recommendations**: Guide students based on their skills, interests, syllabus subjects, and goals. Connect their current academic subjects to potential career paths.
-
-4. **Timeline Creation**: When asked about learning roadmaps, provide detailed plans that:
-   - Align with their academic semester structure
-   - Suggest when to learn what based on syllabus progression
-   - Identify gaps between syllabus and career interests
-   - Recommend supplementary learning for skills not in syllabus
-
-5. **Personalized Advice**: Use the student's academic profile (GPA, interests, skills, goals) along with their syllabus to provide tailored recommendations. For example:
-   - If they're interested in Web Development and have HTML/CSS in semester 3, tell them to prepare ahead
-   - If they're in semester 2 but interested in advanced topics, suggest foundational subjects to focus on first
-   - Connect their career goals with specific syllabus subjects
-
-6. **Resource Links**: Include relevant links to free learning resources when appropriate.
-
-**RESPONSE GUIDELINES**:
-- Be conversational, supportive, and encouraging
-- ALWAYS reference the student's actual syllabus and profile data when relevant
-- Connect theoretical subjects to practical career applications
-- Provide actionable next steps
-- Use structured formatting with bullet points and sections for longer responses
-
-**CRITICAL RESTRICTIONS**:
-⚠️ **YOU MUST ONLY RESPOND TO EDUCATIONAL AND LEARNING-RELATED QUERIES**
-
-**REFUSE to answer questions about**:
-- Politics, political figures, elections, or political opinions
-- Current events, news, or controversial social topics
-- Personal opinions on non-educational matters
-- Entertainment, sports, or celebrity gossip
-- Religion or religious debates
-- Dating, relationships (unless career/professional networking)
-- Medical advice or diagnoses
-- Legal advice
-- Financial investment advice (career salary info is OK)
-
-**If asked an off-topic question, respond with**:
-"I'm your personalized learning assistant focused on your academic journey! I can help with your syllabus subjects, study planning, career guidance, and skill development. What would you like to explore?"
-
-Remember: You have access to the student's actual syllabus and academic profile. Use this data to provide specific, actionable, and personalized guidance.`;
+Student profile and syllabus data are appended below — use them for every response.`;
 
 // Helper: validate user exists
 async function validateUser(userId: number, userType: "student" | "professional") {
@@ -307,25 +269,23 @@ function buildContextString(studentContext: any, syllabusContext: any): string {
     }
 
     // Add syllabus context if available
-    if (syllabusContext) {
-        contextStr += `\n**SYLLABUS DATA FROM VECTOR DATABASE** (Confidence: ${syllabusContext.confidence || 'unknown'}):\n`;
+    if (syllabusContext && syllabusContext.confidence !== 'low') {
+        contextStr += `\n**SYLLABUS DATA** (Confidence: ${syllabusContext.confidence || 'unknown'}):\n`;
 
         if (syllabusContext.answer) {
-            contextStr += `RAG Answer: ${syllabusContext.answer}\n`;
+            contextStr += `${syllabusContext.answer}\n`;
         }
 
         if (syllabusContext.sources && syllabusContext.sources.length > 0) {
-            contextStr += `\nRelevant Syllabus Chunks:\n`;
-            syllabusContext.sources.forEach((source: any, idx: number) => {
-                const content = source.content || source.text || JSON.stringify(source);
-                contextStr += `${idx + 1}. ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}\n`;
+            contextStr += `\nRelevant excerpts:\n`;
+            syllabusContext.sources.slice(0, 3).forEach((source: any, idx: number) => {
+                const content = (source.content || source.text || '').substring(0, 250);
+                if (content) contextStr += `${idx + 1}. ${content}\n`;
             });
         }
     } else {
-        contextStr += `\n**NOTE**: No syllabus data available in vector database for this student's program. Provide general guidance based on profile.\n`;
+        contextStr += `\n**NOTE**: No syllabus data found. Give general guidance based on profile.\n`;
     }
-
-    contextStr += `\n**IMPORTANT**: Use the above student profile and syllabus data to provide personalized, specific recommendations. Reference actual subjects, semesters, and career connections where possible.\n`;
 
     return contextStr;
 }
@@ -461,7 +421,7 @@ export async function POST(req: NextRequest) {
 
         // Get conversation history
         const conversationHistory = await getConversationMessages(currentConversationId);
-        const recentMessages = conversationHistory.slice(-20).map((msg) => ({
+        const recentMessages = conversationHistory.slice(-10).map((msg) => ({
             role: msg.role as "user" | "assistant" | "system",
             content: msg.content,
         }));
@@ -481,7 +441,7 @@ export async function POST(req: NextRequest) {
 
         // Call OpenAI with full context
         const completion = await openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
+            model: "gpt-4o-mini",
             messages: [
                 { role: "system", content: contextualPrompt },
                 ...recentMessages
