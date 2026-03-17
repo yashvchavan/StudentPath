@@ -40,7 +40,10 @@ export async function POST(request: NextRequest) {
       locationPreference,
       industryFocus,
       intensityLevel,
-      collegeToken
+      collegeToken,
+      githubUsername,
+      leetcodeUsername,
+      linkedinUrl
     } = body;
 
     // Validate required fields
@@ -49,6 +52,19 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // Optional field validation
+    if (githubUsername && !/^[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){0,38}$/i.test(githubUsername)) {
+      return NextResponse.json({ error: "Invalid GitHub username format" }, { status: 400 });
+    }
+    
+    if (linkedinUrl && !/^https?:\/\/(www\.)?linkedin\.com\/.*$/i.test(linkedinUrl)) {
+      return NextResponse.json({ error: "Invalid LinkedIn URL format" }, { status: 400 });
+    }
+    
+    if (leetcodeUsername && !/^[a-zA-Z0-9_]{1,15}$/i.test(leetcodeUsername)) {
+      return NextResponse.json({ error: "Invalid LeetCode username format" }, { status: 400 });
     }
 
     connection = await pool.getConnection();
@@ -115,8 +131,8 @@ export async function POST(request: NextRequest) {
         enrollment_year, current_gpa, academic_interests, career_quiz_answers,
         technical_skills, soft_skills, language_skills, primary_goal,
         secondary_goal, timeline, location_preference, industry_focus,
-        intensity_level, created_at, updated_at, is_active
-      ) VALUES (?, ?, CONCAT(?, ' ', ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), TRUE)`,
+        intensity_level, github_username, leetcode_username, linkedin_url, created_at, updated_at, is_active
+      ) VALUES (?, ?, CONCAT(?, ' ', ?), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), TRUE)`,
       [
         firstName,
         lastName,
@@ -144,7 +160,10 @@ export async function POST(request: NextRequest) {
         timeline || null,
         locationPreference || null,
         JSON.stringify(industryFocus || []),
-        intensityLevel || 'moderate'
+        intensityLevel || 'moderate',
+        githubUsername || null,
+        leetcodeUsername || null,
+        linkedinUrl || null
       ]
     );
 

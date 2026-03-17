@@ -41,6 +41,9 @@ export interface StudentRow extends RowDataPacket {
   email: string;
   program: string;
   enrollment_date: Date;
+  github_username?: string;
+  leetcode_username?: string;
+  linkedin_url?: string;
   is_active: boolean;
   created_at: Date;
 }
