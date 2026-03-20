@@ -56,15 +56,7 @@ export async function GET(req: NextRequest) {
     let userRole: 'college' | 'dept_tpo' | null = null;
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
-
-      if (decoded.role !== 'college' && decoded.role !== 'dept_tpo') {
-        return NextResponse.json({
-          success: false,
-          error: 'Unauthorized role'
-        }, { status: 403 })
-      }
-
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: 'college' | 'dept_tpo' };
       userRole = decoded.role;
 
       if (decoded.role === 'college') {
@@ -97,7 +89,7 @@ export async function GET(req: NextRequest) {
       console.error("Session parse error", e);
     }
 
-    if (!collegeToken || !collegeId || !userRole) {
+    if (!collegeToken || !collegeId) {
       return NextResponse.json({
         success: false,
         error: 'Invalid session'
@@ -165,10 +157,13 @@ export async function GET(req: NextRequest) {
       [collegeToken]
     )
 
+    const isDeptTpo = userRole === 'dept_tpo'
+    const maxUsage = isDeptTpo ? 100 : 1000
+
     const tokenUsage = {
       usageCount: tokenUsageRows[0]?.usage_count || 0,
-      maxUsage: userRole === 'dept_tpo' ? 100 : 1000, // Lower quota for dept TPO
-      remaining: (userRole === 'dept_tpo' ? 100 : 1000) - (tokenUsageRows[0]?.usage_count || 0),
+      maxUsage, // Lower quota for dept TPO
+      remaining: maxUsage - (tokenUsageRows[0]?.usage_count || 0),
       isActive: true
     }
 

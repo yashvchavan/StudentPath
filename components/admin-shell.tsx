@@ -91,6 +91,17 @@ interface TpoInfo {
   departmentId?: number;
 }
 
+const CENTRAL_TPO_ONLY_PATHS = [
+  "/admin/departments",
+  "/admin/tpo-users",
+  "/admin/programs",
+  "/admin/ai",
+  "/admin/affiliate",
+  "/admin/integrations",
+  "/admin/settings",
+  "/admin/users",
+]
+
 export default function AdminShell({ title, description, showRange = false, rightContent, children }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -103,6 +114,24 @@ export default function AdminShell({ title, description, showRange = false, righ
   const router = useRouter()
 
   const [loggingOut, setLoggingOut] = useState(false)
+
+  const getFallbackRole = (): "college" | "dept_tpo" | null => {
+    if (typeof window === "undefined") return null
+
+    try {
+      // Use least-privilege fallback to avoid exposing central-only navigation on auth fetch failures.
+      if (localStorage.getItem("tpoData") || document.cookie.includes("tpoData=")) {
+        return "dept_tpo"
+      }
+      if (localStorage.getItem("collegeData") || document.cookie.includes("collegeData=")) {
+        return "college"
+      }
+    } catch (error) {
+      console.error("[AdminShell] Error determining fallback role:", error)
+    }
+
+    return null
+  }
 
   // Fetch TPO session info on mount
   useEffect(() => {
@@ -138,37 +167,56 @@ export default function AdminShell({ title, description, showRange = false, righ
               departmentId: data.user.departmentId,
             });
           } else {
-            console.log("[AdminShell] No user data or not authenticated - defaulting to college role");
-            // Fallback to prevent indefinite loading
-            setTpoInfo({
-              role: "college",
-              isCentralTPO: true,
-              isDeptTPO: false,
-            });
+            const fallbackRole = getFallbackRole()
+            if (fallbackRole) {
+              setTpoInfo({
+                role: fallbackRole,
+                isCentralTPO: fallbackRole === "college",
+                isDeptTPO: fallbackRole === "dept_tpo",
+              })
+            } else {
+              setTpoInfo(null)
+            }
           }
         } else {
-          console.log("[AdminShell] Response not OK - defaulting to college role");
-          // Fallback to prevent indefinite loading
-          setTpoInfo({
-            role: "college",
-            isCentralTPO: true,
-            isDeptTPO: false,
-          });
+          const fallbackRole = getFallbackRole()
+          if (fallbackRole) {
+            setTpoInfo({
+              role: fallbackRole,
+              isCentralTPO: fallbackRole === "college",
+              isDeptTPO: fallbackRole === "dept_tpo",
+            })
+          } else {
+            setTpoInfo(null)
+          }
         }
       } catch (error) {
         console.error("[AdminShell] Error fetching TPO info:", error);
-        // Fallback to prevent indefinite loading
-        setTpoInfo({
-          role: "college",
-          isCentralTPO: true,
-          isDeptTPO: false,
-        });
+        const fallbackRole = getFallbackRole()
+        if (fallbackRole) {
+          setTpoInfo({
+            role: fallbackRole,
+            isCentralTPO: fallbackRole === "college",
+            isDeptTPO: fallbackRole === "dept_tpo",
+          })
+        } else {
+          setTpoInfo(null)
+        }
       } finally {
         setLoadingTpoInfo(false)
       }
     };
     fetchTpoInfo();
   }, []);
+
+  useEffect(() => {
+    if (loadingTpoInfo || !tpoInfo?.isDeptTPO) return
+
+    const isCentralOnlyPath = CENTRAL_TPO_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+    if (isCentralOnlyPath) {
+      router.replace("/admin")
+    }
+  }, [loadingTpoInfo, pathname, router, tpoInfo])
 
   // Filter navigation based on user role
   const roleFilteredNav = adminNav.filter(item => {
