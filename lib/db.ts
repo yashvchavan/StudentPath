@@ -515,6 +515,123 @@ export async function initializeDatabase() {
       )
     `);
 
+    // ── TPO System Tables ─────────────────────────────────────────────────
+
+    // departments: college departments/branches
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS departments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        hod_name VARCHAR(255),
+        hod_email VARCHAR(255),
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+        UNIQUE KEY uq_college_dept_code (college_id, code)
+      )
+    `);
+
+    // tpo_users: departmental TPO accounts
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS tpo_users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        department_id INT,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255),
+        designation VARCHAR(100),
+        permissions JSON,
+        invite_token VARCHAR(100),
+        invite_expires_at TIMESTAMP NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+      )
+    `);
+
+    // department_analytics: placement statistics per department
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS department_analytics (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        department_id INT NOT NULL,
+        period_start DATE NOT NULL,
+        period_end DATE NOT NULL,
+        total_students INT DEFAULT 0,
+        placed_students INT DEFAULT 0,
+        placement_rate DECIMAL(5,2) DEFAULT 0,
+        avg_package DECIMAL(12,2) DEFAULT 0,
+        highest_package DECIMAL(12,2) DEFAULT 0,
+        total_offers INT DEFAULT 0,
+        skill_gaps JSON,
+        top_recruiters JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
+        UNIQUE KEY uq_dept_period (department_id, period_start, period_end)
+      )
+    `);
+
+    // tpo_invites: invite tokens for dept_tpo registration
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS tpo_invites (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        department_id INT,
+        email VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        designation VARCHAR(100),
+        permissions JSON,
+        token VARCHAR(100) UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        accepted_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+      )
+    `);
+
+    // ── ALTER existing tables for TPO support ─────────────────────────────
+
+    // Add department_ids to placements (safe to run multiple times)
+    try {
+      await connection.execute(`
+        ALTER TABLE placements ADD COLUMN department_ids JSON DEFAULT NULL
+      `);
+    } catch (_) { /* column may already exist */ }
+
+    // Add department_ids to internships
+    try {
+      await connection.execute(`
+        ALTER TABLE internships ADD COLUMN department_ids JSON DEFAULT NULL
+      `);
+    } catch (_) { /* column may already exist */ }
+
+    // Add department_id to students
+    try {
+      await connection.execute(`
+        ALTER TABLE students ADD COLUMN department_id INT DEFAULT NULL
+      `);
+    } catch (_) { /* column may already exist */ }
+
+    // Add placement_status to students for tracking
+    try {
+      await connection.execute(`
+        ALTER TABLE students ADD COLUMN placement_status ENUM('unplaced', 'placed', 'opted_out') DEFAULT 'unplaced'
+      `);
+    } catch (_) { /* column may already exist */ }
+
+    // Add backlogs count to students
+    try {
+      await connection.execute(`
+        ALTER TABLE students ADD COLUMN backlogs INT DEFAULT 0
+      `);
+    } catch (_) { /* column may already exist */ }
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {

@@ -37,14 +37,14 @@ import jwt from 'jsonwebtoken'
 
 export async function GET(req: NextRequest) {
   try {
-    // Get college data from cookies
+    // Get auth data from cookies
     const cookieStore = req.cookies
     const token = cookieStore.get('auth_session')?.value
 
     if (!token) {
       return NextResponse.json({
         success: false,
-        error: 'Unauthorized - College authentication required'
+        error: 'Unauthorized - Authentication required'
       }, { status: 401 })
     }
 
@@ -52,14 +52,42 @@ export async function GET(req: NextRequest) {
     let collegeId: number | undefined;
     let collegeName: string | undefined;
     let collegeEmail: string | undefined;
+    let departmentId: number | undefined;
+    let userRole: 'college' | 'dept_tpo' | null = null;
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: number, role: string };
+
+      if (decoded.role !== 'college' && decoded.role !== 'dept_tpo') {
+        return NextResponse.json({
+          success: false,
+          error: 'Unauthorized role'
+        }, { status: 403 })
+      }
+
+      userRole = decoded.role;
+
       if (decoded.role === 'college') {
+        // Central TPO - full access
         collegeId = decoded.id;
-        // Fetch token directly from DB
         const [rows]: any = await pool.query('SELECT college_token, college_name, email FROM colleges WHERE id = ?', [collegeId]);
         if (rows.length > 0) {
+          collegeToken = rows[0].college_token;
+          collegeName = rows[0].college_name;
+          collegeEmail = rows[0].email;
+        }
+      } else if (decoded.role === 'dept_tpo') {
+        // Department TPO - scoped access
+        const [rows]: any = await pool.query(
+          `SELECT tu.college_id, tu.department_id, c.college_token, c.college_name, c.email
+           FROM tpo_users tu
+           JOIN colleges c ON tu.college_id = c.id
+           WHERE tu.id = ? AND tu.is_active = TRUE`,
+          [decoded.id]
+        );
+        if (rows.length > 0) {
+          collegeId = rows[0].college_id;
+          departmentId = rows[0].department_id;
           collegeToken = rows[0].college_token;
           collegeName = rows[0].college_name;
           collegeEmail = rows[0].email;
@@ -69,20 +97,23 @@ export async function GET(req: NextRequest) {
       console.error("Session parse error", e);
     }
 
-    if (!collegeToken) {
+    if (!collegeToken || !collegeId || !userRole) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid college session'
+        error: 'Invalid session'
       }, { status: 401 })
     }
 
+    // Build department filter for queries
+    const departmentFilter = departmentId ? ` AND department_id = ${departmentId}` : '';
+
     // 1. Get total and active students count
     const [statsRows] = await pool.query<StatsRow[]>(
-      `SELECT 
+      `SELECT
         COUNT(*) as total_students,
         SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_students
       FROM Students
-      WHERE college_token = ?`,
+      WHERE college_token = ?${departmentFilter}`,
       [collegeToken]
     )
 
@@ -90,9 +121,9 @@ export async function GET(req: NextRequest) {
 
     // 2. Get unique programs (departments) from Students table
     const [programRows] = await pool.query<ProgramRow[]>(
-      `SELECT DISTINCT program 
+      `SELECT DISTINCT program
       FROM Students
-      WHERE college_token = ? AND program IS NOT NULL AND program != ''
+      WHERE college_token = ? AND program IS NOT NULL AND program != ''${departmentFilter}
       ORDER BY program`,
       [collegeToken]
     )
@@ -101,7 +132,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Get recent registrations (last 10 students) with program from Students table
     const [recentRows] = await pool.query<StudentRow[]>(
-      `SELECT 
+      `SELECT
         student_id,
         first_name,
         last_name,
@@ -109,7 +140,7 @@ export async function GET(req: NextRequest) {
         program,
         created_at
       FROM Students
-      WHERE college_token = ?
+      WHERE college_token = ?${departmentFilter}
       ORDER BY created_at DESC
       LIMIT 10`,
       [collegeToken]
@@ -128,26 +159,26 @@ export async function GET(req: NextRequest) {
     const [tokenUsageRows] = await pool.query<TokenUsageRow[]>(
       `SELECT COUNT(*) as usage_count
       FROM Students
-      WHERE college_token = ? 
+      WHERE college_token = ?
       AND MONTH(created_at) = MONTH(CURRENT_DATE())
-      AND YEAR(created_at) = YEAR(CURRENT_DATE())`,
+      AND YEAR(created_at) = YEAR(CURRENT_DATE())${departmentFilter}`,
       [collegeToken]
     )
 
     const tokenUsage = {
       usageCount: tokenUsageRows[0]?.usage_count || 0,
-      maxUsage: 1000, // You can make this dynamic if stored in database
-      remaining: 1000 - (tokenUsageRows[0]?.usage_count || 0),
+      maxUsage: userRole === 'dept_tpo' ? 100 : 1000, // Lower quota for dept TPO
+      remaining: (userRole === 'dept_tpo' ? 100 : 1000) - (tokenUsageRows[0]?.usage_count || 0),
       isActive: true
     }
 
     // 5. Get department distribution from Students table
     const [deptRows] = await pool.query<DepartmentRow[]>(
-      `SELECT 
+      `SELECT
         program,
         COUNT(*) as count
       FROM Students
-      WHERE college_token = ? AND program IS NOT NULL AND program != ''
+      WHERE college_token = ? AND program IS NOT NULL AND program != ''${departmentFilter}
       GROUP BY program
       ORDER BY count DESC`,
       [collegeToken]

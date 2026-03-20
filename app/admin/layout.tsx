@@ -20,11 +20,13 @@ function AdminAuthWrapper({ children }: { children: React.ReactNode }) {
     const [isAuthorized, setIsAuthorized] = useState(false)
 
     useEffect(() => {
+        console.log("[AdminAuthWrapper] Auth state:", { isAuthenticated, isLoading, role });
         if (!isLoading) {
-            if (isAuthenticated && role === 'college') {
+            if (isAuthenticated && (role === 'college' || role === 'dept_tpo')) {
+                console.log("[AdminAuthWrapper] Authorizing admin access for role:", role);
                 setIsAuthorized(true)
             } else if (isAuthenticated) {
-                // Logged in but not college - redirect to appropriate dashboard
+                // Logged in but not college/dept_tpo - redirect to appropriate dashboard
                 console.log(`User is ${role}, redirecting from admin`)
                 if (role === 'student') router.push('/dashboard')
                 else if (role === 'professional') router.push('/professional-dashboard')

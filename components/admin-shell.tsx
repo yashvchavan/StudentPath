@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type PropsWithChildren } from "react"
+import { useState, useEffect, type PropsWithChildren } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAdminProfile, clearAdminProfileCache } from "@/contexts/AdminProfileContext"
@@ -37,6 +37,8 @@ import {
   LogOut,
   Briefcase,
   Laptop,
+  Building2,
+  UserPlus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +53,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Badge } from "@/components/ui/badge"
 
 type AdminShellProps = PropsWithChildren<{
   title?: string
@@ -59,40 +62,127 @@ type AdminShellProps = PropsWithChildren<{
   rightContent?: React.ReactNode
 }>
 
+// Navigation items with role-based visibility
 const adminNav = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
-  { icon: UsersRound, label: "Student Management", href: "/admin/students" },
-  { icon: Library, label: "Course Catalog", href: "/admin/courses" },
-  { icon: Briefcase, label: "Placements", href: "/admin/placements" },
-  { icon: Laptop, label: "Internships", href: "/admin/internships" },
-  { icon: School, label: "Program Management", href: "/admin/programs" },
-  { icon: BrainCircuit, label: "AI Configuration", href: "/admin/ai" },
-  { icon: Wallet, label: "Affiliate Dashboard", href: "/admin/affiliate" },
-  { icon: LineChart, label: "Analytics & Reports", href: "/admin/analytics" },
-  { icon: BellRing, label: "Notification Center", href: "/admin/notifications" },
-  { icon: Boxes, label: "System Integrations", href: "/admin/integrations" },
-  { icon: Cog, label: "College Settings", href: "/admin/settings" },
-  { icon: UserCog, label: "Admin Users", href: "/admin/users" },
-  { icon: LifeBuoy, label: "Support Center", href: "/admin/support" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/admin", roles: ["college", "dept_tpo"] },
+  { icon: UsersRound, label: "Student Management", href: "/admin/students", roles: ["college", "dept_tpo"] },
+  { icon: Library, label: "Course Catalog", href: "/admin/courses", roles: ["college", "dept_tpo"] },
+  { icon: Briefcase, label: "Placements", href: "/admin/placements", roles: ["college", "dept_tpo"] },
+  { icon: Laptop, label: "Internships", href: "/admin/internships", roles: ["college", "dept_tpo"] },
+  { icon: Building2, label: "Departments", href: "/admin/departments", roles: ["college"] },
+  { icon: UserPlus, label: "TPO Users", href: "/admin/tpo-users", roles: ["college"] },
+  { icon: School, label: "Program Management", href: "/admin/programs", roles: ["college"] },
+  { icon: BrainCircuit, label: "AI Configuration", href: "/admin/ai", roles: ["college"] },
+  { icon: Wallet, label: "Affiliate Dashboard", href: "/admin/affiliate", roles: ["college"] },
+  { icon: LineChart, label: "Analytics & Reports", href: "/admin/analytics", roles: ["college", "dept_tpo"] },
+  { icon: BellRing, label: "Notification Center", href: "/admin/notifications", roles: ["college", "dept_tpo"] },
+  { icon: Boxes, label: "System Integrations", href: "/admin/integrations", roles: ["college"] },
+  { icon: Cog, label: "College Settings", href: "/admin/settings", roles: ["college"] },
+  { icon: UserCog, label: "Admin Users", href: "/admin/users", roles: ["college"] },
+  { icon: LifeBuoy, label: "Support Center", href: "/admin/support", roles: ["college", "dept_tpo"] },
 ]
+
+// TPO session info interface
+interface TpoInfo {
+  role: "college" | "dept_tpo";
+  isCentralTPO: boolean;
+  isDeptTPO: boolean;
+  departmentName?: string;
+  departmentId?: number;
+}
 
 export default function AdminShell({ title, description, showRange = false, rightContent, children }: AdminShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchFocused, setSearchFocused] = useState(false)
-  const { adminProfile, setAdminProfile } = useAdminProfile() // Use context instead of local state
+  const { adminProfile, setAdminProfile } = useAdminProfile()
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
+  const [tpoInfo, setTpoInfo] = useState<TpoInfo | null>(null)
+  const [loadingTpoInfo, setLoadingTpoInfo] = useState(true)
   const pathname = usePathname()
   const router = useRouter()
 
   const [loggingOut, setLoggingOut] = useState(false)
 
-  // � Search filtering logic
-  const filteredNav = adminNav.filter(item =>
+  // Fetch TPO session info on mount
+  useEffect(() => {
+    const fetchTpoInfo = async () => {
+      try {
+        setLoadingTpoInfo(true)
+        console.log("[AdminShell] Fetching TPO info...");
+
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 5000) // Reduced to 5 seconds
+
+        const res = await fetch('/api/auth/me', {
+          credentials: 'include',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId)
+
+        console.log("[AdminShell] Response status:", res.status);
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log("[AdminShell] Response data:", data);
+
+          if (data.authenticated && data.user) {
+            const role = data.user.role as "college" | "dept_tpo";
+            console.log("[AdminShell] Setting TPO info for role:", role);
+
+            setTpoInfo({
+              role,
+              isCentralTPO: role === "college",
+              isDeptTPO: role === "dept_tpo",
+              departmentName: data.user.departmentName,
+              departmentId: data.user.departmentId,
+            });
+          } else {
+            console.log("[AdminShell] No user data or not authenticated - defaulting to college role");
+            // Fallback to prevent indefinite loading
+            setTpoInfo({
+              role: "college",
+              isCentralTPO: true,
+              isDeptTPO: false,
+            });
+          }
+        } else {
+          console.log("[AdminShell] Response not OK - defaulting to college role");
+          // Fallback to prevent indefinite loading
+          setTpoInfo({
+            role: "college",
+            isCentralTPO: true,
+            isDeptTPO: false,
+          });
+        }
+      } catch (error) {
+        console.error("[AdminShell] Error fetching TPO info:", error);
+        // Fallback to prevent indefinite loading
+        setTpoInfo({
+          role: "college",
+          isCentralTPO: true,
+          isDeptTPO: false,
+        });
+      } finally {
+        setLoadingTpoInfo(false)
+      }
+    };
+    fetchTpoInfo();
+  }, []);
+
+  // Filter navigation based on user role
+  const roleFilteredNav = adminNav.filter(item => {
+    // While loading, show minimal navigation to prevent flash
+    if (loadingTpoInfo || !tpoInfo) return item.href === "/admin"; // Only show Dashboard while loading
+    return item.roles.includes(tpoInfo.role);
+  });
+
+  // Search filtering logic
+  const filteredNav = roleFilteredNav.filter(item =>
     item.label.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // 🔍 Handle search navigation
+  // Handle search navigation
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim() && filteredNav.length > 0) {
       router.push(filteredNav[0].href)
@@ -101,15 +191,15 @@ export default function AdminShell({ title, description, showRange = false, righ
     }
   }
 
-  // �🔹 Logout function
+  // Logout function
   const handleLogout = async () => {
     setLoggingOut(true)
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        setAdminProfile(null); // Clear context state
-        clearAdminProfileCache(); // Clear module-level cache
+        setAdminProfile(null);
+        clearAdminProfileCache();
         router.replace("/college-login");
       } else {
         console.error("Logout failed:", data.error);
@@ -156,7 +246,16 @@ export default function AdminShell({ title, description, showRange = false, righ
                     <h1 className="text-sm sm:text-base md:text-lg font-bold text-white truncate" title={adminProfile.name ?? undefined}>
                       {adminProfile.name}
                     </h1>
-                    <p className="text-xs text-zinc-400 hidden sm:block">Admin Portal</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-zinc-400 hidden sm:block">
+                        {tpoInfo?.isDeptTPO ? "Dept TPO Portal" : "Admin Portal"}
+                      </p>
+                      {tpoInfo?.isDeptTPO && tpoInfo.departmentName && (
+                        <Badge variant="outline" className="text-xs border-blue-600/50 text-blue-400 hidden md:inline-flex">
+                          {tpoInfo.departmentName}
+                        </Badge>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <div className="animate-pulse">
@@ -197,6 +296,19 @@ export default function AdminShell({ title, description, showRange = false, righ
 
           {/* Right */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Role Badge (visible on desktop) */}
+            {tpoInfo && (
+              <Badge
+                variant="outline"
+                className={`hidden lg:inline-flex text-xs ${
+                  tpoInfo.isCentralTPO
+                    ? "border-emerald-600/50 text-emerald-400"
+                    : "border-purple-600/50 text-purple-400"
+                }`}
+              >
+                {tpoInfo.isCentralTPO ? "Central TPO" : "Dept TPO"}
+              </Badge>
+            )}
             {/* Logout Button */}
             <Button
               onClick={handleLogout}
@@ -229,6 +341,13 @@ export default function AdminShell({ title, description, showRange = false, righ
           style={{ top: '68px', height: 'calc(100vh - 68px)' }}
         >
           <nav className="p-4">
+            {/* Department info for Dept TPO (mobile) */}
+            {tpoInfo?.isDeptTPO && tpoInfo.departmentName && (
+              <div className="mb-4 p-3 bg-purple-600/10 border border-purple-600/30 rounded-lg md:hidden">
+                <p className="text-xs text-purple-400 font-medium">Your Department</p>
+                <p className="text-sm text-white truncate">{tpoInfo.departmentName}</p>
+              </div>
+            )}
             <ul className="space-y-1">
               {filteredNav.length > 0 ? (
                 filteredNav.map((item) => {

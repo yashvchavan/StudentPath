@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type UserRole = 'student' | 'college' | 'professional' | null;
+export type UserRole = 'student' | 'college' | 'professional' | 'dept_tpo' | null;
 
 export interface User {
     id: number | string;
