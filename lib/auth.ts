@@ -6,10 +6,12 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 export interface AuthUser {
     id: number | string; // Allow string ID for student_id
-    role: "student" | "professional" | "college";
+    role: "student" | "professional" | "college" | "dept_tpo";
     email: string;
     name: string;
     college_id?: number;
+    department_id?: number; // For dept_tpo users
+    permissions?: string[]; // TPO permissions array
     logo_url?: string;
 }
 
@@ -55,6 +57,39 @@ export async function getAuthUser(): Promise<AuthUser | null> {
                         name: college.college_name,
                         college_id: college.id,
                         logo_url: college.logo_url,
+                    };
+                }
+            } else if (userRole === "dept_tpo") {
+                // Dept TPO - fetch from tpo_users table
+                const [rows]: any = await connection.execute(
+                    `SELECT tu.*, c.logo_url
+                     FROM tpo_users tu
+                     LEFT JOIN colleges c ON tu.college_id = c.id
+                     WHERE tu.id = ? AND tu.is_active = TRUE`,
+                    [userId]
+                );
+                if (rows.length > 0) {
+                    const tpoUser = rows[0];
+                    // Parse permissions from JSON
+                    let permissions: string[] = [];
+                    if (tpoUser.permissions) {
+                        if (Array.isArray(tpoUser.permissions)) {
+                            permissions = tpoUser.permissions;
+                        } else if (typeof tpoUser.permissions === 'string') {
+                            try {
+                                permissions = JSON.parse(tpoUser.permissions);
+                            } catch { /* ignore parse error */ }
+                        }
+                    }
+                    return {
+                        id: tpoUser.id,
+                        role: "dept_tpo",
+                        email: tpoUser.email,
+                        name: tpoUser.name,
+                        college_id: tpoUser.college_id,
+                        department_id: tpoUser.department_id,
+                        permissions,
+                        logo_url: tpoUser.logo_url,
                     };
                 }
             } else if (userRole === "student") {

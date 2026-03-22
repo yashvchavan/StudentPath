@@ -505,6 +505,9 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     agreeToTerms: false,
     country: "India",
     showAllInterests: false,
+    githubUsername: "",
+    leetcodeUsername: "",
+    linkedinUrl: "",
 
     // Academic Info (Step 2)
     program: "",
@@ -584,6 +587,9 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
           gender: formData.gender,
           password: formData.password,
           country: formData.country,
+          githubUsername: formData.githubUsername,
+          leetcodeUsername: formData.leetcodeUsername,
+          linkedinUrl: formData.linkedinUrl,
           collegeToken: searchParams.get('token'),
         }),
       });
@@ -832,6 +838,45 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                       <SelectItem value="prefer-not-to-say" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Prefer not to say</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="githubUsername" className="text-gray-900 dark:text-white font-medium">
+                    GitHub Username (Optional)
+                  </Label>
+                  <Input
+                    id="githubUsername"
+                    placeholder="e.g. johndoe"
+                    value={formData.githubUsername}
+                    onChange={(e) => updateFormData({ githubUsername: e.target.value })}
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="leetcodeUsername" className="text-gray-900 dark:text-white font-medium">
+                    LeetCode Username (Optional)
+                  </Label>
+                  <Input
+                    id="leetcodeUsername"
+                    placeholder="e.g. johndoe"
+                    value={formData.leetcodeUsername}
+                    onChange={(e) => updateFormData({ leetcodeUsername: e.target.value })}
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="linkedinUrl" className="text-gray-900 dark:text-white font-medium">
+                    LinkedIn Profile URL (Optional)
+                  </Label>
+                  <Input
+                    id="linkedinUrl"
+                    placeholder="https://linkedin.com/in/johndoe"
+                    value={formData.linkedinUrl}
+                    onChange={(e) => updateFormData({ linkedinUrl: e.target.value })}
+                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                  />
                 </div>
 
                 <div className="space-y-2">

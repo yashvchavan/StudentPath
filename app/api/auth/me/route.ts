@@ -3,6 +3,29 @@ import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import pool from '@/lib/db';
 
+// Helper to parse permissions from various formats
+function parsePermissions(permissions: any): string[] {
+  if (!permissions) return [];
+  if (Array.isArray(permissions)) return permissions;
+  if (typeof permissions === "string") {
+    // Handle comma-separated string
+    if (permissions.includes(',')) {
+      return permissions.split(',').map(p => p.trim()).filter(p => p);
+    }
+    // Handle single permission
+    if (permissions.trim() && !permissions.startsWith('[') && !permissions.startsWith('{')) {
+      return [permissions.trim()];
+    }
+    // Try JSON parse as fallback
+    try {
+      return JSON.parse(permissions);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export async function GET(req: NextRequest) {
   let connection;
   try {
@@ -37,6 +60,16 @@ export async function GET(req: NextRequest) {
         [userId]
       );
       if (rows.length > 0) dbUser = rows[0];
+    } else if (userType === 'dept_tpo') {
+      const [rows]: any = await connection.execute(
+        `SELECT tu.id, tu.name, tu.email, tu.designation, tu.college_id, tu.department_id, tu.permissions, tu.is_active,
+                d.name as department_name, d.code as department_code
+         FROM tpo_users tu
+         LEFT JOIN departments d ON tu.department_id = d.id
+         WHERE tu.id = ?`,
+        [userId]
+      );
+      if (rows.length > 0) dbUser = rows[0];
     } else if (userType === 'professional') {
       const [rows]: any = await connection.execute(
         'SELECT id, first_name, last_name, email, is_active FROM professionals WHERE id = ?',
@@ -59,11 +92,22 @@ export async function GET(req: NextRequest) {
     const userData = {
       id: userType === 'student' ? dbUser.student_id : dbUser.id,
       role: userType,
-      name: userType === 'college' ? dbUser.college_name : `${dbUser.first_name} ${dbUser.last_name}`,
+      name: userType === 'college'
+        ? dbUser.college_name
+        : userType === 'dept_tpo'
+        ? dbUser.name
+        : `${dbUser.first_name} ${dbUser.last_name}`,
       email: dbUser.email,
       ...(userType === 'college' ? { logo_url: dbUser.logo_url } : {}),
-      // We might need to return college_token for student if the frontend uses it, 
-      // but the requirement says cookies are opaque. We return data in JSON.
+      ...(userType === 'dept_tpo' ? {
+        department_id: dbUser.department_id,
+        departmentId: dbUser.department_id,
+        departmentName: dbUser.department_name,
+        departmentCode: dbUser.department_code,
+        designation: dbUser.designation,
+        college_id: dbUser.college_id,
+        permissions: parsePermissions(dbUser.permissions)
+      } : {}),
       ...(userType === 'student' ? { college_token: dbUser.college_token } : {})
     };
 

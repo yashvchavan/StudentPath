@@ -98,7 +98,7 @@ export default function ProfessionalAssistantPage() {
       fetchProfessionalProfile()
 
       if (messages.length === 0) {
-        const firstName = user?.name?.split(' ')[0] || 'Professional';
+        const firstName = String(user?.name ?? '').split(' ')[0] || 'Professional';
         const welcomeMessage = `👋 **Welcome back, ${firstName}!**
 
 I'm your AI-powered career assistant with access to your complete professional profile. I can help you with:

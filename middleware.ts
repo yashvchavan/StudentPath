@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const key = new TextEncoder().encode(JWT_SECRET);
 
 // User types for RBAC
-type UserType = 'student' | 'professional' | 'college' | null;
+type UserType = 'student' | 'professional' | 'college' | 'dept_tpo' | null;
 
 // Helper to verify session
 async function verifyAuth(token: string | undefined): Promise<{ id: number; role: UserType } | null> {
@@ -31,6 +31,7 @@ function getRedirectUrl(userType: UserType): string {
     case 'professional':
       return '/professional-dashboard';
     case 'college':
+    case 'dept_tpo':
       return '/admin';
     default:
       return '/';
@@ -52,7 +53,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Define path types with role-based categorization
-    const publicPaths = ['/', '/login', '/register', '/register/student', '/college-login', '/professional-login', '/register-other', '/forgot-password', '/reset-password', '/privacy', '/terms'];
+    const publicPaths = ['/', '/login', '/register', '/register/student', '/college-login', '/professional-login', '/register-other', '/forgot-password', '/reset-password', '/privacy', '/terms', '/auth/accept-invite', '/tpo-login'];
     const studentDashboardPaths = ['/dashboard'];
     const professionalDashboardPaths = ['/professional-dashboard'];
     const collegeDashboardPaths = ['/admin'];
@@ -90,28 +91,31 @@ export async function middleware(request: NextRequest) {
         path.startsWith('/api/auth/validate-token') ||
         path.startsWith('/api/auth/login') ||
         path.startsWith('/api/auth/register') ||
+        path.startsWith('/api/auth/accept-invite') ||
+        path.startsWith('/api/auth/login-tpo') ||
         path.startsWith('/api/professionals/login') ||
         path.startsWith('/api/professionals/register') ||
         path.startsWith('/api/auth/forgot-password') ||
         path.startsWith('/api/auth/reset-password') ||
-        path.startsWith('/api/contact')
+        path.startsWith('/api/contact') ||
+        path.startsWith('/api/career-tracks/init-db')  // Database initialization (remove after setup)
       ) {
         return NextResponse.next();
       }
 
-      // Protect admin/college endpoints
+      // Protect admin/college endpoints - allow both college and dept_tpo
       if (path.startsWith('/api/admin') ||
         path.startsWith('/api/college') ||
         path === '/api/student/list') {
-        console.log('Validating college access for:', path);
-        if (currentUserType !== 'college') {
-          console.log('College validation failed');
-          return new NextResponse(JSON.stringify({ error: 'Unauthorized - College access required' }), {
+        console.log('Validating college/TPO access for:', path);
+        if (currentUserType !== 'college' && currentUserType !== 'dept_tpo') {
+          console.log('College/TPO validation failed');
+          return new NextResponse(JSON.stringify({ error: 'Unauthorized - College/TPO access required' }), {
             status: 401,
             headers: { 'Content-Type': 'application/json' }
           });
         }
-        console.log('College validation passed');
+        console.log('College/TPO validation passed');
       }
 
       // Protect professional endpoints
@@ -198,7 +202,7 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // Handle college admin routes
+    // Handle college admin routes - allow both college and dept_tpo
     if (isCollegeDashboardPath) {
       console.log('Admin route access - user type:', currentUserType);
 
@@ -210,8 +214,8 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/professional-dashboard', request.url));
       }
 
-      if (currentUserType !== 'college') {
-        console.log('No valid college data, redirecting to login');
+      if (currentUserType !== 'college' && currentUserType !== 'dept_tpo') {
+        console.log('No valid college/TPO data, redirecting to login');
         return NextResponse.redirect(new URL('/college-login', request.url));
       }
 

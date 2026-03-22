@@ -16,6 +16,9 @@ export async function POST(request: Request) {
       password,
       country,
       collegeToken,
+      githubUsername,
+      leetcodeUsername,
+      linkedinUrl,
     } = await request.json();
 
     // Basic validation
@@ -24,6 +27,19 @@ export async function POST(request: Request) {
         { error: "Please provide all required fields" },
         { status: 400 }
       );
+    }
+
+    // Optional field validation
+    if (githubUsername && !/^[a-zA-Z\d](?:[a-zA-Z\d]|-(?=[a-zA-Z\d])){0,38}$/i.test(githubUsername)) {
+      return NextResponse.json({ error: "Invalid GitHub username format" }, { status: 400 });
+    }
+    
+    if (linkedinUrl && !/^https?:\/\/(www\.)?linkedin\.com\/.*$/i.test(linkedinUrl)) {
+      return NextResponse.json({ error: "Invalid LinkedIn URL format" }, { status: 400 });
+    }
+    
+    if (leetcodeUsername && !/^[a-zA-Z0-9_]{1,15}$/i.test(leetcodeUsername)) {
+      return NextResponse.json({ error: "Invalid LeetCode username format" }, { status: 400 });
     }
 
     // Create database connection
@@ -74,10 +90,13 @@ export async function POST(request: Request) {
           college_id,
           role,
           status,
+          github_username,
+          leetcode_username,
+          linkedin_url,
           created_at,
           updated_at,
           is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'STUDENT', 'ACTIVE', NOW(), NOW(), TRUE)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'STUDENT', 'ACTIVE', ?, ?, ?, NOW(), NOW(), TRUE)`,
       [
         firstName,
         lastName,
@@ -88,7 +107,10 @@ export async function POST(request: Request) {
         gender || null,
         country || null,
         collegeToken || null,
-        collegeId
+        collegeId,
+        githubUsername || null,
+        leetcodeUsername || null,
+        linkedinUrl || null
       ]
     );
 

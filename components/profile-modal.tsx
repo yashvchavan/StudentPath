@@ -71,13 +71,21 @@ interface ProfileModalProps {
 export function ProfileModal({ student, open, onOpenChange }: ProfileModalProps) {
     if (!student) return null
 
-    const getInitials = (name: string) => {
-        return name
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .toUpperCase()
-            .slice(0, 2)
+    const getInitials = (firstName?: string, lastName?: string, fullName?: string) => {
+        if (firstName && lastName) {
+            return (firstName[0] + lastName[0]).toUpperCase().slice(0, 2)
+        }
+        if (fullName) {
+            return String(fullName)
+                .trim()
+                .split(" ")
+                .filter(Boolean)
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2)
+        }
+        return "U"
     }
 
     const formatDate = (dateString?: string) => {
@@ -89,19 +97,26 @@ export function ProfileModal({ student, open, onOpenChange }: ProfileModalProps)
         })
     }
 
-    const parseSkills = (skills?: string) => {
+    const parseSkills = (skills?: string | object | null): string[] => {
         if (!skills) return []
+        // Already parsed object (e.g. Record<string, number> from JSON column)
+        if (typeof skills === 'object') {
+            if (Array.isArray(skills)) return (skills as any[]).map(s => typeof s === 'string' ? s : String(s.skill ?? s))
+            return Object.keys(skills)
+        }
+        // String path
+        if (typeof skills !== 'string') return []
         try {
-            // Handle if it's a JSON string or comma-separated
-            if (skills.startsWith("{") || skills.startsWith("[")) {
-                const parsed = JSON.parse(skills)
-                if (Array.isArray(parsed)) return parsed
-                if (typeof parsed === 'object') return Object.keys(parsed)
+            const trimmed = skills.trim()
+            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                const parsed = JSON.parse(trimmed)
+                if (Array.isArray(parsed)) return parsed.map((s: any) => typeof s === 'string' ? s : String(s.skill ?? s))
+                if (typeof parsed === 'object' && parsed !== null) return Object.keys(parsed)
                 return []
             }
-            return skills.split(",").map(s => s.trim()).filter(Boolean)
-        } catch (e) {
-            return skills.split(",").map(s => s.trim()).filter(Boolean)
+            return trimmed.split(",").map((s: string) => s.trim()).filter(Boolean)
+        } catch {
+            return skills.split(",").map((s: string) => s.trim()).filter(Boolean)
         }
     }
 
@@ -114,13 +129,13 @@ export function ProfileModal({ student, open, onOpenChange }: ProfileModalProps)
                     <div className="relative h-32 bg-gradient-to-r from-primary/20 to-primary/5">
                         <div className="absolute -bottom-12 left-8 flex items-end gap-4">
                             <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
-                                <AvatarImage src={student.profile_picture || ""} alt={student.name} />
+                                <AvatarImage src={student.profile_picture || ""} alt={student.name || `${student.first_name} ${student.last_name}`} />
                                 <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                                    {getInitials(student.name)}
+                                    {getInitials(student.first_name, student.last_name, student.name)}
                                 </AvatarFallback>
                             </Avatar>
                             <div className="mb-2">
-                                <h2 className="text-2xl font-bold text-foreground">{student.name}</h2>
+                                <h2 className="text-2xl font-bold text-foreground">{student.name || `${student.first_name} ${student.last_name}`}</h2>
                                 <div className="flex gap-2 mt-1">
                                     <Badge variant="secondary" className="capitalize">
                                         {student.role || "Student"}

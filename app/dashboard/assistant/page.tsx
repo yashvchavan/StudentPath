@@ -88,8 +88,8 @@ export default function AIAssistantPage() {
       // We don't fetch a separate profile API like professionals do, data is in cookie/context
 
       if (messages.length === 0) {
-        const firstName = user?.name?.split(' ')[0] || 'Student';
-        const welcomeMessage = `👋 **Welcome back, ${firstName}!**
+        const firstName = String(user?.name ?? '').split(' ')[0] || 'Student';
+        const welcomeMessage = `👋 **Welcome, ${firstName}!**
 
 I'm your **personalized AI learning assistant**. I have access to your complete academic profile, syllabus, skills, and career goals. I can help you with:
 

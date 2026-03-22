@@ -41,6 +41,9 @@ export interface StudentRow extends RowDataPacket {
   email: string;
   program: string;
   enrollment_date: Date;
+  github_username?: string;
+  leetcode_username?: string;
+  linkedin_url?: string;
   is_active: boolean;
   created_at: Date;
 }
@@ -50,6 +53,18 @@ export interface StudentDataRow extends RowDataPacket {
   data_type: string;
   data_value: string;
   created_at: Date;
+}
+
+// Student skill types (student_skills table)
+export interface StudentSkillRow extends RowDataPacket {
+  id: number;
+  student_id: number;
+  skill_name: string;
+  proficiency_score: number;  // TINYINT 0-10
+  confidence_score: number;   // DECIMAL(3,2) 0.00-1.00
+  sources_json: string;       // JSON array e.g. '["github","resume"]'
+  created_at: Date;
+  updated_at: Date;
 }
 
 // Generic count result type

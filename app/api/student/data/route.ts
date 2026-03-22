@@ -85,6 +85,7 @@ export async function GET(request: NextRequest) {
         program, current_year, current_semester, enrollment_year, current_gpa,
         academic_interests, career_quiz_answers,
         technical_skills, soft_skills, language_skills,
+        merged_skills, last_skill_analysis,
         primary_goal, secondary_goal, timeline, location_preference,
         industry_focus, intensity_level
        FROM Students
@@ -104,10 +105,11 @@ export async function GET(request: NextRequest) {
     // Parse JSON fields from the Students table
     const academicInterests = safeJsonParse(student.academic_interests, []);
     const careerQuizAnswers = safeJsonParse(student.career_quiz_answers, {});
-    const technicalSkills = safeJsonParse(student.technical_skills, {});
-    const softSkills = safeJsonParse(student.soft_skills, {});
-    const languageSkills = safeJsonParse(student.language_skills, {});
-    const industryFocus = safeJsonParse(student.industry_focus, []);
+    const technicalSkills   = safeJsonParse(student.technical_skills, {});
+    const softSkills        = safeJsonParse(student.soft_skills, {});
+    const languageSkills    = safeJsonParse(student.language_skills, {});
+    const industryFocus     = safeJsonParse(student.industry_focus, []);
+    const mergedSkills      = safeJsonParse(student.merged_skills, []);
 
     // Combine all data
     const processedData = {
@@ -139,10 +141,23 @@ export async function GET(request: NextRequest) {
       // Career quiz answers (parsed from JSON)
       career_quiz_answers: careerQuizAnswers,
 
-      // Skills (parsed from JSON) - always return objects, even if empty
-      technical_skills: technicalSkills || {},
-      soft_skills: softSkills || {},
-      language_skills: languageSkills || {},
+      // Skills (parsed from JSON) — always return objects, even if empty
+      // technical_skills only holds plain { skill: level } numeric entries
+      technical_skills: typeof technicalSkills === 'object' && !Array.isArray(technicalSkills)
+        ? technicalSkills
+        : {},
+      soft_skills: typeof softSkills === 'object' && !Array.isArray(softSkills)
+        ? softSkills
+        : {},
+      language_skills: typeof languageSkills === 'object' && !Array.isArray(languageSkills)
+        ? languageSkills
+        : {},
+
+      // AI skill passport — from dedicated merged_skills column
+      merged_skills: Array.isArray(mergedSkills) ? mergedSkills : [],
+      last_skill_analysis: student.last_skill_analysis
+        ? new Date(student.last_skill_analysis).toISOString()
+        : null,
 
       // Career goals (from Students table)
       primary_goal: student.primary_goal || null,

@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Building, MapPin, GraduationCap, Code, Users, Languages, Star } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
+interface MergedSkill {
+  skill: string;
+  sources: string[];
+  confidence: number;
+  proficiency: number; // 0-10 scale from AI analysis
+}
+
 interface StudentData {
   student_id: string;
   first_name: string;
@@ -25,9 +32,11 @@ interface StudentData {
   current_gpa: number;
   academic_interests: string[];
   career_quiz_answers: Record<string, string>;
-  technical_skills: Record<string, number>;
+  technical_skills: Record<string, number>;   // plain { skill: level 0-5 }
   soft_skills: Record<string, number>;
   language_skills: Record<string, string>;
+  merged_skills: MergedSkill[];               // AI passport (0-10 scale)
+  last_skill_analysis: string | null;
   primary_goal: string;
   secondary_goal: string;
   timeline: string;
@@ -89,11 +98,13 @@ export default function DashboardContent() {
           // Add safe defaults for empty fields
           const safeData = {
             ...apiData.data,
-            first_name: apiData.data.first_name || user.name.split(' ')[0] || 'Student',
-            last_name: apiData.data.last_name || user.name.split(' ').slice(1).join(' ') || '',
+            first_name: apiData.data.first_name || String(user.name ?? '').split(' ')[0] || 'Student',
+            last_name: apiData.data.last_name || String(user.name ?? '').split(' ').slice(1).join(' ') || '',
             technical_skills: apiData.data.technical_skills || {},
             soft_skills: apiData.data.soft_skills || {},
             language_skills: apiData.data.language_skills || {},
+            merged_skills: apiData.data.merged_skills || [],
+            last_skill_analysis: apiData.data.last_skill_analysis || null,
             academic_interests: apiData.data.academic_interests || [],
             industry_focus: apiData.data.industry_focus || [],
             career_quiz_answers: apiData.data.career_quiz_answers || {}
@@ -105,8 +116,8 @@ export default function DashboardContent() {
           // Fallback to minimal data from user object if API fails
           setStudentData({
             student_id: String(user.id),
-            first_name: user.name.split(' ')[0],
-            last_name: user.name.split(' ').slice(1).join(' '),
+            first_name: String(user.name ?? '').split(' ')[0] || 'Student',
+            last_name: String(user.name ?? '').split(' ').slice(1).join(' ') || '',
             email: user.email,
             college: '',
             college_name: 'Your College',
@@ -121,6 +132,8 @@ export default function DashboardContent() {
             technical_skills: {},
             soft_skills: {},
             language_skills: {},
+            merged_skills: [],
+            last_skill_analysis: null,
             primary_goal: 'Learn',
             secondary_goal: 'Explore',
             timeline: 'Flexible',
@@ -290,11 +303,12 @@ export default function DashboardContent() {
                 <div>
                   <p className="text-sm font-medium mb-2">Technical Skills</p>
                   <div className="flex flex-wrap gap-2">
-                    {studentData?.technical_skills && Object.keys(studentData.technical_skills).length > 0 ? (
+                    {studentData?.technical_skills && Object.keys(studentData.technical_skills).filter(k => typeof (studentData.technical_skills as any)[k] === 'number').length > 0 ? (
                       Object.entries(studentData.technical_skills)
+                        .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
                         .sort(([, a], [, b]) => (b as number) - (a as number))
                         .slice(0, 3)
-                        .map(([skill, level]) => (
+                        .map(([skill]) => (
                           <span key={skill} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
                             {skill}
                           </span>
@@ -307,13 +321,14 @@ export default function DashboardContent() {
                 <div>
                   <p className="text-sm font-medium mb-2">Soft Skills</p>
                   <div className="flex flex-wrap gap-2">
-                    {studentData?.soft_skills && Object.keys(studentData.soft_skills).length > 0 ? (
+                    {studentData?.soft_skills && Object.keys(studentData.soft_skills).filter(k => typeof (studentData.soft_skills as any)[k] === 'number').length > 0 ? (
                       Object.entries(studentData.soft_skills)
+                        .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
                         .sort(([, a], [, b]) => (b as number) - (a as number))
                         .slice(0, 3)
                         .map(([skill, level]) => (
                           <Badge key={skill} variant="outline">
-                            {skill} - L{level}
+                            {skill} - L{level as number}
                           </Badge>
                         ))
                     ) : (
@@ -374,15 +389,16 @@ export default function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {studentData?.technical_skills && Object.keys(studentData.technical_skills).length > 0 ? (
+                {studentData?.technical_skills && Object.entries(studentData.technical_skills).filter(([, v]) => typeof v === 'number' && isFinite(v as number)).length > 0 ? (
                   Object.entries(studentData.technical_skills)
-                    .sort(([, a], [, b]) => b - a)
+                    .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
+                    .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([skill, level]) => (
                       <div key={skill} className="flex items-center justify-between">
                         <span className="text-sm">{skill}</span>
                         <div className="flex items-center gap-2">
-                          <Progress value={level * 20} className="w-20" />
-                          <span className="text-xs text-muted-foreground">{level}/5</span>
+                          <Progress value={(level as number) * 20} className="w-20" />
+                          <span className="text-xs text-muted-foreground">{level as number}/5</span>
                         </div>
                       </div>
                     ))
@@ -442,20 +458,21 @@ export default function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {studentData?.career_quiz_answers && Object.keys(studentData.career_quiz_answers).length > 0 ? (
+                {studentData?.soft_skills && Object.entries(studentData.soft_skills).filter(([, v]) => typeof v === 'number' && isFinite(v as number)).length > 0 ? (
                   Object.entries(studentData.soft_skills)
-                    .sort(([, a], [, b]) => b - a)
+                    .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
+                    .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([skill, level]) => (
                       <div key={skill} className="flex items-center justify-between">
                         <span className="text-sm">{skill}</span>
                         <div className="flex items-center gap-2">
-                          <Progress value={level * 20} className="w-20" />
-                          <span className="text-xs text-muted-foreground">{level}/5</span>
+                          <Progress value={(level as number) * 20} className="w-20" />
+                          <span className="text-xs text-muted-foreground">{level as number}/5</span>
                         </div>
                       </div>
                     ))
                 ) : (
-                  <p className="text-sm text-gray-500">No quiz answers yet</p>
+                  <p className="text-sm text-gray-500">No soft skills added yet</p>
                 )}
 
               </div>

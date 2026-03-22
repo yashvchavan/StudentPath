@@ -42,6 +42,7 @@ interface TokenUsage {
 export default function AdminDashboard() {
   const [copied, setCopied] = useState(false);
   const [collegeData, setCollegeData] = useState<CollegeData | null>(null);
+  const [userType, setUserType] = useState<'college' | 'dept_tpo' | null>(null);
   const [tokenUsage, setTokenUsage] = useState<TokenUsage>({
     usageCount: 0,
     maxUsage: 1000,
@@ -63,16 +64,16 @@ export default function AdminDashboard() {
       setError(null);
 
       // Helper function to get data from cookies
-      const getCollegeDataFromCookies = () => {
+      const getDataFromCookies = (cookieName: string) => {
         if (typeof document !== 'undefined') {
           const cookies = document.cookie.split(';');
-          const collegeDataCookie = cookies.find(cookie =>
-            cookie.trim().startsWith('collegeData=')
+          const dataCookie = cookies.find(cookie =>
+            cookie.trim().startsWith(`${cookieName}=`)
           );
 
-          if (collegeDataCookie) {
+          if (dataCookie) {
             try {
-              const cookieValue = collegeDataCookie.split('=')[1];
+              const cookieValue = dataCookie.split('=')[1];
               return JSON.parse(decodeURIComponent(cookieValue));
             } catch (error) {
               console.error('Error parsing cookie:', error);
@@ -82,31 +83,88 @@ export default function AdminDashboard() {
         return null;
       };
 
-      // Try localStorage first, then cookies
-      let storedCollegeData = localStorage.getItem('collegeData');
-      let college = null;
+      // Try both TPO data and college data
+      let userData = null;
+      let userType = null;
 
-      if (storedCollegeData) {
-        college = JSON.parse(storedCollegeData);
-        console.log('📱 College data from localStorage:', college);
+      // Check for TPO data first
+      let storedTpoData = localStorage.getItem('tpoData');
+      if (storedTpoData) {
+        userData = JSON.parse(storedTpoData);
+        userType = 'tpo';
+        console.log('📱 TPO data from localStorage:', userData);
       } else {
-        college = getCollegeDataFromCookies();
-        console.log('🍪 College data from cookies:', college);
+        userData = getDataFromCookies('tpoData');
+        if (userData) {
+          userType = 'tpo';
+          console.log('🍪 TPO data from cookies:', userData);
+        }
       }
 
-      if (!college) {
-        setError('No college data found. Please log in again.');
-        router.push('/college-login');
+      // If no TPO data, check for college data
+      if (!userData) {
+        let storedCollegeData = localStorage.getItem('collegeData');
+        if (storedCollegeData) {
+          userData = JSON.parse(storedCollegeData);
+          userType = 'college';
+          console.log('📱 College data from localStorage:', userData);
+        } else {
+          userData = getDataFromCookies('collegeData');
+          if (userData) {
+            userType = 'college';
+            console.log('🍪 College data from cookies:', userData);
+          }
+        }
+      }
+
+      if (!userData) {
+        // Check auth API to determine which login to redirect to
+        try {
+          const authRes = await fetch('/api/auth/me', { credentials: 'include' });
+          const authData = await authRes.json();
+
+          if (authData.authenticated && authData.user) {
+            if (authData.user.role === 'dept_tpo') {
+              setError('Session expired. Please log in again.');
+              router.push('/tpo-login');
+            } else {
+              setError('Session expired. Please log in again.');
+              router.push('/college-login');
+            }
+          } else {
+            setError('No session found. Please log in.');
+            router.push('/college-login'); // Default to college login
+          }
+        } catch (e) {
+          setError('No session data found. Please log in again.');
+          router.push('/college-login');
+        }
         return;
       }
-      console.log('📊 Stored college data:', college);
+      console.log('📊 User data found:', userData, 'Type:', userType);
 
-      // Set initial college data from localStorage
+      // Set initial college data from localStorage/cookies
+      let collegeInfo;
+      if (userType === 'tpo') {
+        // For TPO users, we need to get college info via API
+        collegeInfo = {
+          id: userData.collegeId,
+          name: userData.collegeName,
+          email: userData.email,
+          token: null, // TPO users don't have direct token access
+        };
+      } else {
+        // For college users, use stored data directly
+        collegeInfo = {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          token: userData.token,
+        };
+      }
+
       setCollegeData({
-        id: college.id,
-        name: college.name,
-        email: college.email,
-        token: college.token,
+        ...collegeInfo,
         totalStudents: 0,
         activeStudents: 0,
         programs: [],
@@ -118,13 +176,13 @@ export default function AdminDashboard() {
         console.log('🔍 Fetching data in parallel from APIs...');
 
         const [collegeDataResponse, authResponse] = await Promise.all([
-          // API 1: Fetch college statistics
-          fetch(`/api/admin/college-data?collegeId=${college.id}`, {
+          // API 1: Fetch college statistics (works for both college and dept_tpo)
+          fetch('/api/admin/college-data', {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${college.token}`
-            }
+            },
+            credentials: 'include'
           }),
           // API 2: Fetch auth/me data (if needed)
           fetch('/api/auth/me', {
@@ -158,10 +216,15 @@ export default function AdminDashboard() {
           console.warn('⚠️ College data API call failed, using localStorage data only');
         }
 
-        // Process auth response if available
+        // Process auth response and determine user type
         if (authResponse && authResponse.ok) {
           const authData = await authResponse.json();
           console.log('✅ Auth data received:', authData);
+
+          // Store user type for conditional rendering
+          if (authData.authenticated && authData.user) {
+            setUserType(authData.user.role);
+          }
         }
 
       } catch (apiError) {
@@ -227,7 +290,14 @@ export default function AdminDashboard() {
           </AlertDescription>
         </Alert>
         <div className="text-center py-12">
-          <Button onClick={() => router.push('/college-login')}>
+          <Button onClick={() => {
+            // Determine which login page to redirect to based on user type
+            if (localStorage.getItem('tpoData') || document.cookie.includes('tpoData=')) {
+              router.push('/tpo-login');
+            } else {
+              router.push('/college-login');
+            }
+          }}>
             Go to Login
           </Button>
         </div>
@@ -246,9 +316,21 @@ export default function AdminDashboard() {
               <Building className="w-7 h-7 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-white mb-1">
-                {collegeData.name}
-              </h2>
+              <div className="flex items-center gap-3 mb-1">
+                <h2 className="text-xl font-bold text-white">
+                  {collegeData.name}
+                </h2>
+                {userType === 'dept_tpo' && (
+                  <Badge variant="outline" className="border-purple-600/50 text-purple-400">
+                    Dept TPO
+                  </Badge>
+                )}
+                {userType === 'college' && (
+                  <Badge variant="outline" className="border-emerald-600/50 text-emerald-400">
+                    Central TPO
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-sm text-zinc-400">
                 <div className="flex items-center gap-1.5">
                   <span className="relative flex h-2.5 w-2.5">
@@ -266,8 +348,9 @@ export default function AdminDashboard() {
 
         {/* Content Section */}
         <div className="p-6 space-y-6">
-          {/* Institution ID */}
-          <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800 hover:border-zinc-700 transition-colors">
+          {/* Institution ID - Only for Central TPO */}
+          {userType === 'college' && collegeData.token && (
+            <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800 hover:border-zinc-700 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center border border-purple-600/30">
@@ -294,9 +377,11 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </div>
+          )}
 
-          {/* Student Registration Portal */}
-          <div className="bg-gradient-to-br from-blue-950/40 to-indigo-950/40 rounded-xl p-5 border border-blue-900/50">
+          {/* Student Registration Portal - Only for Central TPO */}
+          {userType === 'college' && collegeData.token && (
+            <div className="bg-gradient-to-br from-blue-950/40 to-indigo-950/40 rounded-xl p-5 border border-blue-900/50">
             <div className="flex items-start gap-4 mb-4">
               <div className="w-11 h-11 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30 flex-shrink-0">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,9 +434,43 @@ export default function AdminDashboard() {
               <p>Keep this link secure. Only share with authorized students who should register for your institution.</p>
             </div>
           </div>
+      )}
+
+      {/* Department Info - For Dept TPO */}
+      {userType === 'dept_tpo' && (
+        <div className="mb-8 bg-zinc-900/50 rounded-2xl shadow-xl border border-zinc-800/50 overflow-hidden">
+          <div className="p-6">
+            <div className="bg-gradient-to-br from-purple-950/40 to-indigo-950/40 rounded-xl p-5 border border-purple-900/50">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-11 h-11 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-600/30 flex-shrink-0">
+                  <Building className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-base font-bold text-white">Department TPO Portal</h3>
+                    <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30 text-xs">
+                      Active
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-zinc-400">
+                    Manage students and placements for your department
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/50 rounded-lg p-3 border border-zinc-800">
+                <p className="text-sm text-zinc-300">
+                  You have departmental access to manage students, view analytics, and handle placements
+                  for your assigned department. Contact Central TPO for broader administrative features.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
         </div>
       </div>
-
 
       {/* Main Content */}
       <div>
