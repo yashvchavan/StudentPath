@@ -141,6 +141,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Create 30-day free trial subscription
+    const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    try {
+      await connection.execute(
+        `INSERT INTO subscriptions
+           (student_id, plan, status, current_period_start, current_period_end, created_at, updated_at)
+         VALUES (?, 'pro', 'trialing', NOW(), ?, NOW(), NOW())`,
+        [user.student_id, trialEnd]
+      );
+    } catch (subErr) {
+      console.warn('Trial subscription creation failed (non-fatal):', subErr);
+    }
+
     return NextResponse.json({
       message: "Student registered successfully",
       userId: user.student_id,
