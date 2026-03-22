@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,33 +14,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-//import { ThemeToggle } from "@/components/theme-toggle"
 import {
-  Bell,
-  Search,
-  Home,
-  BookOpen,
-  Target,
-  Award,
-  Lightbulb,
-  TrendingUp,
-  Bot,
-  Settings,
-  Menu,
-  X,
-  User,
-  HelpCircle,
-  LogOut,
-  Compass,
-  FileText,
-  Briefcase,
-  GraduationCap,
+  Bell, Search, Home, BookOpen, Target, Award, Lightbulb,
+  TrendingUp, Bot, Settings, Menu, X, User, LogOut,
+  Compass, FileText, Briefcase, GraduationCap, Lock,
+  Sparkles, Clock,
 } from "lucide-react"
 import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { ProfileModal } from "./profile-modal"
+import { UpgradeModal } from "./subscription/UpgradeModal"
+import { ProUpgradeFAB } from "./subscription/ProUpgradeFAB"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -60,7 +46,7 @@ interface StudentProfile {
   department?: string
   current_year?: number
   semester?: number
-  current_semester?: number // Keeping for backward compatibility if used elsewhere
+  current_semester?: number
   current_gpa?: number
   enrollment_year?: number
   gender?: string
@@ -85,6 +71,35 @@ interface StudentProfile {
   updated_at?: string
 }
 
+interface SubscriptionState {
+  isProActive: boolean
+  status: "trialing" | "active" | "trial_expired" | "expired" | "free" | null
+  daysLeft: number | null
+  loaded: boolean
+}
+
+// Sidebar items that require a pro plan after trial
+const PRO_KEYS = new Set([
+  "career-tracks", "internships", "placement",
+  "recommendations", "reports", "assistant", "resume", "notifications",
+])
+
+const ALL_SIDEBAR_ITEMS = [
+  { icon: Home,         label: "Dashboard",       href: "/dashboard",                           key: "dashboard" },
+  { icon: BookOpen,     label: "My Courses",       href: "/dashboard/courses",                   key: "courses" },
+  { icon: Target,       label: "Career Goals",     href: "/dashboard/goals",                     key: "goals" },
+  { icon: Compass,      label: "Career Tracks",    href: "/dashboard/career-tracks",             key: "career-tracks" },
+  { icon: Briefcase,    label: "Internships",      href: "/dashboard/career-tracks/internships", key: "internships" },
+  { icon: GraduationCap,label: "Placements",       href: "/dashboard/career-tracks/placement",   key: "placement" },
+  { icon: Award,        label: "Skills Tracker",   href: "/dashboard/skills",                    key: "skills" },
+  { icon: Lightbulb,    label: "Recommendations",  href: "/dashboard/recommendations",           key: "recommendations" },
+  { icon: TrendingUp,   label: "Progress Reports", href: "/dashboard/reports",                   key: "reports" },
+  { icon: Bot,          label: "AI Assistant",     href: "/dashboard/assistant",                 key: "assistant" },
+  { icon: FileText,     label: "Resume Analyzer",  href: "/dashboard/resume",                    key: "resume" },
+  { icon: Bell,         label: "Notifications",    href: "/dashboard/notifications",             key: "notifications" },
+  { icon: Settings,     label: "Settings",         href: "/dashboard/settings",                  key: "settings" },
+]
+
 export default function DashboardLayout({ children, currentPage = "dashboard" }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -92,50 +107,27 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   const [profileData, setProfileData] = useState<StudentProfile | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(true)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
-  // Use the auth hook
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [lockedFeatureLabel, setLockedFeatureLabel] = useState<string>("")
+  const [subscription, setSubscription] = useState<SubscriptionState>({
+    isProActive: true, // optimistically true to avoid flash
+    status: null,
+    daysLeft: null,
+    loaded: false,
+  })
+
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
-  // Use the context to get student data
   const { studentData, isLoading: contextLoading } = useStudentData()
   const router = useRouter()
 
-  const sidebarItems = [
-    { icon: Home, label: "Dashboard", href: "/dashboard", key: "dashboard" },
-    { icon: BookOpen, label: "My Courses", href: "/dashboard/courses", key: "courses" },
-    { icon: Target, label: "Career Goals", href: "/dashboard/goals", key: "goals" },
-    { icon: Compass, label: "Career Tracks", href: "/dashboard/career-tracks", key: "career-tracks" },
-    { icon: Briefcase, label: "Internships", href: "/dashboard/career-tracks/internships", key: "internships" },
-    { icon: GraduationCap, label: "Placements", href: "/dashboard/career-tracks/placement", key: "placement" },
-    { icon: Award, label: "Skills Tracker", href: "/dashboard/skills", key: "skills" },
-    { icon: Lightbulb, label: "Recommendations", href: "/dashboard/recommendations", key: "recommendations" },
-    { icon: TrendingUp, label: "Progress Reports", href: "/dashboard/reports", key: "reports" },
-    { icon: Bot, label: "AI Assistant", href: "/dashboard/assistant", key: "assistant" },
-    { icon: FileText, label: "Resume Analyzer", href: "/dashboard/resume", key: "resume" },
-    { icon: Bell, label: "Notifications", href: "/dashboard/notifications", key: "notifications" },
-    { icon: Settings, label: "Settings", href: "/dashboard/settings", key: "settings" },
-  ]
-
-  // Fetch profile data with profile picture
-  useEffect(() => {
-    fetchProfile()
-  }, [])
-
+  // ── Fetch profile ─────────────────────────────────────────────────────
   const fetchProfile = async () => {
     try {
       setLoadingProfile(true)
-      const response = await fetch("/api/settings", {
-        credentials: "include"
-      })
-
-      if (!response.ok) {
-        console.error("Failed to fetch profile")
-        return
-      }
-
+      const response = await fetch("/api/settings", { credentials: "include" })
+      if (!response.ok) return
       const data = await response.json()
-
-      if (data.success && data.profile) {
-        setProfileData(data.profile)
-      }
+      if (data.success && data.profile) setProfileData(data.profile)
     } catch (error) {
       console.error("Error fetching profile:", error)
     } finally {
@@ -143,49 +135,113 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
     }
   }
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/login')
+  // ── Fetch subscription status ─────────────────────────────────────────
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const res = await fetch("/api/subscription/status", { credentials: "include" })
+      if (!res.ok) return
+      const data = await res.json()
+      setSubscription({
+        isProActive: data.isProActive,
+        status: data.status,
+        daysLeft: data.daysLeft,
+        loaded: true,
+      })
+    } catch {
+      setSubscription((s) => ({ ...s, loaded: true }))
     }
+  }, [])
+
+  useEffect(() => { fetchProfile() }, [])
+  useEffect(() => { fetchSubscription() }, [fetchSubscription])
+
+  // Auth redirect
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) router.push("/login")
   }, [authLoading, isAuthenticated, router])
 
+  // ── Handle click on a pro-locked nav item ─────────────────────────────
+  const handleLockedClick = (e: React.MouseEvent, label: string) => {
+    e.preventDefault()
+    setLockedFeatureLabel(label)
+    setUpgradeOpen(true)
+  }
+
+  // After successful payment, refresh subscription status
+  const handlePaymentSuccess = () => {
+    fetchSubscription()
+  }
+
+  // ── Display helpers ───────────────────────────────────────────────────
   const getInitials = (firstName?: string, lastName?: string): string => {
     const first = firstName?.[0] || ""
     const last = lastName?.[0] || ""
     return (first + last).toUpperCase() || "U"
   }
 
-  // Use profile data if available, otherwise fall back to context data or user object
   const displayName = profileData
     ? `${profileData.first_name} ${profileData.last_name}`
     : studentData
       ? `${studentData.first_name} ${studentData.last_name}`
       : user?.name || "Loading..."
 
-  const displayEmail = profileData?.email || studentData?.email || user?.email || "Loading..."
-  const displayProgram = profileData?.program || studentData?.program || "Loading..."
+  const displayEmail = profileData?.email || studentData?.email || user?.email || ""
+  const displayProgram = profileData?.program || studentData?.program || ""
   const displaySemester = profileData?.current_semester || studentData?.current_semester || "-"
   const displayGPA = profileData?.current_gpa || studentData?.current_gpa || null
   const displayInitials = getInitials(
-    profileData?.first_name || studentData?.first_name || (user?.name?.split(' ')[0]),
-    profileData?.last_name || studentData?.last_name || (user?.name?.split(' ').slice(1).join(' '))
+    profileData?.first_name || studentData?.first_name || user?.name?.split(" ")[0],
+    profileData?.last_name || studentData?.last_name || user?.name?.split(" ").slice(1).join(" ")
   )
   const profilePicture = profileData?.profile_picture
 
-  // 🔹 Logout function
   const handleLogout = async () => {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" })
       const data = await res.json()
-      if (data.success) {
-        window.location.href = "/login"
-      } else {
-        console.error("Logout failed:", data.error)
-      }
+      if (data.success) window.location.href = "/login"
     } catch (err) {
-      console.error("Error logging out:", err)
+      console.error("Logout error:", err)
     }
+  }
+
+  // ── Trial / expiry banner ─────────────────────────────────────────────
+  const TrialBanner = () => {
+    if (!subscription.loaded) return null
+
+    if (subscription.status === "trialing" && subscription.daysLeft !== null) {
+      return (
+        <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg bg-primary/10 border border-primary/20 px-3 py-2 text-xs text-primary">
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            Free trial: <span className="font-semibold">{subscription.daysLeft}d left</span>
+          </span>
+        </div>
+      )
+    }
+
+    if (subscription.status === "trial_expired" || subscription.status === "expired") {
+      return (
+        <div
+          className="mx-3 mb-2 flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-400 cursor-pointer hover:bg-amber-500/20 transition-colors"
+          onClick={() => { setLockedFeatureLabel(""); setUpgradeOpen(true) }}
+        >
+          <Sparkles className="w-3.5 h-3.5 shrink-0" />
+          <span>Trial ended — <span className="font-semibold underline">Upgrade to Pro</span></span>
+        </div>
+      )
+    }
+
+    if (subscription.status === "active" && subscription.daysLeft !== null && subscription.daysLeft <= 30) {
+      return (
+        <div className="mx-3 mb-2 flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+          <Clock className="w-3.5 h-3.5 shrink-0" />
+          <span>Pro renews in <span className="font-semibold">{subscription.daysLeft}d</span></span>
+        </div>
+      )
+    }
+
+    return null
   }
 
   return (
@@ -193,38 +249,26 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-50 backdrop-blur-sm bg-card/95">
         <div className="flex items-center justify-between px-4 py-3">
-          {/* Left: Logo and Mobile Menu */}
+          {/* Left */}
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
-              className="lg:hidden hover:bg-muted/80 transition-all duration-200 hover:scale-105 active:scale-95"
+              className="lg:hidden hover:bg-muted/80 transition-all duration-200"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              <div className="transition-transform duration-200">
-                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </div>
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:block">
-                <img
-                  src="/logo.png"
-                  alt="StudentPath Logo"
-                  className="h-15 w-auto"
-                />
-              </div>
+            <div className="hidden sm:block">
+              <img src="/logo.png" alt="StudentPath Logo" className="h-15 w-auto" />
             </div>
           </div>
 
-          {/* Center: Search */}
+          {/* Search */}
           <div className="flex-1 max-w-md mx-4">
-            <div
-              className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""
-                }`}
-            >
+            <div className={`relative transition-all duration-300 ${searchFocused ? "scale-105" : ""}`}>
               <Search
-                className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-primary" : "text-muted-foreground"
-                  }`}
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${searchFocused ? "text-primary" : "text-muted-foreground"}`}
               />
               <Input
                 placeholder="Search courses, skills, resources..."
@@ -232,65 +276,37 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                className={`pl-10 bg-background text-foreground border transition-all duration-200
-        ${searchFocused
-                    ? "border-primary ring-2 ring-primary/20"
-                    : "border-border hover:border-muted-foreground/40"
-                  } rounded-xl`}
+                className={`pl-10 bg-background border transition-all duration-200 rounded-xl
+                  ${searchFocused ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-muted-foreground/40"}`}
               />
             </div>
           </div>
 
-          {/* Right: Theme Toggle, Notifications and User */}
+          {/* Right: user dropdown */}
           <div className="flex items-center gap-3">
-            {/* Theme Toggle */}
-            {/* <ThemeToggle />
-            {/* Notifications */}
-            {/* <Button
-              variant="ghost"
-              size="sm"
-              className="relative hover:bg-muted/80 transition-all duration-200 hover:scale-105 active:scale-95"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-secondary text-secondary-foreground text-xs rounded-full flex items-center justify-center animate-pulse">
-                3
-              </span>
-            </Button> */}
-            {/* User Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center gap-3 hover:bg-muted/80 transition-all duration-200 hover:scale-105 active:scale-95"
+                  className="flex items-center gap-3 hover:bg-muted/80 transition-all duration-200"
                 >
-                  <Avatar className="w-8 h-8 transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-primary/20">
-                    <AvatarImage
-                      src={profilePicture || "/placeholder.svg"}
-                      alt={displayName}
-                    />
-                    <AvatarFallback>
-                      {displayInitials}
-                    </AvatarFallback>
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={profilePicture || "/placeholder.svg"} alt={displayName} />
+                    <AvatarFallback>{displayInitials}</AvatarFallback>
                   </Avatar>
                   <div className="hidden sm:block text-left">
                     <p className="text-sm font-medium text-foreground">
                       {loadingProfile || authLoading ? "Loading..." : displayName}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      Semester {displaySemester}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Semester {displaySemester}</p>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {loadingProfile || authLoading ? "Loading..." : displayName}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {displayEmail}
-                    </p>
+                    <p className="text-sm font-medium">{loadingProfile || authLoading ? "Loading..." : displayName}</p>
+                    <p className="text-xs text-muted-foreground">{displayEmail}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
@@ -304,14 +320,11 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
                     <span>Settings</span>
                   </Link>
                 </DropdownMenuItem>
-                {/* <DropdownMenuItem asChild>
-                  <Link href="/help" className="flex items-center">
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>Help & Support</span>
-                  </Link>
-                </DropdownMenuItem> */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
@@ -325,71 +338,122 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
         {/* Sidebar */}
         <aside
           className={`
-          fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-all duration-300 ease-out
-          ${sidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full lg:translate-x-0 lg:shadow-none"}
-        `}
+            fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-all duration-300 ease-out
+            ${sidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full lg:translate-x-0 lg:shadow-none"}
+          `}
         >
           <div className="flex flex-col h-full">
-            {/* User Profile Section */}
-            <div className="p-4 border-b hover:bg-muted/30 transition-colors duration-200">
+            {/* User profile section */}
+            <div className="p-4 border-b hover:bg-muted/30 transition-colors">
               <div className="flex items-center gap-3">
-                <Avatar className="w-12 h-12 transition-all duration-200 hover:scale-105 hover:ring-2 hover:ring-primary/20">
-                  <AvatarImage
-                    src={profilePicture || "/placeholder.svg"}
-                    alt={displayName}
-                  />
-                  <AvatarFallback>
-                    {displayInitials}
-                  </AvatarFallback>
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={profilePicture || "/placeholder.svg"} alt={displayName} />
+                  <AvatarFallback>{displayInitials}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
                     {loadingProfile || authLoading ? "Loading..." : displayName}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {displayProgram}
-                  </p>
-                  <p className="text-xs font-medium text-primary transition-colors duration-200">
+                  <p className="text-xs text-muted-foreground truncate">{displayProgram}</p>
+                  <p className="text-xs font-medium text-primary">
                     CGPA: {displayGPA ? Number(displayGPA).toFixed(2) : "-"}
                   </p>
+                  {/* Plan badge */}
+                  {subscription.loaded && (
+                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full mt-0.5
+                      ${subscription.status === "active"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                        : subscription.status === "trialing"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                      {subscription.status === "active" && <Sparkles className="w-2.5 h-2.5" />}
+                      {subscription.status === "trialing" && <Clock className="w-2.5 h-2.5" />}
+                      {subscription.status === "active"
+                        ? "Pro"
+                        : subscription.status === "trialing"
+                          ? "Trial"
+                          : "Free"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Trial / renewal banner */}
+            <div className="pt-3">
+              <TrialBanner />
+            </div>
+
             {/* Navigation */}
-            <nav className="flex-1 p-4">
-              <ul className="space-y-2">
-                {sidebarItems.map((item) => (
-                  <li key={item.key}>
-                    <Link
-                      href={item.href}
-                      className={`
-                        group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative overflow-hidden
-                        ${item.key === currentPage
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:translate-x-1"
-                        }
-                      `}
-                    >
-                      <item.icon
-                        className={`w-4 h-4 transition-all duration-200 ${item.key === currentPage ? "" : "group-hover:scale-110"}`}
-                      />
-                      {item.label}
-                      {item.key === currentPage && (
-                        <div className="absolute right-2 w-2 h-2 bg-primary-foreground rounded-full animate-pulse" />
-                      )}
-                    </Link>
-                  </li>
-                ))}
+            <nav className="flex-1 px-4 pb-4">
+              <ul className="space-y-1.5">
+                {ALL_SIDEBAR_ITEMS.map((item) => {
+                  const isActive = item.key === currentPage
+                  const isLocked =
+                    subscription.loaded &&
+                    !subscription.isProActive &&
+                    PRO_KEYS.has(item.key)
+
+                  if (isLocked) {
+                    return (
+                      <li key={item.key}>
+                        <button
+                          onClick={(e) => handleLockedClick(e, item.label)}
+                          className="group w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50"
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span className="flex-1 text-left">{item.label}</span>
+                          <Lock className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      </li>
+                    )
+                  }
+
+                  return (
+                    <li key={item.key}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className={`
+                          group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 relative overflow-hidden
+                          ${isActive
+                            ? "bg-primary text-primary-foreground shadow-md"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/80 hover:translate-x-1"
+                          }
+                        `}
+                      >
+                        <item.icon className={`w-4 h-4 transition-all duration-200 ${isActive ? "" : "group-hover:scale-110"}`} />
+                        {item.label}
+                        {isActive && (
+                          <div className="absolute right-2 w-2 h-2 bg-primary-foreground rounded-full animate-pulse" />
+                        )}
+                      </Link>
+                    </li>
+                  )
+                })}
               </ul>
             </nav>
+
+            {/* Upgrade CTA (when trial expired or free) */}
+            {subscription.loaded && !subscription.isProActive && subscription.status !== "trialing" && (
+              <div className="p-4 border-t">
+                <button
+                  onClick={() => { setLockedFeatureLabel(""); setUpgradeOpen(true) }}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Upgrade to Pro
+                </button>
+              </div>
+            )}
           </div>
         </aside>
 
         {/* Overlay for mobile */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden transition-opacity duration-300 animate-in fade-in"
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden animate-in fade-in"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -398,10 +462,24 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
         <main className="flex-1 p-6 lg:p-8 transition-all duration-300">{children}</main>
       </div>
 
+      {/* Modals */}
       <ProfileModal
         student={profileData}
         open={isProfileOpen}
         onOpenChange={setIsProfileOpen}
+      />
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        featureLabel={lockedFeatureLabel}
+        onSuccess={handlePaymentSuccess}
+      />
+
+      {/* Floating upgrade nudge (visible during trial and after trial expires) */}
+      <ProUpgradeFAB
+        status={subscription.status}
+        daysLeft={subscription.daysLeft}
+        onSuccess={fetchSubscription}
       />
     </div>
   )

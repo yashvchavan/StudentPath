@@ -515,6 +515,21 @@ export async function initializeDatabase() {
       )
     `);
 
+    // ── Razorpay columns migration (idempotent) ───────────────────────────
+    // MySQL 8.0 supports ALTER TABLE ... ADD COLUMN IF NOT EXISTS
+    const razorpayCols = [
+      "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS razorpay_order_id VARCHAR(255) NULL",
+      "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(255) NULL",
+      "ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS razorpay_signature VARCHAR(512) NULL",
+    ];
+    for (const sql of razorpayCols) {
+      try {
+        await connection.execute(sql);
+      } catch (_) {
+        // Column may already exist on older MySQL – safe to ignore
+      }
+    }
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {

@@ -35,7 +35,7 @@ const PLANS: Plan[] = [
   {
     id: "free",
     name: "Free",
-    price: "₹0",
+    price: "$0",
     priceSub: "Forever",
     description: "Ideal for students exploring their first AI-powered roadmap.",
     cta: "Start for Free",
@@ -50,8 +50,8 @@ const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    price: "₹499",
-    priceSub: "per month • ₹399/mo billed yearly",
+    price: "$6",
+    priceSub: "per month • $5/mo billed yearly",
     badge: "Most Popular",
     highlight: true,
     description: "For ambitious students who want deeper insights and higher limits.",
