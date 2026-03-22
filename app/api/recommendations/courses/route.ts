@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch student's career goal / target tech stack from Students
     const [studentRows] = await connection.execute<any[]>(
-      `SELECT technical_skills, primary_goal, industry_focus
+      `SELECT technical_skills, merged_skills, primary_goal, industry_focus
        FROM Students
        WHERE student_id = ? AND is_active = TRUE
        LIMIT 1`,
@@ -152,21 +152,28 @@ export async function GET(req: NextRequest) {
       skillRows.map((r: any) => (r.skill_name as string).toLowerCase())
     );
 
-    // Extract desired skills from technical_skills JSON column
+    // Extract desired skills from merged_skills column (dedicated AI passport)
     let desiredSkills: string[] = [];
     try {
-      const raw = studentRows[0].technical_skills;
-      const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      // Support both array format and object format
-      if (Array.isArray(parsed)) {
-        desiredSkills = parsed;
-      } else if (parsed?.desired_skills) {
-        desiredSkills = parsed.desired_skills;
-      } else if (parsed?.merged_skills) {
-        // Infer missing from the summary (skills with low proficiency)
-        desiredSkills = (parsed.merged_skills as any[])
-          .filter((s: any) => s.proficiency < 5)
-          .map((s: any) => s.skill);
+      // First try the new dedicated merged_skills column
+      const rawMerged = studentRows[0].merged_skills;
+      const parsedMerged = typeof rawMerged === 'string' ? JSON.parse(rawMerged) : rawMerged;
+      if (Array.isArray(parsedMerged) && parsedMerged.length > 0) {
+        // Use skills with low proficiency (below 5 on 0-10 scale) as gaps
+        desiredSkills = parsedMerged
+          .filter((s: any) => typeof s.proficiency === 'number' && s.proficiency < 5)
+          .map((s: any) => s.skill as string);
+      }
+
+      // Fallback: try technical_skills if merged_skills has no gaps
+      if (!desiredSkills.length) {
+        const raw = studentRows[0].technical_skills;
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (Array.isArray(parsed)) {
+          desiredSkills = parsed;
+        } else if (parsed?.desired_skills) {
+          desiredSkills = parsed.desired_skills;
+        }
       }
     } catch { /* ignore parse errors */ }
 

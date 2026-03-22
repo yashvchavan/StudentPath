@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Building, MapPin, GraduationCap, Code, Users, Languages, Star } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
+interface MergedSkill {
+  skill: string;
+  sources: string[];
+  confidence: number;
+  proficiency: number; // 0-10 scale from AI analysis
+}
+
 interface StudentData {
   student_id: string;
   first_name: string;
@@ -25,9 +32,11 @@ interface StudentData {
   current_gpa: number;
   academic_interests: string[];
   career_quiz_answers: Record<string, string>;
-  technical_skills: Record<string, number>;
+  technical_skills: Record<string, number>;   // plain { skill: level 0-5 }
   soft_skills: Record<string, number>;
   language_skills: Record<string, string>;
+  merged_skills: MergedSkill[];               // AI passport (0-10 scale)
+  last_skill_analysis: string | null;
   primary_goal: string;
   secondary_goal: string;
   timeline: string;
@@ -89,11 +98,13 @@ export default function DashboardContent() {
           // Add safe defaults for empty fields
           const safeData = {
             ...apiData.data,
-            first_name: apiData.data.first_name || user.name.split(' ')[0] || 'Student',
-            last_name: apiData.data.last_name || user.name.split(' ').slice(1).join(' ') || '',
+            first_name: apiData.data.first_name || String(user.name ?? '').split(' ')[0] || 'Student',
+            last_name: apiData.data.last_name || String(user.name ?? '').split(' ').slice(1).join(' ') || '',
             technical_skills: apiData.data.technical_skills || {},
             soft_skills: apiData.data.soft_skills || {},
             language_skills: apiData.data.language_skills || {},
+            merged_skills: apiData.data.merged_skills || [],
+            last_skill_analysis: apiData.data.last_skill_analysis || null,
             academic_interests: apiData.data.academic_interests || [],
             industry_focus: apiData.data.industry_focus || [],
             career_quiz_answers: apiData.data.career_quiz_answers || {}
@@ -105,8 +116,8 @@ export default function DashboardContent() {
           // Fallback to minimal data from user object if API fails
           setStudentData({
             student_id: String(user.id),
-            first_name: user.name.split(' ')[0],
-            last_name: user.name.split(' ').slice(1).join(' '),
+            first_name: String(user.name ?? '').split(' ')[0] || 'Student',
+            last_name: String(user.name ?? '').split(' ').slice(1).join(' ') || '',
             email: user.email,
             college: '',
             college_name: 'Your College',
@@ -121,6 +132,8 @@ export default function DashboardContent() {
             technical_skills: {},
             soft_skills: {},
             language_skills: {},
+            merged_skills: [],
+            last_skill_analysis: null,
             primary_goal: 'Learn',
             secondary_goal: 'Explore',
             timeline: 'Flexible',

@@ -69,7 +69,7 @@ export default function DashboardLayout({
         const name = user.name || user.email || 'Professional';
         setDisplayName(name);
         if (name) {
-          const parts = name.split(' ');
+          const parts = String(name).split(' ');
           const ivals = parts.length === 1 ? parts[0].substring(0, 1) : (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1));
           setInitials(ivals.toUpperCase());
         }

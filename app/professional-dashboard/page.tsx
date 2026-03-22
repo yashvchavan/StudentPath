@@ -70,8 +70,8 @@ export default function DashboardPage() {
           // Fallback to user object from useAuth if API fails or isn't updated yet
           setProf({
             id: Number(user.id),
-            first_name: user.name.split(' ')[0],
-            last_name: user.name.split(' ').slice(1).join(' '),
+            first_name: String(user.name ?? '').split(' ')[0] || 'Professional',
+            last_name: String(user.name ?? '').split(' ').slice(1).join(' ') || '',
             email: user.email,
             // defaults
           } as ProfData);

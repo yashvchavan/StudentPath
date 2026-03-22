@@ -168,8 +168,8 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   const displaySemester = profileData?.current_semester || studentData?.current_semester || "-"
   const displayGPA = profileData?.current_gpa || studentData?.current_gpa || null
   const displayInitials = getInitials(
-    profileData?.first_name || studentData?.first_name || (user?.name?.split(' ')[0]),
-    profileData?.last_name || studentData?.last_name || (user?.name?.split(' ').slice(1).join(' '))
+    profileData?.first_name || studentData?.first_name || (String(user?.name ?? '').split(' ')[0]),
+    profileData?.last_name || studentData?.last_name || (String(user?.name ?? '').split(' ').slice(1).join(' '))
   )
   const profilePicture = profileData?.profile_picture
 

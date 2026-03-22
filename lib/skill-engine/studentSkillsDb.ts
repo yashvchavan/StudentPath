@@ -152,24 +152,21 @@ export async function upsertStudentSkills(
 
     const [res] = await connection.execute<ResultSetHeader>(sql, values);
 
-    // Also sync the JSON summary column on the Students row for fast reads
+    // Write merged skills to the dedicated column (never pollute technical_skills)
     const summary = skills.map((s) => ({
-      skill:      s.skill,
+      skill:       s.skill,
       proficiency: s.proficiency,
       confidence:  s.confidence,
-      sources:    s.sources,
+      sources:     s.sources,
     }));
 
     await connection.execute(
       `UPDATE Students
-       SET technical_skills = JSON_SET(
-             COALESCE(technical_skills, '{}'),
-             '$.merged_skills',   CAST(? AS JSON),
-             '$.last_merged_at',  ?
-           ),
-           updated_at = NOW()
+       SET merged_skills       = CAST(? AS JSON),
+           last_skill_analysis = NOW(),
+           updated_at          = NOW()
        WHERE student_id = ?`,
-      [JSON.stringify(summary), new Date().toISOString(), studentId]
+      [JSON.stringify(summary), studentId]
     );
 
     return res.affectedRows;

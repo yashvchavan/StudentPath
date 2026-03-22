@@ -246,7 +246,7 @@ async function readCache(skill: string): Promise<CourseResult[] | null> {
         typeof row.courses_json === "string"
           ? JSON.parse(row.courses_json)
           : row.courses_json;
-      return Array.isArray(parsed) ? parsed : null;
+      return Array.isArray(parsed) ? parsed.slice(0, 3) : null;
     } catch {
       return null;
     }
