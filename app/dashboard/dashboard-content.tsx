@@ -290,11 +290,12 @@ export default function DashboardContent() {
                 <div>
                   <p className="text-sm font-medium mb-2">Technical Skills</p>
                   <div className="flex flex-wrap gap-2">
-                    {studentData?.technical_skills && Object.keys(studentData.technical_skills).length > 0 ? (
+                    {studentData?.technical_skills && Object.keys(studentData.technical_skills).filter(k => typeof (studentData.technical_skills as any)[k] === 'number').length > 0 ? (
                       Object.entries(studentData.technical_skills)
+                        .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
                         .sort(([, a], [, b]) => (b as number) - (a as number))
                         .slice(0, 3)
-                        .map(([skill, level]) => (
+                        .map(([skill]) => (
                           <span key={skill} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
                             {skill}
                           </span>
@@ -307,13 +308,14 @@ export default function DashboardContent() {
                 <div>
                   <p className="text-sm font-medium mb-2">Soft Skills</p>
                   <div className="flex flex-wrap gap-2">
-                    {studentData?.soft_skills && Object.keys(studentData.soft_skills).length > 0 ? (
+                    {studentData?.soft_skills && Object.keys(studentData.soft_skills).filter(k => typeof (studentData.soft_skills as any)[k] === 'number').length > 0 ? (
                       Object.entries(studentData.soft_skills)
+                        .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
                         .sort(([, a], [, b]) => (b as number) - (a as number))
                         .slice(0, 3)
                         .map(([skill, level]) => (
                           <Badge key={skill} variant="outline">
-                            {skill} - L{level}
+                            {skill} - L{level as number}
                           </Badge>
                         ))
                     ) : (
@@ -374,15 +376,16 @@ export default function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {studentData?.technical_skills && Object.keys(studentData.technical_skills).length > 0 ? (
+                {studentData?.technical_skills && Object.entries(studentData.technical_skills).filter(([, v]) => typeof v === 'number' && isFinite(v as number)).length > 0 ? (
                   Object.entries(studentData.technical_skills)
-                    .sort(([, a], [, b]) => b - a)
+                    .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
+                    .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([skill, level]) => (
                       <div key={skill} className="flex items-center justify-between">
                         <span className="text-sm">{skill}</span>
                         <div className="flex items-center gap-2">
-                          <Progress value={level * 20} className="w-20" />
-                          <span className="text-xs text-muted-foreground">{level}/5</span>
+                          <Progress value={(level as number) * 20} className="w-20" />
+                          <span className="text-xs text-muted-foreground">{level as number}/5</span>
                         </div>
                       </div>
                     ))
@@ -442,20 +445,21 @@ export default function DashboardContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {studentData?.career_quiz_answers && Object.keys(studentData.career_quiz_answers).length > 0 ? (
+                {studentData?.soft_skills && Object.entries(studentData.soft_skills).filter(([, v]) => typeof v === 'number' && isFinite(v as number)).length > 0 ? (
                   Object.entries(studentData.soft_skills)
-                    .sort(([, a], [, b]) => b - a)
+                    .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
+                    .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([skill, level]) => (
                       <div key={skill} className="flex items-center justify-between">
                         <span className="text-sm">{skill}</span>
                         <div className="flex items-center gap-2">
-                          <Progress value={level * 20} className="w-20" />
-                          <span className="text-xs text-muted-foreground">{level}/5</span>
+                          <Progress value={(level as number) * 20} className="w-20" />
+                          <span className="text-xs text-muted-foreground">{level as number}/5</span>
                         </div>
                       </div>
                     ))
                 ) : (
-                  <p className="text-sm text-gray-500">No quiz answers yet</p>
+                  <p className="text-sm text-gray-500">No soft skills added yet</p>
                 )}
 
               </div>
