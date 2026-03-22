@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     // ✅ Correct destructuring
     const [rows] = await connection.execute<LoginCollegeRow[]>(
-      'SELECT id, college_name, email, password_hash, college_token, is_active, logo_url FROM colleges WHERE email = ?',
+      'SELECT id, college_name, email, password_hash, college_token, is_active FROM colleges WHERE email = ?',
       [email]
     );
 
@@ -81,9 +81,18 @@ export async function POST(request: NextRequest) {
 
     // ✅ Set secure cookies properly
     // ✅ Set secure opaque session cookie
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('College login error: JWT_SECRET is not configured');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const sessionToken = jwt.sign(
       { id: college.id, role: 'college' },
-      process.env.JWT_SECRET!,
+      jwtSecret,
       { expiresIn: '24h' }
     );
 
