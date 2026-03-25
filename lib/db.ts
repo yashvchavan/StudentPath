@@ -44,6 +44,7 @@ export async function initializeDatabase() {
         contact_person_email VARCHAR(255),
         contact_person_phone VARCHAR(20),
         total_students INT,
+        logo_url VARCHAR(255),
         programs JSON,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -601,6 +602,13 @@ export async function initializeDatabase() {
     try {
       await connection.execute(`
         ALTER TABLE placements ADD COLUMN department_ids JSON DEFAULT NULL
+      `);
+    } catch (_) { /* column may already exist */ }
+
+    // Add logo_url to colleges for admin branding/profile
+    try {
+      await connection.execute(`
+        ALTER TABLE colleges ADD COLUMN logo_url VARCHAR(255) DEFAULT NULL
       `);
     } catch (_) { /* column may already exist */ }
 
