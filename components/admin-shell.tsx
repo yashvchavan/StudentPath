@@ -55,6 +55,40 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 
+type CollegeFeatureFlags = {
+  student_registration: boolean
+  internship_module: boolean
+  placement_module: boolean
+  ai_assistant: boolean
+  career_tracks: boolean
+  analytics_dashboard: boolean
+  tpo_management: boolean
+  notification_center: boolean
+}
+
+const DEFAULT_FEATURE_FLAGS: CollegeFeatureFlags = {
+  student_registration: true,
+  internship_module: true,
+  placement_module: true,
+  ai_assistant: true,
+  career_tracks: true,
+  analytics_dashboard: true,
+  tpo_management: true,
+  notification_center: true,
+}
+
+const FEATURE_GATES_BY_HREF: Partial<Record<string, keyof CollegeFeatureFlags>> = {
+  "/admin/students": "student_registration",
+  "/admin/internships": "internship_module",
+  "/admin/placements": "placement_module",
+  "/admin/ai": "ai_assistant",
+  "/admin/analytics": "analytics_dashboard",
+  "/admin/notifications": "notification_center",
+  "/admin/departments": "tpo_management",
+  "/admin/tpo-users": "tpo_management",
+  "/admin/users": "tpo_management",
+}
+
 type AdminShellProps = PropsWithChildren<{
   title?: string
   description?: string
@@ -110,6 +144,8 @@ export default function AdminShell({ title, description, showRange = false, righ
   const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
   const [tpoInfo, setTpoInfo] = useState<TpoInfo | null>(null)
   const [loadingTpoInfo, setLoadingTpoInfo] = useState(true)
+  const [featureFlags, setFeatureFlags] = useState<CollegeFeatureFlags>(DEFAULT_FEATURE_FLAGS)
+  const [featureFlagsLoaded, setFeatureFlagsLoaded] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -210,6 +246,36 @@ export default function AdminShell({ title, description, showRange = false, righ
   }, []);
 
   useEffect(() => {
+    const fetchFeatureFlags = async () => {
+      try {
+        const res = await fetch("/api/admin/feature-flags", {
+          credentials: "include",
+        })
+
+        if (!res.ok) {
+          setFeatureFlags(DEFAULT_FEATURE_FLAGS)
+          return
+        }
+
+        const data = (await res.json()) as { featureFlags?: Partial<CollegeFeatureFlags> }
+        if (data.featureFlags) {
+          setFeatureFlags({
+            ...DEFAULT_FEATURE_FLAGS,
+            ...data.featureFlags,
+          })
+        }
+      } catch (error) {
+        console.error("[AdminShell] Failed to load feature flags:", error)
+        setFeatureFlags(DEFAULT_FEATURE_FLAGS)
+      } finally {
+        setFeatureFlagsLoaded(true)
+      }
+    }
+
+    fetchFeatureFlags()
+  }, [])
+
+  useEffect(() => {
     if (loadingTpoInfo || !tpoInfo?.isDeptTPO) return
 
     const isCentralOnlyPath = CENTRAL_TPO_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
@@ -222,7 +288,17 @@ export default function AdminShell({ title, description, showRange = false, righ
   const roleFilteredNav = adminNav.filter(item => {
     // While loading, show minimal navigation to prevent flash
     if (loadingTpoInfo || !tpoInfo) return item.href === "/admin"; // Only show Dashboard while loading
-    return item.roles.includes(tpoInfo.role);
+
+    if (!item.roles.includes(tpoInfo.role)) return false
+
+    if (!featureFlagsLoaded) {
+      return item.href === "/admin"
+    }
+
+    const featureGate = FEATURE_GATES_BY_HREF[item.href]
+    if (!featureGate) return true
+
+    return featureFlags[featureGate] !== false
   });
 
   // Search filtering logic
