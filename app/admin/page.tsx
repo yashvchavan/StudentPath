@@ -16,7 +16,8 @@ import {
   UserPlus,
   BookOpen,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Database
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -694,6 +695,20 @@ export default function AdminDashboard() {
                   </div>
                   <span className="font-semibold text-base">View Reports</span>
                 </Button>
+
+                {/* ERP Student Data - Only for Central TPO */}
+                {userType === 'college' && (
+                  <Button
+                    variant="ghost"
+                    className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-zinc-800/50 bg-black text-white transition-all duration-300 hover:bg-indigo-950/30 hover:border-indigo-500/70 hover:shadow-xl hover:shadow-indigo-500/20 hover:scale-105 hover:text-white focus:bg-black focus-visible:ring-0 focus-visible:ring-offset-0 active:bg-black data-[state=open]:bg-black"
+                    onClick={() => router.push('/admin/erp')}
+                  >
+                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                      <Database className="w-7 h-7 text-white" />
+                    </div>
+                    <span className="font-semibold text-base">ERP Student Data</span>
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

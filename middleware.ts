@@ -97,6 +97,9 @@ export async function middleware(request: NextRequest) {
         path.startsWith('/api/professionals/register') ||
         path.startsWith('/api/auth/forgot-password') ||
         path.startsWith('/api/auth/reset-password') ||
+        path.startsWith('/api/auth/erp-lookup') ||
+        path.startsWith('/api/auth/erp-verify-otp') ||
+        path.startsWith('/api/admin/erp/status') || // Public endpoint for student registration flow
         path.startsWith('/api/contact') ||
         path.startsWith('/api/career-tracks/init-db')  // Database initialization (remove after setup)
       ) {

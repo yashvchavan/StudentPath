@@ -87,13 +87,17 @@ export async function GET(req: NextRequest) {
       }
     } catch (e) {
       console.error("Session parse error", e);
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid session'
+      }, { status: 401 });
     }
 
     if (!collegeToken || !collegeId) {
       return NextResponse.json({
         success: false,
-        error: 'Invalid session'
-      }, { status: 401 })
+        error: 'Invalid session - No college token details found'
+      }, { status: 401 });
     }
 
     // Build department filter for queries

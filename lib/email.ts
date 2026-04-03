@@ -273,3 +273,123 @@ If you were not expecting this invite, you can ignore this email.
     throw new Error(`Failed to send Department TPO invite email: ${details}`);
   }
 }
+
+interface SendErpOtpEmailParams {
+  to: string;
+  studentName: string;
+  otp: string;
+  collegeName: string;
+  expiresInMinutes?: number;
+}
+
+export async function sendErpOtpEmail({
+  to,
+  studentName,
+  otp,
+  collegeName,
+  expiresInMinutes = 10,
+}: SendErpOtpEmailParams) {
+  const platformName = 'StudentPath';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your OTP - ${platformName}</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #0f0f1a; }
+            .wrapper { padding: 40px 20px; background-color: #0f0f1a; }
+            .container { max-width: 560px; margin: 0 auto; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; overflow: hidden; border: 1px solid rgba(99,102,241,0.3); }
+            .header { background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 36px 32px; text-align: center; }
+            .header-icon { font-size: 40px; margin-bottom: 12px; }
+            .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 700; }
+            .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 15px; }
+            .content { padding: 36px 32px; }
+            .greeting { font-size: 17px; color: #e2e8f0; margin-bottom: 20px; }
+            .message { color: #94a3b8; line-height: 1.7; margin-bottom: 28px; font-size: 15px; }
+            .otp-box { background: rgba(99,102,241,0.1); border: 2px solid rgba(99,102,241,0.4); border-radius: 12px; padding: 28px; text-align: center; margin: 28px 0; }
+            .otp-label { color: #94a3b8; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; }
+            .otp-code { font-size: 48px; font-weight: 900; letter-spacing: 12px; color: #818cf8; font-family: 'Courier New', monospace; }
+            .otp-expires { color: #64748b; font-size: 13px; margin-top: 12px; }
+            .college-box { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 16px 20px; margin: 20px 0; border-left: 3px solid #4f46e5; }
+            .college-box p { margin: 0; color: #94a3b8; font-size: 14px; }
+            .college-box strong { color: #c7d2fe; }
+            .note { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; padding: 14px 18px; margin-top: 24px; }
+            .note p { margin: 0; color: #fbbf24; font-size: 14px; }
+            .footer { background: rgba(0,0,0,0.2); padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; }
+            .footer p { margin: 0; color: #475569; font-size: 13px; }
+        </style>
+    </head>
+    <body>
+        <div class="wrapper">
+          <div class="container">
+            <div class="header">
+                <div class="header-icon">🎓</div>
+                <h1>${platformName}</h1>
+                <p>Student Registration Verification</p>
+            </div>
+            <div class="content">
+                <div class="greeting">Hello ${studentName},</div>
+                <div class="message">
+                    You've initiated registration on <strong style="color:#818cf8">${platformName}</strong> using your PRN. 
+                    Use the one-time password below to verify your identity and continue registration.
+                </div>
+                
+                <div class="otp-box">
+                    <div class="otp-label">Your One-Time Password</div>
+                    <div class="otp-code">${otp}</div>
+                    <div class="otp-expires">⏱️ Expires in ${expiresInMinutes} minutes</div>
+                </div>
+
+                <div class="college-box">
+                    <p>Registering for: <strong>${collegeName}</strong></p>
+                </div>
+
+                <div class="note">
+                    <p>🔒 Do not share this OTP with anyone. If you didn't request this, please ignore this email.</p>
+                </div>
+            </div>
+            <div class="footer">
+                <p>© ${new Date().getFullYear()} ${platformName}. All rights reserved.</p>
+                <p style="margin-top:6px;">This is an automated message — please do not reply.</p>
+            </div>
+          </div>
+        </div>
+    </body>
+    </html>
+  `;
+
+  const textContent = `
+${platformName} - Student Registration OTP
+
+Hello ${studentName},
+
+Your OTP for registration at ${collegeName} is: ${otp}
+
+This OTP expires in ${expiresInMinutes} minutes.
+Do not share this OTP with anyone.
+
+If you didn't request this, please ignore this email.
+
+© ${new Date().getFullYear()} ${platformName}
+  `;
+
+  const mailOptions = {
+    from: `"${platformName}" <${process.env.SMTP_USER}>`,
+    to,
+    subject: `${otp} — Your ${platformName} Registration OTP`,
+    text: textContent,
+    html: htmlContent,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('ERP OTP email sent successfully:', info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error('Failed to send ERP OTP email:', error);
+    throw new Error(`Failed to send OTP email: ${error?.message || 'Unknown error'}`);
+  }
+}

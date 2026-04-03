@@ -33,14 +33,32 @@ import {
   Building,
   TrendingUp,
   CheckCircle,
+  Lock,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 // Inside student-registration.tsx or similar file
+interface ErpPrefillData {
+  prn?: string;
+  firstName?: string;
+  lastName?: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  branch?: string;
+  department?: string;
+  year?: string;
+  semester?: string;
+  gender?: string;
+  dateOfBirth?: string;
+}
+
 interface StudentRegistrationProps {
   collegeToken: string | null;
   collegeInfo: any;
+  prefillData?: ErpPrefillData;
 }
 
 // === Animated Background ===
@@ -480,26 +498,22 @@ const softSkillsList = [
   "Emotional Intelligence",
 ];
 
-// === Student Registration Component ===
-interface StudentRegistrationProps {
-  collegeToken: string | null;
-  collegeInfo: any;
-}
 
-const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken, collegeInfo }) => {
+// === Student Registration Component ===
+const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken, collegeInfo, prefillData }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const searchParams = useSearchParams();
   const [isRegistered, setIsRegistered] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     // Basic Info (Step 1)
-    studentId: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    dateOfBirth: "",
-    gender: "",
+    studentId: prefillData?.prn || "",
+    firstName: prefillData?.firstName || "",
+    lastName: prefillData?.lastName || "",
+    email: prefillData?.email || "",
+    phone: prefillData?.phone || "",
+    dateOfBirth: prefillData?.dateOfBirth || "",
+    gender: prefillData?.gender || "",
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
@@ -510,9 +524,9 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     linkedinUrl: "",
 
     // Academic Info (Step 2)
-    program: "",
-    currentYear: "",
-    currentSemester: "",
+    program: prefillData?.branch || "",
+    currentYear: prefillData?.year || "",
+    currentSemester: prefillData?.semester || "",
     enrollmentYear: "",
     currentGPA: [7.5],
     academicInterests: [] as string[],
@@ -538,6 +552,42 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [error, setError] = useState<string>("");
   const router = useRouter();
+
+  // If prefillData changes (e.g., parent re-renders), re-sync form fields
+  useEffect(() => {
+    if (!prefillData) return;
+    setFormData(prev => ({
+      ...prev,
+      studentId: prefillData.prn || prev.studentId,
+      firstName: prefillData.firstName || prev.firstName,
+      lastName: prefillData.lastName || prev.lastName,
+      email: prefillData.email || prev.email,
+      phone: prefillData.phone || prev.phone,
+      dateOfBirth: prefillData.dateOfBirth || prev.dateOfBirth,
+      gender: prefillData.gender || prev.gender,
+      program: prefillData.branch || prev.program,
+      currentYear: prefillData.year || prev.currentYear,
+      currentSemester: prefillData.semester || prev.currentSemester,
+    }));
+  }, [prefillData]);
+
+  // Helper: is a field locked (pre-filled from ERP and should be read-only)
+  const isErpField = (field: string): boolean => {
+    if (!prefillData) return false;
+    const erpFields: Record<string, boolean> = {
+      studentId: !!prefillData.prn,
+      firstName: !!prefillData.firstName,
+      lastName: !!prefillData.lastName,
+      email: !!prefillData.email,
+      phone: !!prefillData.phone,
+      dateOfBirth: !!prefillData.dateOfBirth,
+      gender: !!prefillData.gender,
+      program: !!prefillData.branch,
+      currentYear: !!prefillData.year,
+      currentSemester: !!prefillData.semester,
+    };
+    return erpFields[field] === true;
+  };
 
   const totalSteps = 6;
   const progress = (currentStep / totalSteps) * 100;
@@ -714,21 +764,29 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                   Basic Information
                 </h2>
                 <p className="text-gray-400 mt-2">
-                  Let's start with your basic details
+                  {prefillData ? "Your details are pre-filled from college records. Set your password to continue." : "Let's start with your basic details"}
                 </p>
+                {prefillData && (
+                  <div className="inline-flex items-center gap-2 mt-3 bg-emerald-950/40 border border-emerald-700/40 rounded-full px-4 py-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs text-emerald-300 font-medium">ERP Verified — locked fields are from your college records</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="studentId" className="text-gray-900 dark:text-white font-medium">
-                    Student ID *
+                  <Label htmlFor="studentId" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
+                    Student ID / PRN *
+                    {isErpField('studentId') && <Lock className="w-3 h-3 text-emerald-400" />}
                   </Label>
                   <Input
                     id="studentId"
-                    placeholder="Your student ID"
+                    placeholder="Your student ID / PRN"
                     value={formData.studentId}
-                    onChange={(e) => updateFormData({ studentId: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                    onChange={(e) => !isErpField('studentId') && updateFormData({ studentId: e.target.value })}
+                    readOnly={isErpField('studentId')}
+                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('studentId') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
                   />
                 </div>
 
@@ -756,55 +814,63 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-gray-900 dark:text-white font-medium">
+                  <Label htmlFor="firstName" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
                     First Name *
+                    {isErpField('firstName') && <Lock className="w-3 h-3 text-emerald-400" />}
                   </Label>
                   <Input
                     id="firstName"
                     placeholder="Your first name"
                     value={formData.firstName}
-                    onChange={(e) => updateFormData({ firstName: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                    onChange={(e) => !isErpField('firstName') && updateFormData({ firstName: e.target.value })}
+                    readOnly={isErpField('firstName')}
+                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('firstName') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-gray-900 dark:text-white font-medium">
+                  <Label htmlFor="lastName" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
                     Last Name *
+                    {isErpField('lastName') && <Lock className="w-3 h-3 text-emerald-400" />}
                   </Label>
                   <Input
                     id="lastName"
                     placeholder="Your last name"
                     value={formData.lastName}
-                    onChange={(e) => updateFormData({ lastName: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                    onChange={(e) => !isErpField('lastName') && updateFormData({ lastName: e.target.value })}
+                    readOnly={isErpField('lastName')}
+                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('lastName') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-900 dark:text-white font-medium">
+                  <Label htmlFor="email" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
                     Email Address *
+                    {isErpField('email') && <Lock className="w-3 h-3 text-emerald-400" />}
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="your.email@college.edu"
                     value={formData.email}
-                    onChange={(e) => updateFormData({ email: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                    onChange={(e) => !isErpField('email') && updateFormData({ email: e.target.value })}
+                    readOnly={isErpField('email')}
+                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('email') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-gray-900 dark:text-white font-medium">
+                  <Label htmlFor="phone" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
                     Phone Number
+                    {isErpField('phone') && <Lock className="w-3 h-3 text-emerald-400" />}
                   </Label>
                   <Input
                     id="phone"
                     placeholder="+91 0123456789"
                     value={formData.phone}
-                    onChange={(e) => updateFormData({ phone: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
+                    onChange={(e) => !isErpField('phone') && updateFormData({ phone: e.target.value })}
+                    readOnly={isErpField('phone')}
+                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('phone') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
                   />
                 </div>
 

@@ -640,6 +640,58 @@ export async function initializeDatabase() {
       `);
     } catch (_) { /* column may already exist */ }
 
+    // ── ERP Student Data Tables ───────────────────────────────────────────
+
+    // college_erp_students: stores student roster uploaded via ERP Excel
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS college_erp_students (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        prn VARCHAR(100) NOT NULL,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        full_name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(30),
+        branch VARCHAR(255),
+        department VARCHAR(255),
+        year INT,
+        semester INT,
+        division VARCHAR(50),
+        roll_no VARCHAR(100),
+        gender VARCHAR(30),
+        date_of_birth DATE,
+        address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(100),
+        extra_data JSON,
+        is_registered BOOLEAN DEFAULT FALSE,
+        registered_student_id INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+        UNIQUE KEY uq_college_prn (college_id, prn),
+        INDEX idx_erp_email (email),
+        INDEX idx_erp_college (college_id)
+      )
+    `);
+
+    // erp_otps: temporary OTP store for PRN-based student registration
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS erp_otps (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        prn VARCHAR(100) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        otp_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        is_used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_otp_lookup (college_id, prn),
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+      )
+    `);
+
     connection.release();
     console.log('Database tables initialized successfully');
   } catch (error) {
