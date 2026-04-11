@@ -5,89 +5,48 @@ import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import { useAdminProfile, clearAdminProfileCache } from "@/contexts/AdminProfileContext"
 import {
-  BarChart3,
-  Users,
   BookOpen,
-  GraduationCap,
-  Bot,
-  DollarSign,
-  TrendingUp,
-  Bell,
-  Database,
-  SettingsIcon,
-  UserCheck,
-  Shield,
   Menu,
   X,
-  Download,
   Search,
-  Eye,
   LayoutDashboard,
   UsersRound,
-  Library,
-  School,
-  BrainCircuit,
-  Wallet,
   LineChart,
   BellRing,
-  Boxes,
   Cog,
-  UserCog,
   LifeBuoy,
   LogOut,
   Briefcase,
   Laptop,
   Building2,
   UserPlus,
+  Database,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 
-type CollegeFeatureFlags = {
-  student_registration: boolean
-  internship_module: boolean
-  placement_module: boolean
-  ai_assistant: boolean
-  career_tracks: boolean
-  analytics_dashboard: boolean
-  tpo_management: boolean
-  notification_center: boolean
-}
+// ── Clean, purposeful navigation ──────────────────────────────────────────
+const adminNav = [
+  { icon: LayoutDashboard, label: "Dashboard",          href: "/admin",               roles: ["college", "dept_tpo"] },
+  { icon: Building2,       label: "Departments",         href: "/admin/departments",   roles: ["college"] },
+  { icon: UsersRound,      label: "Student Management",  href: "/admin/students",      roles: ["college", "dept_tpo"] },
+  { icon: Briefcase,       label: "Placements",          href: "/admin/placements",    roles: ["college", "dept_tpo"] },
+  { icon: Laptop,          label: "Internships",         href: "/admin/internships",   roles: ["college", "dept_tpo"] },
+  { icon: Database,        label: "ERP Data",            href: "/admin/erp",           roles: ["college"] },
+  { icon: LineChart,       label: "Analytics & Reports", href: "/admin/analytics",     roles: ["college", "dept_tpo"] },
+  { icon: UserPlus,        label: "TPO Users",           href: "/admin/tpo-users",     roles: ["college"] },
+  { icon: BellRing,        label: "Notifications",       href: "/admin/notifications", roles: ["college", "dept_tpo"] },
+  { icon: Cog,             label: "Settings",            href: "/admin/settings",      roles: ["college"] },
+  { icon: LifeBuoy,        label: "Support",             href: "/admin/support",       roles: ["college", "dept_tpo"] },
+]
 
-const DEFAULT_FEATURE_FLAGS: CollegeFeatureFlags = {
-  student_registration: true,
-  internship_module: true,
-  placement_module: true,
-  ai_assistant: true,
-  career_tracks: true,
-  analytics_dashboard: true,
-  tpo_management: true,
-  notification_center: true,
-}
-
-const FEATURE_GATES_BY_HREF: Partial<Record<string, keyof CollegeFeatureFlags>> = {
-  "/admin/students": "student_registration",
-  "/admin/internships": "internship_module",
-  "/admin/placements": "placement_module",
-  "/admin/ai": "ai_assistant",
-  "/admin/analytics": "analytics_dashboard",
-  "/admin/notifications": "notification_center",
-  "/admin/departments": "tpo_management",
-  "/admin/tpo-users": "tpo_management",
-  "/admin/users": "tpo_management",
-}
+const CENTRAL_TPO_ONLY_PATHS = [
+  "/admin/departments",
+  "/admin/tpo-users",
+  "/admin/erp",
+  "/admin/settings",
+]
 
 type AdminShellProps = PropsWithChildren<{
   title?: string
@@ -96,461 +55,268 @@ type AdminShellProps = PropsWithChildren<{
   rightContent?: React.ReactNode
 }>
 
-// Navigation items with role-based visibility
-const adminNav = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/admin", roles: ["college", "dept_tpo"] },
-  { icon: UsersRound, label: "Student Management", href: "/admin/students", roles: ["college", "dept_tpo"] },
-  { icon: Library, label: "Course Catalog", href: "/admin/courses", roles: ["college", "dept_tpo"] },
-  { icon: Briefcase, label: "Placements", href: "/admin/placements", roles: ["college", "dept_tpo"] },
-  { icon: Laptop, label: "Internships", href: "/admin/internships", roles: ["college", "dept_tpo"] },
-  { icon: Building2, label: "Departments", href: "/admin/departments", roles: ["college"] },
-  { icon: UserPlus, label: "TPO Users", href: "/admin/tpo-users", roles: ["college"] },
-  { icon: School, label: "Program Management", href: "/admin/programs", roles: ["college"] },
-  { icon: BrainCircuit, label: "AI Configuration", href: "/admin/ai", roles: ["college"] },
-  { icon: Wallet, label: "Affiliate Dashboard", href: "/admin/affiliate", roles: ["college"] },
-  { icon: LineChart, label: "Analytics & Reports", href: "/admin/analytics", roles: ["college", "dept_tpo"] },
-  { icon: BellRing, label: "Notification Center", href: "/admin/notifications", roles: ["college", "dept_tpo"] },
-  { icon: Boxes, label: "System Integrations", href: "/admin/integrations", roles: ["college"] },
-  { icon: Cog, label: "College Settings", href: "/admin/settings", roles: ["college"] },
-  { icon: UserCog, label: "Admin Users", href: "/admin/users", roles: ["college"] },
-  { icon: LifeBuoy, label: "Support Center", href: "/admin/support", roles: ["college", "dept_tpo"] },
-]
-
-// TPO session info interface
 interface TpoInfo {
-  role: "college" | "dept_tpo";
-  isCentralTPO: boolean;
-  isDeptTPO: boolean;
-  departmentName?: string;
-  departmentId?: number;
+  role: "college" | "dept_tpo"
+  isCentralTPO: boolean
+  isDeptTPO: boolean
+  departmentName?: string
+  departmentId?: number
 }
 
-const CENTRAL_TPO_ONLY_PATHS = [
-  "/admin/departments",
-  "/admin/tpo-users",
-  "/admin/programs",
-  "/admin/ai",
-  "/admin/affiliate",
-  "/admin/integrations",
-  "/admin/settings",
-  "/admin/users",
-]
+const SESSION_KEY_TPO = "adminShell_tpoInfo"
 
-export default function AdminShell({ title, description, showRange = false, rightContent, children }: AdminShellProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
+export default function AdminShell({ title, description, rightContent, children }: AdminShellProps) {
+  const [sidebarOpen,   setSidebarOpen]   = useState(false)
+  const [searchQuery,   setSearchQuery]   = useState("")
   const [searchFocused, setSearchFocused] = useState(false)
   const { adminProfile, setAdminProfile } = useAdminProfile()
-  const [selectedTimeRange, setSelectedTimeRange] = useState("7d")
-  const [tpoInfo, setTpoInfo] = useState<TpoInfo | null>(null)
-  const [loadingTpoInfo, setLoadingTpoInfo] = useState(true)
-  const [featureFlags, setFeatureFlags] = useState<CollegeFeatureFlags>(DEFAULT_FEATURE_FLAGS)
-  const [featureFlagsLoaded, setFeatureFlagsLoaded] = useState(false)
+  const [tpoInfo,         setTpoInfo]         = useState<TpoInfo | null>(null)
+  const [loadingTpoInfo,  setLoadingTpoInfo]  = useState(true)
+  const [loggingOut,      setLoggingOut]      = useState(false)
   const pathname = usePathname()
-  const router = useRouter()
-
-  const [loggingOut, setLoggingOut] = useState(false)
+  const router   = useRouter()
 
   const getFallbackRole = (): "college" | "dept_tpo" | null => {
     if (typeof window === "undefined") return null
-
     try {
-      // Use least-privilege fallback to avoid exposing central-only navigation on auth fetch failures.
-      if (localStorage.getItem("tpoData") || document.cookie.includes("tpoData=")) {
-        return "dept_tpo"
-      }
-      if (localStorage.getItem("collegeData") || document.cookie.includes("collegeData=")) {
-        return "college"
-      }
-    } catch (error) {
-      console.error("[AdminShell] Error determining fallback role:", error)
-    }
-
+      if (localStorage.getItem("tpoData") || document.cookie.includes("tpoData=")) return "dept_tpo"
+      if (localStorage.getItem("collegeData") || document.cookie.includes("collegeData=")) return "college"
+    } catch { /* ignore */ }
     return null
   }
 
-  // Fetch TPO session info on mount
+  // Fetch session info — cached in sessionStorage so only runs ONCE per browser session
   useEffect(() => {
     const fetchTpoInfo = async () => {
+      // Restore from sessionStorage immediately to prevent nav flash on page navigation
+      const cached = sessionStorage.getItem(SESSION_KEY_TPO)
+      if (cached) {
+        try {
+          setTpoInfo(JSON.parse(cached))
+          setLoadingTpoInfo(false)
+          return
+        } catch { /* fall through */ }
+      }
+
+      // While fetching, apply local fallback so nav renders immediately
+      const fallback = getFallbackRole()
+      if (fallback) {
+        setTpoInfo({ role: fallback, isCentralTPO: fallback === "college", isDeptTPO: fallback === "dept_tpo" })
+      }
+
       try {
-        setLoadingTpoInfo(true)
-        console.log("[AdminShell] Fetching TPO info...");
-
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000) // Reduced to 5 seconds
-
-        const res = await fetch('/api/auth/me', {
-          credentials: 'include',
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId)
-
-        console.log("[AdminShell] Response status:", res.status);
+        const timer = setTimeout(() => controller.abort(new Error("Timeout")), 6000)
+        const res = await fetch("/api/auth/me", { credentials: "include", signal: controller.signal })
+        clearTimeout(timer)
 
         if (res.ok) {
-          const data = await res.json();
-          console.log("[AdminShell] Response data:", data);
-
+          const data = await res.json()
           if (data.authenticated && data.user) {
-            const role = data.user.role as "college" | "dept_tpo";
-            console.log("[AdminShell] Setting TPO info for role:", role);
-
-            setTpoInfo({
+            const role = data.user.role as "college" | "dept_tpo"
+            const info: TpoInfo = {
               role,
-              isCentralTPO: role === "college",
-              isDeptTPO: role === "dept_tpo",
+              isCentralTPO:   role === "college",
+              isDeptTPO:      role === "dept_tpo",
               departmentName: data.user.departmentName,
-              departmentId: data.user.departmentId,
-            });
-          } else {
-            const fallbackRole = getFallbackRole()
-            if (fallbackRole) {
-              setTpoInfo({
-                role: fallbackRole,
-                isCentralTPO: fallbackRole === "college",
-                isDeptTPO: fallbackRole === "dept_tpo",
-              })
-            } else {
-              setTpoInfo(null)
+              departmentId:   data.user.departmentId,
             }
-          }
-        } else {
-          const fallbackRole = getFallbackRole()
-          if (fallbackRole) {
-            setTpoInfo({
-              role: fallbackRole,
-              isCentralTPO: fallbackRole === "college",
-              isDeptTPO: fallbackRole === "dept_tpo",
-            })
-          } else {
-            setTpoInfo(null)
+            setTpoInfo(info)
+            sessionStorage.setItem(SESSION_KEY_TPO, JSON.stringify(info))
           }
         }
-      } catch (error) {
-        console.error("[AdminShell] Error fetching TPO info:", error);
-        const fallbackRole = getFallbackRole()
-        if (fallbackRole) {
-          setTpoInfo({
-            role: fallbackRole,
-            isCentralTPO: fallbackRole === "college",
-            isDeptTPO: fallbackRole === "dept_tpo",
-          })
-        } else {
-          setTpoInfo(null)
+      } catch (err: any) {
+        // AbortError from timeout is expected — fallback already applied above
+        if (err?.name !== "AbortError") {
+          console.warn("[AdminShell] Session fetch error:", err?.message)
         }
       } finally {
         setLoadingTpoInfo(false)
       }
-    };
-    fetchTpoInfo();
-  }, []);
-
-  useEffect(() => {
-    const fetchFeatureFlags = async () => {
-      try {
-        const res = await fetch("/api/admin/feature-flags", {
-          credentials: "include",
-        })
-
-        if (!res.ok) {
-          setFeatureFlags(DEFAULT_FEATURE_FLAGS)
-          return
-        }
-
-        const data = (await res.json()) as { featureFlags?: Partial<CollegeFeatureFlags> }
-        if (data.featureFlags) {
-          setFeatureFlags({
-            ...DEFAULT_FEATURE_FLAGS,
-            ...data.featureFlags,
-          })
-        }
-      } catch (error) {
-        console.error("[AdminShell] Failed to load feature flags:", error)
-        setFeatureFlags(DEFAULT_FEATURE_FLAGS)
-      } finally {
-        setFeatureFlagsLoaded(true)
-      }
     }
 
-    fetchFeatureFlags()
+    fetchTpoInfo()
   }, [])
 
+  // Redirect dept_tpo away from central-only pages
   useEffect(() => {
     if (loadingTpoInfo || !tpoInfo?.isDeptTPO) return
-
-    const isCentralOnlyPath = CENTRAL_TPO_ONLY_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-    if (isCentralOnlyPath) {
-      router.replace("/admin")
-    }
+    const blocked = CENTRAL_TPO_ONLY_PATHS.some(p => pathname === p || pathname.startsWith(`${p}/`))
+    if (blocked) router.replace("/admin")
   }, [loadingTpoInfo, pathname, router, tpoInfo])
 
-  // Filter navigation based on user role
-  const roleFilteredNav = adminNav.filter(item => {
-    // While loading, show minimal navigation to prevent flash
-    if (loadingTpoInfo || !tpoInfo) return item.href === "/admin"; // Only show Dashboard while loading
+  // Build nav list — use cached/fallback role to avoid empty sidebar while loading
+  const role = tpoInfo?.role ?? getFallbackRole() ?? "college"
+  const filteredNav = adminNav
+    .filter(item => item.roles.includes(role))
+    .filter(item => item.label.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    if (!item.roles.includes(tpoInfo.role)) return false
-
-    if (!featureFlagsLoaded) {
-      return item.href === "/admin"
-    }
-
-    const featureGate = FEATURE_GATES_BY_HREF[item.href]
-    if (!featureGate) return true
-
-    return featureFlags[featureGate] !== false
-  });
-
-  // Search filtering logic
-  const filteredNav = roleFilteredNav.filter(item =>
-    item.label.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  // Handle search navigation
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim() && filteredNav.length > 0) {
+    if (e.key === "Enter" && searchQuery.trim() && filteredNav.length > 0) {
       router.push(filteredNav[0].href)
       setSearchQuery("")
       setSearchFocused(false)
     }
   }
 
-  // Logout function
   const handleLogout = async () => {
     setLoggingOut(true)
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST" });
-      const data = await res.json();
+      sessionStorage.removeItem(SESSION_KEY_TPO)
+      const res  = await fetch("/api/auth/logout", { method: "POST" })
+      const data = await res.json()
       if (data.success) {
-        setAdminProfile(null);
-        clearAdminProfileCache();
-        router.replace("/college-login");
+        setAdminProfile(null)
+        clearAdminProfileCache()
+        router.replace("/college-login")
       } else {
-        console.error("Logout failed:", data.error);
         setLoggingOut(false)
       }
-    } catch (err) {
-      console.error("Error logging out:", err);
+    } catch {
       setLoggingOut(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Header */}
-      <header className="border-b border-zinc-900 bg-black sticky top-0 z-50 shadow-lg shadow-black/20">
-        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4">
-          {/* Left */}
-          <div className="flex items-center gap-4">
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <header className="border-b border-zinc-900 bg-black sticky top-0 z-50">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-3">
+          {/* Left: hamburger + college branding */}
+          <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
-              size="sm"
+              variant="ghost" size="sm"
               className="lg:hidden text-zinc-400 hover:text-white hover:bg-zinc-800 p-2 h-auto"
-              onClick={() => setSidebarOpen((v) => !v)}
+              onClick={() => setSidebarOpen(v => !v)}
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 max-w-[200px] sm:max-w-xs md:max-w-md lg:max-w-lg">
+
+            <div className="flex items-center gap-2">
               {adminProfile?.logo_url ? (
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden bg-white border border-zinc-700 flex-shrink-0 shadow-md">
-                  <img
-                    src={adminProfile.logo_url}
-                    alt={adminProfile.name || 'College Logo'}
-                    className="w-full h-full object-contain"
-                  />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg overflow-hidden bg-white border border-zinc-700 flex-shrink-0">
+                  <img src={adminProfile.logo_url} alt={adminProfile.name || "College"} className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-4 h-4 text-white" />
                 </div>
               )}
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 hidden sm:block">
                 {adminProfile ? (
                   <>
-                    <h1 className="text-sm sm:text-base md:text-lg font-bold text-white truncate" title={adminProfile.name ?? undefined}>
-                      {adminProfile.name}
-                    </h1>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-zinc-400 hidden sm:block">
-                        {tpoInfo?.isDeptTPO ? "Dept TPO Portal" : "Admin Portal"}
-                      </p>
-                      {tpoInfo?.isDeptTPO && tpoInfo.departmentName && (
-                        <Badge variant="outline" className="text-xs border-blue-600/50 text-blue-400 hidden md:inline-flex">
-                          {tpoInfo.departmentName}
-                        </Badge>
-                      )}
-                    </div>
+                    <h1 className="text-sm font-semibold text-white truncate max-w-[200px] md:max-w-xs">{adminProfile.name}</h1>
+                    <p className="text-xs text-zinc-500">{tpoInfo?.isDeptTPO ? "Dept TPO Portal" : "Admin Portal"}</p>
                   </>
                 ) : (
-                  <div className="animate-pulse">
-                    <div className="h-4 w-20 sm:w-24 bg-zinc-800 rounded mb-1" />
-                    <div className="h-3 w-12 sm:w-16 bg-zinc-800 rounded hidden sm:block" />
+                  <div className="animate-pulse space-y-1">
+                    <div className="h-3.5 w-28 bg-zinc-800 rounded" />
+                    <div className="h-3 w-16 bg-zinc-800 rounded" />
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Center - Search (Hidden on mobile) */}
-          <div className="flex-1 max-w-md mx-4 hidden lg:block">
-            <div
-              className={`relative transition-all duration-300 ${searchFocused ? "scale-[1.02]" : ""
-                }`}
-            >
-              <Search
-                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors duration-200 ${searchFocused ? "text-blue-400" : "text-zinc-500"
-                  }`}
-              />
+          {/* Center: search */}
+          <div className="flex-1 max-w-sm mx-4 hidden lg:block">
+            <div className={`relative transition-all duration-150 ${searchFocused ? "scale-[1.01]" : ""}`}>
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${searchFocused ? "text-blue-400" : "text-zinc-500"}`} />
               <Input
-                placeholder="Search students, courses, reports..."
+                placeholder="Search navigation..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                className={`pl-10 bg-zinc-900 text-white border rounded-xl transition-all duration-200 placeholder:text-zinc-500
-        ${searchFocused
-                    ? "border-blue-500 ring-2 ring-blue-500/20 shadow-lg shadow-blue-500/10"
-                    : "border-zinc-700 hover:border-zinc-600"
-                  }`}
+                className={`pl-9 h-9 bg-zinc-900 text-sm text-white border rounded-lg placeholder:text-zinc-500 ${searchFocused ? "border-blue-500 ring-1 ring-blue-500/20" : "border-zinc-800"}`}
               />
             </div>
           </div>
 
-
-          {/* Right */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Role Badge (visible on desktop) */}
+          {/* Right: role badge + logout */}
+          <div className="flex items-center gap-2">
             {tpoInfo && (
-              <Badge
-                variant="outline"
-                className={`hidden lg:inline-flex text-xs ${
-                  tpoInfo.isCentralTPO
-                    ? "border-emerald-600/50 text-emerald-400"
-                    : "border-purple-600/50 text-purple-400"
-                }`}
-              >
+              <Badge variant="outline" className={`hidden md:inline-flex text-xs ${tpoInfo.isCentralTPO ? "border-emerald-600/40 text-emerald-400" : "border-purple-600/40 text-purple-400"}`}>
                 {tpoInfo.isCentralTPO ? "Central TPO" : "Dept TPO"}
               </Badge>
             )}
-            {/* Logout Button */}
-            <Button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="bg-red-600/90 hover:bg-red-600 text-white border-0 shadow-lg shadow-red-600/20 transition-all duration-200 hover:shadow-red-600/40 hover:scale-105 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
-              size="sm"
-            >
-              {loggingOut ? (
-                <>
-                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Logging out...</span>
-                  <span className="sm:hidden">...</span>
-                </>
-              ) : (
-                <>
-                  <LogOut className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Logout</span>
-                </>
-              )}
+            <Button onClick={handleLogout} disabled={loggingOut} size="sm" className="bg-red-600/90 hover:bg-red-600 text-white text-xs h-8 px-3">
+              {loggingOut
+                ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />Logging out</>
+                : <><LogOut className="w-3 h-3 mr-1.5" />Logout</>
+              }
             </Button>
           </div>
         </div>
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
+        {/* ── Sidebar ─────────────────────────────────────────────────────── */}
         <aside
-          className={`fixed lg:fixed inset-y-0 left-0 z-40 w-64 bg-black border-r border-zinc-700 transform transition-transform duration-300 ease-in-out overflow-y-auto scrollbar-hide ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-            }`}
-          style={{ top: '68px', height: 'calc(100vh - 68px)' }}
+          className={`fixed inset-y-0 left-0 z-40 w-60 bg-zinc-950 border-r border-zinc-800/60 transform transition-transform duration-200 ease-in-out overflow-y-auto ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
+          style={{ top: "53px", height: "calc(100vh - 53px)" }}
         >
-          <nav className="p-4">
-            {/* Department info for Dept TPO (mobile) */}
+          <nav className="p-2.5">
             {tpoInfo?.isDeptTPO && tpoInfo.departmentName && (
-              <div className="mb-4 p-3 bg-purple-600/10 border border-purple-600/30 rounded-lg md:hidden">
-                <p className="text-xs text-purple-400 font-medium">Your Department</p>
+              <div className="mb-2 px-3 py-2 bg-purple-600/10 border border-purple-600/20 rounded-lg">
+                <p className="text-[11px] text-purple-400 font-medium uppercase tracking-wide">Your Dept</p>
                 <p className="text-sm text-white truncate">{tpoInfo.departmentName}</p>
               </div>
             )}
-            <ul className="space-y-1">
-              {filteredNav.length > 0 ? (
-                filteredNav.map((item) => {
-                  const active = pathname === item.href
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${active
-                          ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/30"
-                          : "text-zinc-300 hover:bg-zinc-800/80 hover:text-white hover:shadow-md hover:shadow-zinc-800/50 hover:scale-[1.02]"
-                          }`}
-                      >
-                        <item.icon className="w-5 h-5 transition-colors duration-200" />
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  )
-                })
-              ) : searchQuery ? (
-                <li className="px-3 py-4 text-center text-sm text-zinc-500">
-                  No results found for "{searchQuery}"
-                </li>
-              ) : null}
+            <ul className="space-y-0.5">
+              {filteredNav.map(item => {
+                const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"))
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-100 ${
+                        active
+                          ? "bg-blue-600 text-white"
+                          : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  </li>
+                )
+              })}
+              {searchQuery && filteredNav.length === 0 && (
+                <li className="px-3 py-6 text-center text-sm text-zinc-600">No results for &quot;{searchQuery}&quot;</li>
+              )}
             </ul>
           </nav>
         </aside>
 
-        {/* Overlay for mobile */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
-        )}
+        {/* Mobile overlay */}
+        {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-        {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8 lg:ml-64 bg-black min-h-screen">
-          {(title || description || showRange || rightContent) && (
-            <div className="flex items-center justify-between mb-6">
+        {/* ── Main ─────────────────────────────────────────────────────────── */}
+        <main className="flex-1 lg:ml-60 min-h-screen bg-black">
+          {(title || description || rightContent) && (
+            <div className="flex items-start justify-between px-6 pt-6 pb-0">
               <div>
-                {title && <h2 className="text-3xl font-bold text-white">{title}</h2>}
-                {description && <p className="text-zinc-400 mt-1">{description}</p>}
+                {title       && <h2 className="text-2xl font-bold text-white">{title}</h2>}
+                {description && <p className="text-zinc-400 mt-1 text-sm">{description}</p>}
               </div>
-              <div className="flex items-center gap-3">
-                {rightContent}
-                {showRange && (
-                  <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                    <SelectTrigger className="w-32 bg-zinc-900 border-zinc-700 text-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-zinc-700">
-                      <SelectItem value="24h">Last 24h</SelectItem>
-                      <SelectItem value="7d">Last 7 days</SelectItem>
-                      <SelectItem value="30d">Last 30 days</SelectItem>
-                      <SelectItem value="90d">Last 90 days</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+              {rightContent && <div className="flex items-center gap-3 mt-1">{rightContent}</div>}
             </div>
           )}
-          {children}
+          <div className="p-6">{children}</div>
         </main>
       </div>
 
-      {/* Logout Loading Overlay */}
+      {/* Logout overlay */}
       {loggingOut && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm mx-4">
-            <div className="relative">
-              <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-900 rounded-full"></div>
-              <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                Logging Out...
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Please wait while we securely log you out
-              </p>
-            </div>
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 flex flex-col items-center gap-3">
+            <div className="w-7 h-7 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-zinc-300">Logging out securely...</p>
           </div>
         </div>
       )}

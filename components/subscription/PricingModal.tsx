@@ -120,7 +120,7 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
               <div>
                 <span className="font-semibold text-base">Pro</span>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-primary">$12</span>
+                  <span className="text-3xl font-bold text-primary">₹299</span>
                   <span className="text-xs text-muted-foreground">/ year</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -146,7 +146,7 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
                 onClick={() => setUpgradeOpen(true)}
               >
                 <ShieldCheck className="w-4 h-4" />
-                Get Pro - $12 / year
+                Get Pro - ₹299 / year
               </Button>
 
               <p className="text-[10px] text-center text-muted-foreground -mt-2">

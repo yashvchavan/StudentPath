@@ -18,91 +18,69 @@ function safeJsonParse(value: any, fallback: any = {}) {
 export async function GET(request: NextRequest) {
   let connection;
   try {
-    // Get and validate query parameters
     const { searchParams } = new URL(request.url);
     const cookieStore = await cookies();
     const tokenCookie = cookieStore.get('auth_session')?.value;
 
     let studentId = searchParams.get('studentId');
-    let token = searchParams.get('token');
 
-    if ((!studentId || !token) && tokenCookie) {
+    // Decode JWT to get studentId if not in query param
+    if (!studentId && tokenCookie) {
       try {
-        const decoded = jwt.verify(tokenCookie, process.env.JWT_SECRET!) as { id: number, role: string, collegeToken?: string };
+        const decoded = jwt.verify(tokenCookie, process.env.JWT_SECRET!) as { id: number, role: string };
         if (decoded.role === 'student') {
           studentId = String(decoded.id);
-          if (decoded.collegeToken) {
-            token = decoded.collegeToken;
-          }
         }
       } catch (e) {
-        console.error("JWT verification failed", e);
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
       }
     }
 
-    // If we still don't have token but have studentId, we can fetch it from DB
-    if (studentId && !token) {
+    if (!studentId) {
+      return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
+    }
+
+    // Verify the requesting user is the same student (security check)
+    if (tokenCookie) {
       try {
-        const [rows]: any = await pool.query('SELECT college_token FROM Students WHERE student_id = ?', [studentId]);
-        if (rows && rows.length > 0) {
-          token = rows[0].college_token;
+        const decoded = jwt.verify(tokenCookie, process.env.JWT_SECRET!) as { id: number, role: string };
+        if (decoded.role !== 'student' || String(decoded.id) !== String(studentId)) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
-      } catch (e) { console.error(e) }
+      } catch {
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+      }
     }
 
-    if (!studentId || !token) {
-      return NextResponse.json(
-        { error: 'Student ID and token are required' },
-        { status: 400 }
-      );
-    }
-
-    // Get database connection
     connection = await pool.getConnection();
 
-    // Validate the token and get college information
-    const [tokenResult] = await connection.execute<RowDataPacket[]>(
-      `SELECT c.id as college_id, c.college_name, c.college_type, c.city, c.state, c.country
-       FROM colleges c 
-       JOIN college_tokens ct ON c.id = ct.college_id 
-       WHERE ct.token = ? AND ct.is_active = TRUE`,
-      [token]
-    );
-
-    if (!tokenResult || tokenResult.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 401 }
-      );
-    }
-
-    const collegeInfo = tokenResult[0];
-
-    // Single query to get ALL student data from Students table
+    // Fetch all student data + college info in one query via JOIN
     const [students] = await connection.execute<RowDataPacket[]>(
-      `SELECT 
-        student_id, first_name, last_name, email, phone,
-        program, current_year, current_semester, enrollment_year, current_gpa,
-        academic_interests, career_quiz_answers,
-        technical_skills, soft_skills, language_skills,
-        merged_skills, last_skill_analysis,
-        primary_goal, secondary_goal, timeline, location_preference,
-        industry_focus, intensity_level
-       FROM Students
-       WHERE student_id = ?`,
+      `SELECT
+        s.student_id, s.first_name, s.last_name, s.email, s.phone,
+        s.program, s.current_year, s.current_semester, s.enrollment_year, s.current_gpa,
+        s.academic_interests, s.career_quiz_answers,
+        s.technical_skills, s.soft_skills, s.language_skills,
+        s.merged_skills, s.last_skill_analysis,
+        s.primary_goal, s.secondary_goal, s.timeline, s.location_preference,
+        s.industry_focus, s.intensity_level,
+        s.prn, s.date_of_birth, s.gender, s.country,
+        s.github_username, s.leetcode_username, s.linkedin_url,
+        s.college_token, s.college_id,
+        c.college_name, c.college_type, c.city, c.state, c.country AS college_country
+       FROM Students s
+       LEFT JOIN colleges c ON s.college_id = c.id
+       WHERE s.student_id = ? AND s.is_active = TRUE`,
       [studentId]
     );
 
     if (!students || students.length === 0) {
-      return NextResponse.json(
-        { error: 'Student not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
     const student = students[0];
 
-    // Parse JSON fields from the Students table
+    // Parse JSON fields
     const academicInterests = safeJsonParse(student.academic_interests, []);
     const careerQuizAnswers = safeJsonParse(student.career_quiz_answers, {});
     const technicalSkills   = safeJsonParse(student.technical_skills, {});
@@ -111,22 +89,27 @@ export async function GET(request: NextRequest) {
     const industryFocus     = safeJsonParse(student.industry_focus, []);
     const mergedSkills      = safeJsonParse(student.merged_skills, []);
 
-    // Combine all data
     const processedData = {
-      // Basic student info
+      // Identity
       student_id: student.student_id,
       first_name: student.first_name,
       last_name: student.last_name,
       email: student.email,
       phone: student.phone,
+      prn: student.prn,
+      date_of_birth: student.date_of_birth,
+      gender: student.gender,
+      country: student.country,
+      github_username: student.github_username,
+      leetcode_username: student.leetcode_username,
+      linkedin_url: student.linkedin_url,
 
-      // College info from token
-      college_id: collegeInfo.college_id,
-      college_name: collegeInfo.college_name,
-      college_type: collegeInfo.college_type,
-      city: collegeInfo.city,
-      state: collegeInfo.state,
-      country: collegeInfo.country,
+      // College info (from JOIN)
+      college_id: student.college_id,
+      college_name: student.college_name || 'Your College',
+      college_type: student.college_type || '',
+      city: student.city || '',
+      state: student.state || '',
 
       // Academic profile (from Students table)
       program: student.program || null,
@@ -135,64 +118,48 @@ export async function GET(request: NextRequest) {
       enrollment_year: student.enrollment_year || null,
       current_gpa: student.current_gpa || null,
 
-      // Academic interests (parsed from JSON)
+      // Academic interests
       academic_interests: Array.isArray(academicInterests) ? academicInterests : [],
 
-      // Career quiz answers (parsed from JSON)
+      // Career quiz
       career_quiz_answers: careerQuizAnswers,
 
-      // Skills (parsed from JSON) — always return objects, even if empty
-      // technical_skills only holds plain { skill: level } numeric entries
+      // Skills
       technical_skills: typeof technicalSkills === 'object' && !Array.isArray(technicalSkills)
-        ? technicalSkills
-        : {},
+        ? technicalSkills : {},
       soft_skills: typeof softSkills === 'object' && !Array.isArray(softSkills)
-        ? softSkills
-        : {},
+        ? softSkills : {},
       language_skills: typeof languageSkills === 'object' && !Array.isArray(languageSkills)
-        ? languageSkills
-        : {},
+        ? languageSkills : {},
 
-      // AI skill passport — from dedicated merged_skills column
+      // AI skill passport
       merged_skills: Array.isArray(mergedSkills) ? mergedSkills : [],
       last_skill_analysis: student.last_skill_analysis
         ? new Date(student.last_skill_analysis).toISOString()
         : null,
 
-      // Career goals (from Students table)
+      // Career goals
       primary_goal: student.primary_goal || null,
       secondary_goal: student.secondary_goal || null,
       timeline: student.timeline || null,
       location_preference: student.location_preference || null,
       intensity_level: student.intensity_level || null,
 
-      // Industry focus (parsed from JSON)
+      // Industry focus
       industry_focus: Array.isArray(industryFocus) ? industryFocus : []
     };
 
-    // Return successful response
-    return NextResponse.json({
-      success: true,
-      data: processedData
-    });
+    return NextResponse.json({ success: true, data: processedData });
 
   } catch (error) {
     console.error('Error fetching student data:', error);
     return NextResponse.json(
-      {
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   } finally {
-    // Always release the connection
     if (connection) {
-      try {
-        connection.release();
-      } catch (releaseError) {
-        console.error('Error releasing connection:', releaseError);
-      }
+      try { connection.release(); } catch (_) {}
     }
   }
 }

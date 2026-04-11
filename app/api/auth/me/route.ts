@@ -78,7 +78,13 @@ export async function GET(req: NextRequest) {
       if (rows.length > 0) dbUser = rows[0];
     } else if (userType === 'student') {
       const [rows]: any = await connection.execute(
-        'SELECT student_id, first_name, last_name, email, is_active, college_token FROM Students WHERE student_id = ?',
+        `SELECT student_id, first_name, last_name, email, phone, is_active, college_token,
+                program, current_year, current_semester, enrollment_year, current_gpa,
+                prn, date_of_birth, gender, country,
+                github_username, leetcode_username, linkedin_url,
+                primary_goal, secondary_goal, timeline, location_preference,
+                academic_interests, technical_skills, soft_skills, language_skills, industry_focus
+         FROM Students WHERE student_id = ? AND is_active = TRUE`,
         [userId]
       );
       if (rows.length > 0) dbUser = rows[0];
@@ -108,7 +114,26 @@ export async function GET(req: NextRequest) {
         college_id: dbUser.college_id,
         permissions: parsePermissions(dbUser.permissions)
       } : {}),
-      ...(userType === 'student' ? { college_token: dbUser.college_token } : {})
+      ...(userType === 'student' ? {
+        college_token: dbUser.college_token,
+        phone: dbUser.phone,
+        prn: dbUser.prn,
+        date_of_birth: dbUser.date_of_birth,
+        gender: dbUser.gender,
+        country: dbUser.country,
+        program: dbUser.program,
+        current_year: dbUser.current_year,
+        current_semester: dbUser.current_semester,
+        enrollment_year: dbUser.enrollment_year,
+        current_gpa: dbUser.current_gpa,
+        github_username: dbUser.github_username,
+        leetcode_username: dbUser.leetcode_username,
+        linkedin_url: dbUser.linkedin_url,
+        primary_goal: dbUser.primary_goal,
+        secondary_goal: dbUser.secondary_goal,
+        timeline: dbUser.timeline,
+        location_preference: dbUser.location_preference,
+      } : {})
     };
 
     return NextResponse.json({

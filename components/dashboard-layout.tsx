@@ -245,9 +245,9 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50 backdrop-blur-sm bg-card/95">
+      <header className="border-b bg-card shrink-0 sticky top-0 z-50 backdrop-blur-sm bg-card/95">
         <div className="flex items-center justify-between px-4 py-3">
           {/* Left */}
           <div className="flex items-center gap-4">
@@ -334,11 +334,15 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
         </div>
       </header>
 
-      <div className="flex">
+      {/* Body: sidebar + main in a flex row that fills remaining height */}
+      <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside
           className={`
-            fixed lg:static inset-y-0 left-0 z-40 w-64 bg-card border-r transform transition-all duration-300 ease-out
+            fixed lg:relative inset-y-0 left-0 z-40 w-64 bg-card border-r
+            flex-shrink-0 flex flex-col
+            transform transition-all duration-300 ease-out
+            h-full overflow-y-auto
             ${sidebarOpen ? "translate-x-0 shadow-xl" : "-translate-x-full lg:translate-x-0 lg:shadow-none"}
           `}
         >
@@ -386,7 +390,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 pb-4">
+            <nav className="flex-1 px-4 pb-4 overflow-y-auto">
               <ul className="space-y-1.5">
                 {ALL_SIDEBAR_ITEMS.map((item) => {
                   const isActive = item.key === currentPage
@@ -458,8 +462,8 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
           />
         )}
 
-        {/* Main Content */}
-        <main className="flex-1 p-6 lg:p-8 transition-all duration-300">{children}</main>
+        {/* Main Content — scrollable */}
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8 transition-all duration-300">{children}</main>
       </div>
 
       {/* Modals */}

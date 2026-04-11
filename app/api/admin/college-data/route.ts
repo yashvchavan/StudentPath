@@ -198,6 +198,7 @@ export async function GET(req: NextRequest) {
       recentRegistrations,
       tokenUsage,
       departmentStats,
+      userRole,
       collegeInfo: {
         id: collegeId,
         name: collegeName,

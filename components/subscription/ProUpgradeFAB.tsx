@@ -107,7 +107,7 @@ export function ProUpgradeFAB({ status, daysLeft, onSuccess }: ProUpgradeFABProp
           <p className="text-xs text-muted-foreground leading-relaxed">
             {isExpired
               ? "Upgrade to Pro to unlock Career Tracks, AI Assistant, Resume Analyzer and more."
-              : "Upgrade before your trial ends and keep all features - just $12/year."}
+              : "Upgrade before your trial ends and keep all features - just ₹299/year."}
           </p>
         </div>
 

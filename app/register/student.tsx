@@ -5,42 +5,23 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
-import {
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  User,
-  GraduationCap,
-  Target,
-  Award,
-  MapPin,
-  Calendar,
-  Rocket,
-  Briefcase,
-  Users,
-  Building,
-  TrendingUp,
-  CheckCircle,
   Lock,
-  ShieldCheck,
+  ChevronRight,
+  ChevronLeft,
+  CheckCircle,
+  GraduationCap,
+  User,
+  Briefcase,
+  Star,
+  Globe,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-// Inside student-registration.tsx or similar file
-interface ErpPrefillData {
+// ── Types ─────────────────────────────────────────────────────────────────
+export interface ErpPrefillData {
   prn?: string;
   firstName?: string;
   lastName?: string;
@@ -51,8 +32,19 @@ interface ErpPrefillData {
   department?: string;
   year?: string;
   semester?: string;
+  division?: string;
+  rollNo?: string;
   gender?: string;
   dateOfBirth?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+}
+
+interface CollegeDepartment {
+  id: number;
+  name: string;
+  code: string;
 }
 
 interface StudentRegistrationProps {
@@ -61,485 +53,227 @@ interface StudentRegistrationProps {
   prefillData?: ErpPrefillData;
 }
 
-// === Animated Background ===
-const AnimatedBackground = () => {
-  const [particles, setParticles] = useState<
-    Array<{ id: number; x: number; y: number; delay: number }>
-  >([]);
-
-  useEffect(() => {
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 5,
-    }));
-    setParticles(newParticles);
-  }, []);
-
+// ── Locked Field (ERP sourced, read-only) ─────────────────────────────────
+function LockedField({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {particles.map((p) => (
-        <div
-          key={p.id}
-          className="absolute w-1 h-1 bg-gradient-to-r from-red-400 to-yellow-400 rounded-full animate-pulse"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            animationDelay: `${p.delay}s`,
-            animationDuration: "3s",
-          }}
-        />
-      ))}
-    </div>
-  );
-};
-
-// === User Type Selection Component ===
-const UserTypeSelection = ({ onSelect }: { onSelect: (type: 'student' | 'professional') => void }) => {
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-
-  return (
-    <div className="min-h-screen flex items-center justify-center relative">
-      <AnimatedBackground />
-
-      <div className="relative z-10 max-w-6xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <img
-            src="/logo.png"
-            alt="StudentPath Logo"
-            className="h-20 w-auto mx-auto mb-8"
-          />
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent mb-4">
-            Welcome to Your Journey
-          </h1>
-          <p className="text-xl text-gray-400">
-            Choose your path to personalized learning and career growth
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-1 gap-8">
-          <Card
-            className={`relative cursor-pointer transition-all duration-500 transform hover:scale-105 border-2 ${hoveredCard === 'student'
-              ? 'border-indigo-400 shadow-2xl shadow-indigo-500/20'
-              : 'border-white/20 hover:border-white/30'
-              } bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl overflow-hidden group`}
-            onMouseEnter={() => setHoveredCard('student')}
-            onMouseLeave={() => setHoveredCard(null)}
-            onClick={() => onSelect('student')}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-            <CardContent className="p-8 relative z-10">
-              <div className="flex justify-center mb-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-2xl group-hover:animate-pulse">
-                  <GraduationCap className="w-12 h-12 text-white" />
-                </div>
-              </div>
-
-              <h2 className="text-3xl font-bold text-center mb-4 bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
-                I'm Student
-              </h2>
-
-              <p className="text-gray-300 text-center mb-6">
-                Currently pursuing education and looking to build skills for future career
-              </p>
-
-              <Button
-                className="w-full mt-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-6 text-lg group-hover:shadow-xl transition-all duration-300"
-              >
-                Continue as Student
-                <ChevronRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center mt-12">
-          <p className="text-gray-400">
-            Already have an account?{" "}
-            <Link href={`/login?token=${token || ''}`} className="text-indigo-400 hover:text-indigo-300 underline">
-              Sign in
-            </Link>
-          </p>
-        </div>
+    <div className="space-y-1">
+      <Label className="text-xs text-zinc-500 uppercase tracking-wider">{label}</Label>
+      <div className="flex items-center gap-2 px-3 py-2.5 bg-zinc-900 border border-zinc-700/50 rounded-lg">
+        <Lock className="w-3 h-3 text-zinc-600 flex-shrink-0" />
+        <span className="text-sm text-zinc-300 flex-1">{value}</span>
+        <span className="text-[10px] text-emerald-500 font-medium">ERP</span>
       </div>
     </div>
   );
-};
+}
 
-// === Rocket Progress ===
-const RocketProgress = ({ progress }: { progress: number }) => {
-  return (
-    <div className="relative w-full mt-3">
-      <div className="absolute top-0 left-0 w-full h-2 bg-white/10 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-red-500 to-yellow-500 rounded-full transition-all duration-500 ease-out relative"
-          style={{ width: `${progress}%` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-red-400 to-yellow-400 rounded-full animate-pulse" />
-        </div>
-      </div>
-      <div
-        className="absolute top-[-8px] transition-all duration-500 ease-out"
-        style={{ left: `${Math.min(progress, 95)}%` }}
-      >
-        <Rocket className="w-6 h-6 text-yellow-400 animate-bounce" />
-      </div>
-    </div>
-  );
-};
-
-// === Transition Wrapper ===
-const StepTransition = ({
-  children,
-  isActive,
+// ── Skill Selector ────────────────────────────────────────────────────────
+function SkillSelector({
+  label,
+  skills,
+  selected,
+  onChange,
+  maxLevel = 5,
 }: {
-  children: React.ReactNode;
-  isActive: boolean;
-}) => (
-  <div
-    className={`transition-all duration-500 ${isActive ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-      }`}
-  >
-    {children}
-  </div>
-);
+  label: string;
+  skills: string[];
+  selected: Record<string, number>;
+  onChange: (skills: Record<string, number>) => void;
+  maxLevel?: number;
+}) {
+  const toggle = (skill: string) => {
+    if (selected[skill] !== undefined) {
+      const next = { ...selected };
+      delete next[skill];
+      onChange(next);
+    } else {
+      onChange({ ...selected, [skill]: 3 });
+    }
+  };
 
-// === Rocket Launch Loader ===
-// === Rocket Launch Loader with Dynamic Messages ===
-const RocketLaunchLoader = () => {
-  const [messageIndex, setMessageIndex] = useState(0);
-
-  const loadingMessages = [
-    { text: "Analyzing your profile...", icon: "📊" },
-    { text: "Parsing your interests...", icon: "🔍" },
-    { text: "Building your career path...", icon: "🛤️" },
-    { text: "Matching skills with opportunities...", icon: "🎯" },
-    { text: "Personalizing your roadmap...", icon: "🗺️" },
-    { text: "Creating your success journey...", icon: "✨" },
-    { text: "Almost there...", icon: "🚀" },
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 2500); // Change message every 2.5 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+  const setLevel = (skill: string, level: number) => {
+    onChange({ ...selected, [skill]: level });
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <div className="relative mb-8">
-        <div className="animate-bounce" style={{ animationDuration: "2s" }}>
-          <Rocket className="w-24 h-24 text-indigo-500" />
-        </div>
-        {/* Sparkle effects */}
-        <div className="absolute -top-2 -right-2 animate-ping">
-          <span className="text-2xl">✨</span>
-        </div>
-        <div className="absolute -bottom-2 -left-2 animate-ping" style={{ animationDelay: "0.5s" }}>
-          <span className="text-2xl">⭐</span>
-        </div>
+    <div className="space-y-3">
+      <Label className="text-sm font-medium text-zinc-200">{label}</Label>
+      <div className="flex flex-wrap gap-2">
+        {skills.map((skill) => {
+          const isSelected = selected[skill] !== undefined;
+          return (
+            <button
+              key={skill}
+              type="button"
+              onClick={() => toggle(skill)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 border ${
+                isSelected
+                  ? "bg-blue-600/20 border-blue-500/60 text-blue-300"
+                  : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+              }`}
+            >
+              {skill}
+            </button>
+          );
+        })}
       </div>
-
-      <div className="text-center space-y-3 min-h-[80px]">
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-3xl animate-bounce" style={{ animationDelay: "0.1s" }}>
-            {loadingMessages[messageIndex].icon}
-          </span>
-          <h3
-            key={messageIndex}
-            className="text-2xl font-bold bg-gradient-to-r from-red-400 to-yellow-400 bg-clip-text text-transparent animate-fade-in"
-          >
-            {loadingMessages[messageIndex].text}
-          </h3>
-        </div>
-
-        {/* Progress dots */}
-        <div className="flex justify-center gap-2 mt-4">
-          {loadingMessages.map((_, idx) => (
-            <div
-              key={idx}
-              className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === messageIndex
-                ? 'bg-indigo-500 w-8'
-                : 'bg-white/20'
-                }`}
-            />
+      {Object.keys(selected).length > 0 && (
+        <div className="space-y-2 mt-2">
+          <p className="text-xs text-zinc-500">Set proficiency level:</p>
+          {Object.entries(selected).map(([skill, level]) => (
+            <div key={skill} className="flex items-center gap-3">
+              <span className="text-sm text-zinc-300 w-36 truncate">{skill}</span>
+              <div className="flex gap-1">
+                {Array.from({ length: maxLevel }, (_, i) => i + 1).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setLevel(skill, l)}
+                    className={`w-7 h-7 rounded text-xs font-medium transition-colors ${
+                      l <= level
+                        ? "bg-blue-600 text-white"
+                        : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs text-zinc-500">/ {maxLevel}</span>
+            </div>
           ))}
         </div>
-
-        <p className="text-gray-400 animate-pulse text-sm">
-          This won't take long...
-        </p>
-      </div>
+      )}
     </div>
   );
-};
+}
 
-// Academic Interest Options by Program
-const academicInterestsByProgram = {
-  "Computer Science Engineering": [
-    "Artificial Intelligence",
-    "Machine Learning",
-    "Data Science",
-    "Web Development",
-    "Mobile Development",
-    "Cybersecurity",
-    "Cloud Computing",
-    "DevOps",
-    "Blockchain",
-    "Computer Vision",
-    "Natural Language Processing",
-    "Robotics",
-  ],
-  "Information Technology": [
-    "Web Development",
-    "Mobile Development",
-    "Database Management",
-    "Network Administration",
-    "Cybersecurity",
-    "Cloud Computing",
-    "DevOps",
-    "IT Project Management",
-    "Data Analytics",
-    "UI/UX Design",
-    "System Administration",
-    "Digital Marketing",
-  ],
-  "Electronics Engineering": [
-    "Embedded Systems",
-    "IoT Development",
-    "Signal Processing",
-    "VLSI Design",
-    "Robotics",
-    "Telecommunications",
-    "Control Systems",
-    "Hardware Design",
-    "Circuit Design",
-    "Automation",
-    "RF Engineering",
-    "Power Electronics",
-  ],
-  "Mechanical Engineering": [
-    "CAD/CAM",
-    "Manufacturing",
-    "Automotive Engineering",
-    "Robotics",
-    "Thermal Engineering",
-    "Materials Science",
-    "Fluid Mechanics",
-    "Product Design",
-    "Industrial Engineering",
-    "Aerospace Engineering",
-    "Renewable Energy",
-    "Automation",
-  ],
-  "Civil Engineering": [
-    "Structural Engineering",
-    "Construction Management",
-    "Urban Planning",
-    "Environmental Engineering",
-    "Transportation Engineering",
-    "Water Resources",
-    "Geotechnical Engineering",
-    "Project Management",
-    "Sustainable Construction",
-    "Infrastructure Development",
-    "Building Information Modeling",
-    "Smart Cities",
-  ],
-  "Business Administration": [
-    "Marketing",
-    "Finance",
-    "Human Resources",
-    "Operations Management",
-    "Strategy",
-    "Entrepreneurship",
-    "Project Management",
-    "Digital Marketing",
-    "Data Analytics",
-    "International Business",
-    "Supply Chain Management",
-    "Business Intelligence",
-  ],
-  "Economics": [
-    "Financial Economics",
-    "Development Economics",
-    "International Economics",
-    "Econometrics",
-    "Behavioral Economics",
-    "Public Policy",
-    "Data Analysis",
-    "Market Research",
-    "Economic Modeling",
-    "Investment Analysis",
-    "Risk Management",
-    "Economic Consulting",
-  ],
-};
+// ── Language Skill Selector ───────────────────────────────────────────────
+function LanguageSelector({
+  selected,
+  onChange,
+}: {
+  selected: Record<string, string>;
+  onChange: (val: Record<string, string>) => void;
+}) {
+  const LEVELS = ["Beginner", "Conversational", "Professional", "Native"];
+  const LANGUAGES = ["English", "Hindi", "Marathi", "Tamil", "Telugu", "Bengali", "Gujarati", "Kannada", "Malayalam", "Punjabi", "Spanish", "French", "German", "Other"];
 
-// Technical Skills by Academic Interest
-const technicalSkillsByInterest = {
-  // Programming & Development
-  "Artificial Intelligence": ["Python", "TensorFlow", "PyTorch", "Scikit-learn", "Deep Learning", "Neural Networks"],
-  "Machine Learning": ["Python", "R", "Scikit-learn", "Pandas", "NumPy", "Jupyter", "Statistics"],
-  "Data Science": ["Python", "R", "SQL", "Tableau", "Power BI", "Excel", "Statistics", "Data Visualization"],
-  "Web Development": ["HTML", "CSS", "JavaScript", "React", "Node.js", "Express", "MongoDB", "Git"],
-  "Mobile Development": ["React Native", "Flutter", "Swift", "Kotlin", "Java", "Dart", "Firebase"],
-  "Cybersecurity": ["Penetration Testing", "Network Security", "Ethical Hacking", "CISSP", "Security Auditing"],
-  "Cloud Computing": ["AWS", "Azure", "Google Cloud", "Docker", "Kubernetes", "DevOps", "Terraform"],
-  "DevOps": ["Docker", "Kubernetes", "Jenkins", "Git", "CI/CD", "Linux", "Monitoring Tools"],
-  "Blockchain": ["Solidity", "Web3", "Smart Contracts", "Ethereum", "Cryptocurrency", "DApps"],
+  const toggle = (lang: string) => {
+    if (selected[lang]) {
+      const next = { ...selected };
+      delete next[lang];
+      onChange(next);
+    } else {
+      onChange({ ...selected, [lang]: "Conversational" });
+    }
+  };
 
-  // Engineering
-  "Embedded Systems": ["C", "C++", "Microcontrollers", "Arduino", "Raspberry Pi", "Circuit Design"],
-  "IoT Development": ["Arduino", "Raspberry Pi", "Sensors", "Wireless Communication", "Cloud Integration"],
-  "Signal Processing": ["MATLAB", "DSP", "Analog Circuits", "Digital Filters", "Signal Analysis"],
-  "VLSI Design": ["Verilog", "VHDL", "Cadence", "Synopsis", "Digital Design", "Analog Design"],
-  "Robotics": ["ROS", "Python", "C++", "Computer Vision", "Control Systems", "Sensors"],
+  const setLevel = (lang: string, level: string) => {
+    onChange({ ...selected, [lang]: level });
+  };
 
-  // Mechanical & Design
-  "CAD/CAM": ["AutoCAD", "SolidWorks", "CATIA", "Fusion 360", "3D Modeling", "Manufacturing"],
-  "Product Design": ["SolidWorks", "Fusion 360", "Prototyping", "3D Printing", "Design Thinking"],
+  return (
+    <div className="space-y-3">
+      <Label className="text-sm font-medium text-zinc-200">Languages</Label>
+      <div className="flex flex-wrap gap-2">
+        {LANGUAGES.map((lang) => (
+          <button
+            key={lang}
+            type="button"
+            onClick={() => toggle(lang)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all duration-150 ${
+              selected[lang]
+                ? "bg-purple-600/20 border-purple-500/60 text-purple-300"
+                : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+            }`}
+          >
+            {lang}
+          </button>
+        ))}
+      </div>
+      {Object.keys(selected).length > 0 && (
+        <div className="space-y-2 mt-2">
+          {Object.entries(selected).map(([lang, level]) => (
+            <div key={lang} className="flex items-center gap-3">
+              <span className="text-sm text-zinc-300 w-28 truncate">{lang}</span>
+              <div className="flex gap-1 flex-wrap">
+                {LEVELS.map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => setLevel(lang, l)}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      level === l
+                        ? "bg-purple-600 text-white"
+                        : "bg-zinc-800 text-zinc-500 hover:bg-zinc-700"
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-  // Business & Analytics
-  "Digital Marketing": ["Google Analytics", "SEO", "SEM", "Social Media Marketing", "Content Marketing"],
-  "Data Analytics": ["Excel", "SQL", "Tableau", "Power BI", "Python", "R", "Statistics"],
-  "Finance": ["Excel", "Financial Modeling", "Risk Analysis", "Portfolio Management", "Bloomberg"],
-
-  // Default for others
-  "Other": ["Communication", "Problem Solving", "Critical Thinking", "Project Management", "Teamwork"],
-};
-
-// All available academic interests (for "Other" option)
-const allAcademicInterests = [
-  ...Object.values(academicInterestsByProgram).flat(),
-  "Game Development",
-  "AR/VR Development",
-  "Quantum Computing",
-  "Bioinformatics",
-  "Green Technology",
-  "Fintech",
-  "EdTech",
-  "HealthTech",
-  "Agricultural Technology",
-  "Space Technology",
-].filter((value, index, self) => self.indexOf(value) === index).sort();
-
-const programs = [
-  "Computer Science Engineering",
-  "Information Technology",
-  "Electronics Engineering",
-  "Mechanical Engineering",
-  "Civil Engineering",
-  "Business Administration",
-  "Economics",
-];
-
-const careerQuestions = [
-  {
-    id: "work_environment",
-    question: "What type of work environment ignites your passion?",
-    options: [
-      { value: "startup", label: "Fast-paced startup environment", icon: "🚀" },
-      { value: "corporate", label: "Structured corporate setting", icon: "🏢" },
-      { value: "remote", label: "Remote/flexible work", icon: "🏠" },
-      { value: "research", label: "Research and academic institutions", icon: "🔬" },
-    ],
-  },
-  {
-    id: "problem_solving",
-    question: "How do you prefer to conquer challenges?",
-    options: [
-      { value: "analytical", label: "Through data and analysis", icon: "📊" },
-      { value: "creative", label: "Through creative thinking", icon: "🎨" },
-      { value: "collaborative", label: "Through team collaboration", icon: "👥" },
-      { value: "systematic", label: "Through systematic processes", icon: "⚙️" },
-    ],
-  },
-  {
-    id: "career_focus",
-    question: "What drives your career ambitions most?",
-    options: [
-      { value: "impact", label: "Making a positive impact", icon: "🌟" },
-      { value: "growth", label: "Rapid career growth", icon: "📈" },
-      { value: "stability", label: "Job security and stability", icon: "🛡️" },
-      { value: "innovation", label: "Working on cutting-edge technology", icon: "💡" },
-    ],
-  },
-];
-
-// Country-specific languages
-const languagesByCountry = {
-  "India": ["English", "Hindi", "Tamil", "Telugu", "Bengali", "Marathi", "Gujarati", "Kannada", "Malayalam", "Punjabi"],
-  "USA": ["English", "Spanish", "French", "German", "Chinese", "Japanese"],
-  "UK": ["English", "French", "German", "Spanish", "Italian"],
-  "Canada": ["English", "French", "Spanish", "German", "Chinese"],
-  "Australia": ["English", "Mandarin", "Italian", "Arabic", "Greek"],
-  "Other": ["English", "Spanish", "French", "German", "Chinese", "Japanese", "Arabic", "Portuguese", "Russian", "Korean"],
-};
-
-const softSkillsList = [
-  "Communication",
-  "Leadership",
-  "Time Management",
-  "Problem Solving",
-  "Teamwork",
-  "Adaptability",
-  "Critical Thinking",
-  "Project Management",
-  "Creativity",
-  "Public Speaking",
-  "Negotiation",
-  "Emotional Intelligence",
-];
-
-
-// === Student Registration Component ===
-const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken, collegeInfo, prefillData }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+// ── Main Registration Component ───────────────────────────────────────────
+export const StudentRegistration: React.FC<StudentRegistrationProps> = ({
+  collegeToken,
+  collegeInfo,
+  prefillData,
+}) => {
   const searchParams = useSearchParams();
-  const [isRegistered, setIsRegistered] = useState(false);
+  const router = useRouter();
+  const token = collegeToken || searchParams.get("token");
+
+  const isErp = !!prefillData;
+
+  // State
+  const [step, setStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    // Basic Info (Step 1)
-    studentId: prefillData?.prn || "",
-    firstName: prefillData?.firstName || "",
-    lastName: prefillData?.lastName || "",
-    email: prefillData?.email || "",
-    phone: prefillData?.phone || "",
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [departments, setDepartments] = useState<CollegeDepartment[]>([]);
+
+  // Form data — initialized with ERP values
+  const [form, setForm] = useState({
+    // Step 1: Account
+    firstName:   prefillData?.firstName  || "",
+    lastName:    prefillData?.lastName   || "",
+    email:       prefillData?.email      || "",
+    phone:       prefillData?.phone      || "",
+    gender:      prefillData?.gender     || "",
     dateOfBirth: prefillData?.dateOfBirth || "",
-    gender: prefillData?.gender || "",
-    password: "",
+    password:    "",
     confirmPassword: "",
     agreeToTerms: false,
-    country: "India",
-    showAllInterests: false,
-    githubUsername: "",
-    leetcodeUsername: "",
-    linkedinUrl: "",
-
-    // Academic Info (Step 2)
-    program: prefillData?.branch || "",
-    currentYear: prefillData?.year || "",
+    // ERP-only
+    prn:      prefillData?.prn      || "",
+    division: prefillData?.division || "",
+    rollNo:   prefillData?.rollNo   || "",
+    address:  prefillData?.address  || "",
+    city:     prefillData?.city     || "",
+    state:    prefillData?.state    || "",
+    // Step 2: Academic
+    department:   prefillData?.branch || prefillData?.department || "",
+    currentYear:  prefillData?.year   || "",
     currentSemester: prefillData?.semester || "",
     enrollmentYear: "",
-    currentGPA: [7.5],
+    currentGPA: "7.5",
+    // Step 3: Interests
     academicInterests: [] as string[],
-
-    // Career Quiz (Step 3)
-    careerQuizAnswers: {} as { [key: string]: string },
-
-    // Skills (Step 4)
-    technicalSkills: {} as { [key: string]: number },
-    softSkills: {} as { [key: string]: number },
-    languageSkills: {} as { [key: string]: number },
-
-    // Goals (Step 5)
+    // Step 4: Skills
+    technicalSkills: {} as Record<string, number>,
+    softSkills: {} as Record<string, number>,
+    languageSkills: {} as Record<string, string>,
+    // Step 5: Career
     primaryGoal: "",
     secondaryGoal: "",
     timeline: "",
@@ -548,1981 +282,661 @@ const StudentRegistration: React.FC<StudentRegistrationProps> = ({ collegeToken,
     intensityLevel: "moderate",
   });
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [error, setError] = useState<string>("");
-  const router = useRouter();
-
-  // If prefillData changes (e.g., parent re-renders), re-sync form fields
+  // Re-sync if prefillData changes
   useEffect(() => {
     if (!prefillData) return;
-    setFormData(prev => ({
+    setForm((prev) => ({
       ...prev,
-      studentId: prefillData.prn || prev.studentId,
-      firstName: prefillData.firstName || prev.firstName,
-      lastName: prefillData.lastName || prev.lastName,
-      email: prefillData.email || prev.email,
-      phone: prefillData.phone || prev.phone,
+      firstName:   prefillData.firstName   || prev.firstName,
+      lastName:    prefillData.lastName    || prev.lastName,
+      email:       prefillData.email       || prev.email,
+      phone:       prefillData.phone       || prev.phone,
+      gender:      prefillData.gender      || prev.gender,
       dateOfBirth: prefillData.dateOfBirth || prev.dateOfBirth,
-      gender: prefillData.gender || prev.gender,
-      program: prefillData.branch || prev.program,
-      currentYear: prefillData.year || prev.currentYear,
+      prn:         prefillData.prn         || prev.prn,
+      division:    prefillData.division    || prev.division,
+      rollNo:      prefillData.rollNo      || prev.rollNo,
+      address:     prefillData.address     || prev.address,
+      city:        prefillData.city        || prev.city,
+      state:       prefillData.state       || prev.state,
+      department:  prefillData.branch || prefillData.department || prev.department,
+      currentYear: prefillData.year        || prev.currentYear,
       currentSemester: prefillData.semester || prev.currentSemester,
     }));
   }, [prefillData]);
 
-  // Helper: is a field locked (pre-filled from ERP and should be read-only)
-  const isErpField = (field: string): boolean => {
-    if (!prefillData) return false;
-    const erpFields: Record<string, boolean> = {
-      studentId: !!prefillData.prn,
-      firstName: !!prefillData.firstName,
-      lastName: !!prefillData.lastName,
-      email: !!prefillData.email,
-      phone: !!prefillData.phone,
-      dateOfBirth: !!prefillData.dateOfBirth,
-      gender: !!prefillData.gender,
-      program: !!prefillData.branch,
-      currentYear: !!prefillData.year,
-      currentSemester: !!prefillData.semester,
-    };
-    return erpFields[field] === true;
+  // Load college departments for manual users
+  useEffect(() => {
+    if (!token || isErp) return;
+    fetch(`/api/college/departments?token=${token}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.departments) setDepartments(d.departments); })
+      .catch(() => {});
+  }, [token, isErp]);
+
+  const up = (patch: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  const locked = (field: keyof ErpPrefillData): boolean => {
+    if (!isErp) return false;
+    const value = (prefillData as any)?.[field];
+    return !!value;
   };
 
-  const totalSteps = 6;
-  const progress = (currentStep / totalSteps) * 100;
+  const TOTAL_STEPS = 5;
 
-  const updateFormData = (updates: any) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
+  // Interest options (from ERPs department → common topics)
+  const INTEREST_MAP: Record<string, string[]> = {
+    "Computer Engineering":         ["Algorithms", "System Design", "Operating Systems", "Networking", "Databases", "Compilers", "Embedded Systems", "AI/ML", "Cybersecurity", "Web Development"],
+    "Computer Science Engineering": ["AI/ML", "Data Science", "Web Development", "Mobile Development", "Cybersecurity", "Cloud Computing", "DevOps", "Blockchain", "Computer Vision", "NLP"],
+    "Information Technology":       ["Web Development", "Mobile Development", "Network Admin", "Cybersecurity", "Cloud Computing", "DevOps", "IT Project Management", "Data Analytics", "UI/UX Design"],
+    "Electronics Engineering":      ["Embedded Systems", "IoT", "Signal Processing", "VLSI Design", "Robotics", "Telecommunications", "Control Systems", "Circuit Design", "RF Engineering"],
+    "Electronics & Telecommunication": ["Signal Processing", "Telecommunications", "RF Engineering", "Microwave Engineering", "Antenna Design", "Embedded Systems", "IoT"],
+    "Mechanical Engineering":        ["CAD/CAM", "Manufacturing", "Automotive", "Robotics", "Thermal Engg", "Materials Science", "Fluid Mechanics", "Renewable Energy"],
+    "Civil Engineering":             ["Structural Engg", "Construction Management", "Urban Planning", "Environmental Engg", "Transportation", "Water Resources", "Geotechnical Engg"],
+    "Electrical Engineering":        ["Power Systems", "Renewable Energy", "Power Electronics", "Drives & Control", "Smart Grid", "Electric Vehicles", "Instrumentation"],
+    "Business Administration":       ["Marketing", "Finance & Accounting", "HR Management", "Supply Chain", "Business Analytics", "Entrepreneurship", "International Business"],
+    "Economics":                     ["Macroeconomics", "Microeconomics", "Econometrics", "Finance", "Development Economics", "Public Policy"],
   };
 
-  const nextStep = () => {
-    if (currentStep < totalSteps) setCurrentStep((s) => s + 1);
+  const getInterests = (): string[] => {
+    if (!form.department) return [];
+    // Try exact match first
+    for (const key of Object.keys(INTEREST_MAP)) {
+      if (form.department.toLowerCase().includes(key.toLowerCase()) || key.toLowerCase().includes(form.department.toLowerCase())) {
+        return INTEREST_MAP[key];
+      }
+    }
+    return ["Software Development", "Data Analysis", "Research", "Project Management", "Machine Learning", "Cloud Computing"];
   };
 
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep((s) => s - 1);
+  const TECH_SKILLS_MAP: Record<string, string[]> = {
+    "Web Development":    ["HTML/CSS", "JavaScript", "React", "Node.js", "TypeScript", "Next.js"],
+    "AI/ML":              ["Python", "TensorFlow", "PyTorch", "Scikit-learn", "Pandas", "NumPy"],
+    "Data Science":       ["Python", "SQL", "Tableau", "Power BI", "R", "Excel"],
+    "Mobile Development": ["React Native", "Flutter", "Swift", "Kotlin", "Android", "iOS"],
+    "Cloud Computing":    ["AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform"],
+    "Cybersecurity":      ["Linux", "Kali Linux", "Wireshark", "Python", "Network Security", "Penetration Testing"],
+    "Embedded Systems":   ["C/C++", "Arduino", "Raspberry Pi", "RTOS", "Verilog", "MATLAB"],
+    "Databases":          ["SQL", "MySQL", "PostgreSQL", "MongoDB", "Redis", "Oracle"],
+    "DevOps":             ["Docker", "Kubernetes", "Jenkins", "Git", "Ansible", "CI/CD"],
+    "Algorithms":         ["C++", "Java", "Python", "Data Structures", "Dynamic Programming", "Graph Algorithms"],
   };
 
-  // Register user with basic info
-  const registerBasicInfo = async () => {
-    setIsLoading(true);
+  const getTechSkills = (): string[] => {
+    const set = new Set<string>();
+    form.academicInterests.forEach((interest) => {
+      (TECH_SKILLS_MAP[interest] || []).forEach((s) => set.add(s));
+    });
+    if (set.size === 0) ["Python", "JavaScript", "SQL", "Git", "Linux", "Java"].forEach(s => set.add(s));
+    return Array.from(set).slice(0, 20);
+  };
+
+  const SOFT_SKILLS = ["Communication", "Leadership", "Teamwork", "Problem Solving", "Time Management", "Adaptability", "Critical Thinking", "Creativity", "Public Speaking", "Project Management"];
+  const CAREER_GOALS = ["Software Developer", "Data Scientist", "AI/ML Engineer", "Product Manager", "DevOps Engineer", "Cybersecurity Analyst", "Cloud Architect", "Business Analyst", "Research Scientist", "Entrepreneur"];
+  const INDUSTRY_LIST = ["Technology", "Finance/FinTech", "Healthcare", "Education/EdTech", "E-Commerce", "Automotive", "Manufacturing", "Government/PSU", "Consulting", "Startup"];
+  const TIMELINE_OPTIONS = ["Internship (6 months)", "1 Year", "2 Years", "Long-term (4+ years)"];
+  const LOCATION_OPTIONS = ["Anywhere in India", "Home City/State", "Metro Cities", "Remote/WFH", "Open to Abroad"];
+  const YEAR_OPTIONS = ["1", "2", "3", "4"];
+  const SEM_OPTIONS = ["1", "2", "3", "4", "5", "6", "7", "8"];
+
+  // ── Step 1: Register Account ──────────────────────────────────────────
+  const handleRegister = async () => {
     setError("");
+    if (!form.firstName || !form.lastName || !form.email || !form.password) {
+      return setError("Please fill in all required fields.");
+    }
+    if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
+    if (form.password.length < 8) return setError("Password must be at least 8 characters.");
+    if (!form.agreeToTerms) return setError("Please agree to the terms.");
 
+    setLoading(true);
     try {
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-        throw new Error("Please fill in all required fields");
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error("Passwords do not match");
-      }
-
-      if (!formData.agreeToTerms) {
-        throw new Error("Please agree to the terms and conditions");
-      }
-
-      const response = await fetch("/api/auth/register-basic", {
+      const res = await fetch("/api/auth/register-basic", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          studentId: formData.studentId,
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          password: formData.password,
-          country: formData.country,
-          githubUsername: formData.githubUsername,
-          leetcodeUsername: formData.leetcodeUsername,
-          linkedinUrl: formData.linkedinUrl,
-          collegeToken: searchParams.get('token'),
+          studentId:    form.prn,
+          firstName:    form.firstName,
+          lastName:     form.lastName,
+          email:        form.email,
+          phone:        form.phone,
+          dateOfBirth:  form.dateOfBirth,
+          gender:       form.gender,
+          password:     form.password,
+          collegeToken: token,
+          division:     form.division,
+          rollNo:       form.rollNo,
+          address:      form.address,
+          city:         form.city,
+          state:        form.state,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Registration failed");
-      }
-
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Registration failed");
       setUserId(data.userId);
       setIsRegistered(true);
-      nextStep();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
+      setStep(2);
+    } catch (e: any) {
+      setError(e.message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Complete profile with additional info
-  const completeProfile = async () => {
-    setIsLoading(true);
+  // ── Step 2-5: Complete Profile ─────────────────────────────────────────
+  const handleCompleteProfile = async () => {
+    if (!userId) return setError("Session error — please refresh.");
+    setLoading(true);
     setError("");
-
     try {
-      if (!userId) {
-        throw new Error("User not registered. Please go back to step 1.");
-      }
-
-      const token = collegeToken || searchParams.get('token');
-      const response = await fetch("/api/auth/complete-profile", {
+      const res = await fetch("/api/auth/complete-profile", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          student_id: userId,
-          collegeToken: token, // Include the token in the request
-          program: formData.program,
-          currentYear: formData.currentYear,
-          currentSemester: formData.currentSemester,
-          enrollmentYear: formData.enrollmentYear,
-          currentGPA: formData.currentGPA[0],
-          academicInterests: formData.academicInterests,
-          careerQuizAnswers: formData.careerQuizAnswers,
-          technicalSkills: formData.technicalSkills,
-          softSkills: formData.softSkills,
-          languageSkills: formData.languageSkills,
-          primaryGoal: formData.primaryGoal,
-          secondaryGoal: formData.secondaryGoal,
-          timeline: formData.timeline,
-          locationPreference: formData.locationPreference,
-          industryFocus: formData.industryFocus,
-          intensityLevel: formData.intensityLevel,
+          student_id:        userId,
+          collegeToken:      token,
+          program:           form.department,
+          currentYear:       form.currentYear,
+          currentSemester:   form.currentSemester,
+          enrollmentYear:    form.enrollmentYear,
+          currentGPA:        parseFloat(form.currentGPA) || null,
+          academicInterests: form.academicInterests,
+          careerQuizAnswers: {},
+          technicalSkills:   form.technicalSkills,
+          softSkills:        form.softSkills,
+          languageSkills:    form.languageSkills,
+          primaryGoal:       form.primaryGoal,
+          secondaryGoal:     form.secondaryGoal,
+          timeline:          form.timeline,
+          locationPreference: form.locationPreference,
+          industryFocus:     form.industryFocus,
+          intensityLevel:    form.intensityLevel,
         }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Profile completion failed");
-      }
-
-      // Store student data in cookies like the login page does
-      const redirectToken = collegeToken || searchParams.get('token');
-      if (!redirectToken) {
-        throw new Error('No token available for redirection');
-      }
-
-      // Store student data in cookies (similar to login page)
-      document.cookie = `studentData=${JSON.stringify({
-        ...data.student,
-        collegeToken: redirectToken // Store the college token with student data
-      })}; path=/; max-age=86400`; // 24 hours expiry
-      console.log('token', redirectToken);
-      // Redirect to dashboard with token
-      window.location.href = `/login?token=${redirectToken}`;
-    } catch (err) {
-      console.error('Profile completion error:', err);
-      setError(err instanceof Error ? err.message : "Profile completion failed. Please try again.");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Profile completion failed");
+      // Redirect to login
+      window.location.href = `/login?token=${token}`;
+    } catch (e: any) {
+      setError(e.message);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // Get academic interests based on selected program
-  const getAcademicInterests = () => {
-    if (!formData.program) return [];
-    return academicInterestsByProgram[formData.program as keyof typeof academicInterestsByProgram] || [];
+  const handleNext = () => {
+    setError("");
+    if (step === 1) { handleRegister(); return; }
+    if (step === TOTAL_STEPS) { handleCompleteProfile(); return; }
+    setStep((s) => s + 1);
   };
 
-  // Get technical skills based on selected interests
-  const getTechnicalSkills = () => {
-    if (formData.academicInterests.length === 0) return technicalSkillsByInterest["Other"];
-
-    const allSkills = new Set<string>();
-    formData.academicInterests.forEach(interest => {
-      const skills = technicalSkillsByInterest[interest as keyof typeof technicalSkillsByInterest] || [];
-      skills.forEach(skill => allSkills.add(skill));
-    });
-
-    return Array.from(allSkills).sort();
+  const handleBack = () => {
+    setError("");
+    setStep((s) => Math.max(1, s - 1));
   };
 
-  // Get languages based on selected country
-  const getLanguages = () => {
-    return languagesByCountry[formData.country as keyof typeof languagesByCountry] || languagesByCountry["Other"];
-  };
+  const stepLabels = ["Account", "Academic", "Interests", "Skills", "Career"];
 
-  const renderStep = () => {
-    switch (currentStep as number) {
-      case 1:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <User className="w-8 h-8 text-white" />
+  return (
+    <div className="max-w-2xl mx-auto">
+      {/* Progress bar */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          {stepLabels.map((label, i) => {
+            const num = i + 1;
+            const done = step > num;
+            const active = step === num;
+            return (
+              <div key={label} className="flex flex-col items-center gap-1">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                  done   ? "bg-emerald-600 text-white" :
+                  active ? "bg-blue-600 text-white" :
+                           "bg-zinc-800 text-zinc-500"
+                }`}>
+                  {done ? <CheckCircle className="w-4 h-4" /> : num}
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Basic Information
-                </h2>
-                <p className="text-gray-400 mt-2">
-                  {prefillData ? "Your details are pre-filled from college records. Set your password to continue." : "Let's start with your basic details"}
-                </p>
-                {prefillData && (
-                  <div className="inline-flex items-center gap-2 mt-3 bg-emerald-950/40 border border-emerald-700/40 rounded-full px-4 py-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span className="text-xs text-emerald-300 font-medium">ERP Verified — locked fields are from your college records</span>
-                  </div>
+                <span className={`text-xs font-medium hidden sm:block ${active ? "text-white" : "text-zinc-600"}`}>{label}</span>
+              </div>
+            );
+          })}
+        </div>
+        <Progress value={(step / TOTAL_STEPS) * 100} className="h-1 bg-zinc-800" />
+      </div>
+
+      {/* Card */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 sm:p-8">
+        {/* Step heading */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            {[GraduationCap, User, Star, Briefcase, Globe][step - 1] &&
+              React.createElement([GraduationCap, User, Star, Briefcase, Globe][step - 1], { className: "w-5 h-5 text-blue-400" })}
+            <h3 className="text-xl font-bold text-white">
+              {["Create Your Account", "Academic Info", "Academic Interests", "Your Skills", "Career Goals"][step - 1]}
+            </h3>
+          </div>
+          <p className="text-sm text-zinc-500">
+            {["Set up login credentials. ERP fields are pre-filled and locked.",
+              "Your program and year info.",
+              "Select what topics interest you.",
+              "Your technical, soft, and language skills.",
+              "Where you want to go in your career."][step - 1]}
+          </p>
+          {isErp && step === 1 && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-emerald-400 bg-emerald-400/5 border border-emerald-400/20 rounded-lg px-3 py-2">
+              <CheckCircle className="w-3.5 h-3.5" />
+              ERP-verified — your institution data is pre-filled
+            </div>
+          )}
+        </div>
+
+        {/* ── STEP 1: Account ───────────────────────────── */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {locked("firstName") ? (
+                <LockedField label="First Name" value={form.firstName} />
+              ) : (
+                <Field label="First Name *" value={form.firstName} onChange={v => up({ firstName: v })} placeholder="First name" />
+              )}
+              {locked("lastName") ? (
+                <LockedField label="Last Name" value={form.lastName} />
+              ) : (
+                <Field label="Last Name *" value={form.lastName} onChange={v => up({ lastName: v })} placeholder="Last name" />
+              )}
+            </div>
+
+            {locked("email") ? (
+              <LockedField label="Email Address" value={form.email} />
+            ) : (
+              <Field label="Email *" value={form.email} onChange={v => up({ email: v })} type="email" placeholder="your@email.com" />
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              {locked("phone") ? (
+                <LockedField label="Phone" value={form.phone} />
+              ) : (
+                <Field label="Phone" value={form.phone} onChange={v => up({ phone: v })} placeholder="+91 XXXXX XXXXX" />
+              )}
+              {locked("gender") ? (
+                <LockedField label="Gender" value={form.gender} />
+              ) : (
+                <div className="space-y-1">
+                  <Label className="text-xs text-zinc-400">Gender</Label>
+                  <select
+                    value={form.gender}
+                    onChange={e => up({ gender: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non-binary">Non-binary</option>
+                    <option value="prefer-not-to-say">Prefer not to say</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {locked("dateOfBirth") ? (
+              <LockedField label="Date of Birth" value={form.dateOfBirth} />
+            ) : (
+              <Field label="Date of Birth" value={form.dateOfBirth} onChange={v => up({ dateOfBirth: v })} type="date" />
+            )}
+
+            {/* Show ERP-locked supplementary fields */}
+            {isErp && (form.prn || form.division || form.rollNo) && (
+              <div className="grid grid-cols-3 gap-3">
+                {form.prn      && <LockedField label="PRN"      value={form.prn} />}
+                {form.division && <LockedField label="Division" value={form.division} />}
+                {form.rollNo   && <LockedField label="Roll No"  value={form.rollNo} />}
+              </div>
+            )}
+            {isErp && (form.city || form.state) && (
+              <div className="grid grid-cols-2 gap-3">
+                {form.city  && <LockedField label="City"  value={form.city} />}
+                {form.state && <LockedField label="State" value={form.state} />}
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-zinc-800 space-y-4">
+              <Field label="Password *" value={form.password} onChange={v => up({ password: v })} type="password" placeholder="Minimum 8 characters" />
+              <Field label="Confirm Password *" value={form.confirmPassword} onChange={v => up({ confirmPassword: v })} type="password" placeholder="Re-enter password" />
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer mt-2">
+              <input
+                type="checkbox"
+                checked={form.agreeToTerms}
+                onChange={e => up({ agreeToTerms: e.target.checked })}
+                className="w-4 h-4 rounded border-zinc-600 accent-blue-600"
+              />
+              <span className="text-sm text-zinc-400">
+                I agree to the <span className="text-blue-400 underline cursor-pointer">Terms of Service</span> and <span className="text-blue-400 underline cursor-pointer">Privacy Policy</span>
+              </span>
+            </label>
+          </div>
+        )}
+
+        {/* ── STEP 2: Academic Info ─────────────────────── */}
+        {step === 2 && (
+          <div className="space-y-4">
+            {isErp && form.department ? (
+              <LockedField label="Department / Branch" value={form.department} />
+            ) : (
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-400">Department / Branch *</Label>
+                {departments.length > 0 ? (
+                  <select
+                    value={form.department}
+                    onChange={e => up({ department: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Select department</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.name}>{d.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Field label="" value={form.department} onChange={v => up({ department: v })} placeholder="e.g. Computer Engineering" />
                 )}
               </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="studentId" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                    Student ID / PRN *
-                    {isErpField('studentId') && <Lock className="w-3 h-3 text-emerald-400" />}
-                  </Label>
-                  <Input
-                    id="studentId"
-                    placeholder="Your student ID / PRN"
-                    value={formData.studentId}
-                    onChange={(e) => !isErpField('studentId') && updateFormData({ studentId: e.target.value })}
-                    readOnly={isErpField('studentId')}
-                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('studentId') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-gray-900 dark:text-white font-medium">Country *</Label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={(value) => updateFormData({ country: value })}
+            <div className="grid grid-cols-2 gap-4">
+              {isErp && form.currentYear ? (
+                <LockedField label="Current Year" value={`Year ${form.currentYear}`} />
+              ) : (
+                <div className="space-y-1">
+                  <Label className="text-xs text-zinc-400">Current Year *</Label>
+                  <select
+                    value={form.currentYear}
+                    onChange={e => up({ currentYear: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-gray-900 dark:text-white">
-                      <SelectValue placeholder="Select your country" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-50 dark:bg-gray-900 border-white/20">
-                      {Object.keys(languagesByCountry).map((country) => (
-                        <SelectItem
-                          key={country}
-                          value={country}
-                          className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5"
-                        >
-                          {country}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                    First Name *
-                    {isErpField('firstName') && <Lock className="w-3 h-3 text-emerald-400" />}
-                  </Label>
-                  <Input
-                    id="firstName"
-                    placeholder="Your first name"
-                    value={formData.firstName}
-                    onChange={(e) => !isErpField('firstName') && updateFormData({ firstName: e.target.value })}
-                    readOnly={isErpField('firstName')}
-                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('firstName') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                    Last Name *
-                    {isErpField('lastName') && <Lock className="w-3 h-3 text-emerald-400" />}
-                  </Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Your last name"
-                    value={formData.lastName}
-                    onChange={(e) => !isErpField('lastName') && updateFormData({ lastName: e.target.value })}
-                    readOnly={isErpField('lastName')}
-                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('lastName') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                    Email Address *
-                    {isErpField('email') && <Lock className="w-3 h-3 text-emerald-400" />}
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@college.edu"
-                    value={formData.email}
-                    onChange={(e) => !isErpField('email') && updateFormData({ email: e.target.value })}
-                    readOnly={isErpField('email')}
-                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('email') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-gray-900 dark:text-white font-medium flex items-center gap-2">
-                    Phone Number
-                    {isErpField('phone') && <Lock className="w-3 h-3 text-emerald-400" />}
-                  </Label>
-                  <Input
-                    id="phone"
-                    placeholder="+91 0123456789"
-                    value={formData.phone}
-                    onChange={(e) => !isErpField('phone') && updateFormData({ phone: e.target.value })}
-                    readOnly={isErpField('phone')}
-                    className={`bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400 ${isErpField('phone') ? 'opacity-70 cursor-not-allowed border-emerald-800/50' : ''}`}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth" className="text-gray-900 dark:text-white font-medium">
-                    Date of Birth
-                  </Label>
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={(e) => updateFormData({ dateOfBirth: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white focus:border-indigo-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-
-                  <Label className="text-gray-900 dark:text-white font-medium">Gender (Optional)</Label>
-                  <Select
-                    value={formData.gender}
-                    onValueChange={(value) => updateFormData({ gender: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-gray-900 dark:text-white">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-50 dark:bg-gray-900 border-white/20">
-                      <SelectItem value="male" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Male</SelectItem>
-                      <SelectItem value="female" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Female</SelectItem>
-                      <SelectItem value="non-binary" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Non-binary</SelectItem>
-                      <SelectItem value="prefer-not-to-say" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/5">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="githubUsername" className="text-gray-900 dark:text-white font-medium">
-                    GitHub Username (Optional)
-                  </Label>
-                  <Input
-                    id="githubUsername"
-                    placeholder="e.g. johndoe"
-                    value={formData.githubUsername}
-                    onChange={(e) => updateFormData({ githubUsername: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="leetcodeUsername" className="text-gray-900 dark:text-white font-medium">
-                    LeetCode Username (Optional)
-                  </Label>
-                  <Input
-                    id="leetcodeUsername"
-                    placeholder="e.g. johndoe"
-                    value={formData.leetcodeUsername}
-                    onChange={(e) => updateFormData({ leetcodeUsername: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="linkedinUrl" className="text-gray-900 dark:text-white font-medium">
-                    LinkedIn Profile URL (Optional)
-                  </Label>
-                  <Input
-                    id="linkedinUrl"
-                    placeholder="https://linkedin.com/in/johndoe"
-                    value={formData.linkedinUrl}
-                    onChange={(e) => updateFormData({ linkedinUrl: e.target.value })}
-                    className="bg-white/5 border-white/20 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-indigo-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white font-medium">
-                    Password *
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Create a strong password"
-                    value={formData.password}
-                    onChange={(e) => updateFormData({ password: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-white font-medium">
-                    Confirm Password *
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400 focus:border-indigo-400"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                <Checkbox
-                  id="terms"
-                  checked={formData.agreeToTerms}
-                  onCheckedChange={(checked) => updateFormData({ agreeToTerms: checked as boolean })}
-                  className="border-white/20 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                />
-                <Label htmlFor="terms" className="text-sm text-gray-300">
-                  I agree to the{" "}
-                  <Link href="/terms" className="text-indigo-400 hover:text-indigo-300 underline">
-                    Terms and Conditions
-                  </Link>{" "}
-                  and{" "}
-                  <Link href="/privacy" className="text-indigo-400 hover:text-indigo-300 underline">
-                    Privacy Policy
-                  </Link>
-                </Label>
-              </div>
-
-              {error && (
-                <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-300">
-                  {error}
+                    <option value="">Select year</option>
+                    {YEAR_OPTIONS.map(y => <option key={y} value={y}>Year {y}</option>)}
+                  </select>
                 </div>
               )}
 
-              <div className="flex justify-end">
-                <Button
-                  onClick={registerBasicInfo}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-8"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                      Creating Account...
-                    </>
-                  ) : (
-                    <>
-                      Register & Continue
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </StepTransition>
-        );
-
-      case 2:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl mb-4 shadow-2xl">
-                  <CheckCircle className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
-                  Welcome {formData.firstName}! 🎉
-                </h2>
-                <p className="text-gray-400 mt-2">
-                  Your account has been created. Now let's personalize your learning journey.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <GraduationCap className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Academic Information
-                </h3>
-                <p className="text-gray-400 mt-2">Tell us about your academic journey</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Program/Course *</Label>
-                  <Select
-                    value={formData.program}
-                    onValueChange={(value) => updateFormData({ program: value, academicInterests: [] })}
+              {isErp && form.currentSemester ? (
+                <LockedField label="Current Semester" value={`Sem ${form.currentSemester}`} />
+              ) : (
+                <div className="space-y-1">
+                  <Label className="text-xs text-zinc-400">Current Semester *</Label>
+                  <select
+                    value={form.currentSemester}
+                    onChange={e => up({ currentSemester: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select your program" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      {programs.map((program) => (
-                        <SelectItem
-                          key={program}
-                          value={program}
-                          className="text-white hover:bg-white/10"
-                        >
-                          {program}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Current Year *</Label>
-                  <Select
-                    value={formData.currentYear}
-                    onValueChange={(value) => updateFormData({ currentYear: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      <SelectItem value="1" className="text-white hover:bg-white/10">1st Year</SelectItem>
-                      <SelectItem value="2" className="text-white hover:bg-white/10">2nd Year</SelectItem>
-                      <SelectItem value="3" className="text-white hover:bg-white/10">3rd Year</SelectItem>
-                      <SelectItem value="4" className="text-white hover:bg-white/10">4th Year</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Current Semester</Label>
-                  <Select
-                    value={formData.currentSemester}
-                    onValueChange={(value) => updateFormData({ currentSemester: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select semester" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      {Array.from({ length: 8 }, (_, i) => i + 1).map((sem) => (
-                        <SelectItem
-                          key={sem}
-                          value={String(sem)}
-                          className="text-white hover:bg-white/10"
-                        >
-                          Semester {sem}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Enrollment Year</Label>
-                  <Select
-                    value={formData.enrollmentYear}
-                    onValueChange={(value) => updateFormData({ enrollmentYear: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      {["2029", "2028", "2027", "2026", "2025", "2024", "2023", "2022", "2021", "2020"].map((year) => (
-                        <SelectItem
-                          key={year}
-                          value={year}
-                          className="text-white hover:bg-white/10"
-                        >
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <Card className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/20 backdrop-blur-xl">
-                  <CardContent className="p-6">
-                    <Label className="text-white font-medium">Current GPA (Optional)</Label>
-                    <div className="mt-4">
-                      <Slider
-                        value={formData.currentGPA}
-                        onValueChange={(value) => updateFormData({ currentGPA: value })}
-                        max={10}
-                        min={0}
-                        step={0.1}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-sm text-gray-400 mt-2">
-                        <span>0.0</span>
-                        <span className="font-medium text-indigo-400 text-lg">
-                          {formData.currentGPA[0].toFixed(1)} CGPA
-                        </span>
-                        <span>10.0</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/20 backdrop-blur-xl">
-                  <CardContent className="p-6">
-                    <Label className="text-white font-medium mb-4">
-                      Academic Interests (Select multiple)
-                    </Label>
-                    {formData.program && (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-                        {getAcademicInterests().map((interest) => {
-                          const checked = formData.academicInterests.includes(interest);
-                          return (
-                            <label
-                              key={interest}
-                              htmlFor={interest}
-                              className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
-                                ? "bg-indigo-500/10 border-indigo-400/40"
-                                : "bg-white/5 border-white/10 hover:bg-white/10"
-                                } cursor-pointer`}
-                            >
-                              <Checkbox
-                                id={interest}
-                                checked={checked}
-                                onCheckedChange={(isChecked) => {
-                                  if (isChecked) {
-                                    updateFormData({
-                                      academicInterests: [
-                                        ...formData.academicInterests,
-                                        interest,
-                                      ],
-                                    });
-                                  } else {
-                                    updateFormData({
-                                      academicInterests: formData.academicInterests.filter(
-                                        (i) => i !== interest
-                                      ),
-                                    });
-                                  }
-                                }}
-                                className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                              />
-                              <span className="text-white/90 text-sm">{interest}</span>
-                            </label>
-                          );
-                        })}
-                        <label
-                          htmlFor="other-interests"
-                          className="flex items-center gap-3 p-3 rounded-lg border bg-orange-500/10 border-orange-400/40 cursor-pointer"
-                        >
-                          <Checkbox
-                            id="other-interests"
-                            checked={false}
-                            onCheckedChange={() => {
-                              updateFormData({
-                                showAllInterests: !formData.showAllInterests
-                              });
-                            }}
-                            className="border-orange-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
-                          />
-                          <span className="text-orange-300 text-sm font-medium">Other Fields</span>
-                        </label>
-                      </div>
-                    )}
-
-                    {(formData as any).showAllInterests && (
-                      <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
-                        <h4 className="text-white font-medium mb-3">All Academic Interests</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
-                          {allAcademicInterests.map((interest) => {
-                            const checked = formData.academicInterests.includes(interest);
-                            return (
-                              <label
-                                key={interest}
-                                htmlFor={`all-${interest}`}
-                                className={`flex items-center gap-2 p-2 rounded border transition text-xs ${checked
-                                  ? "bg-indigo-500/10 border-indigo-400/40"
-                                  : "bg-white/5 border-white/10 hover:bg-white/10"
-                                  } cursor-pointer`}
-                              >
-                                <Checkbox
-                                  id={`all-${interest}`}
-                                  checked={checked}
-                                  onCheckedChange={(isChecked) => {
-                                    if (isChecked) {
-                                      updateFormData({
-                                        academicInterests: [
-                                          ...formData.academicInterests,
-                                          interest,
-                                        ],
-                                      });
-                                    } else {
-                                      updateFormData({
-                                        academicInterests: formData.academicInterests.filter(
-                                          (i) => i !== interest
-                                        ),
-                                      });
-                                    }
-                                  }}
-                                  className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                                />
-                                <span className="text-white/90">{interest}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {!formData.program && (
-                      <p className="text-gray-400 mt-4 text-center">
-                        Please select your program first to see relevant academic interests
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            <div className="flex justify-between mt-6">
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                className="border-white/20 text-white hover:bg-white/10"
-              >
-                <ChevronLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <Button
-                onClick={nextStep}
-                disabled={!formData.program || !formData.currentYear}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
-              >
-                Continue
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
-            </div>
-          </StepTransition>
-        );
-
-      case 3: {
-        const currentQuestion = careerQuestions[currentQuestionIndex];
-        const quizProgress = ((currentQuestionIndex + 1) / careerQuestions.length) * 100;
-
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Career Interest Assessment
-                </h2>
-                <p className="text-gray-400 mt-2">
-                  Help us understand your career preferences
-                </p>
-              </div>
-
-              <div className="text-center mb-2">
-                <div className="text-sm text-gray-400 mb-2">
-                  Question {currentQuestionIndex + 1} of {careerQuestions.length}
-                </div>
-                <Progress value={quizProgress} className="w-full" />
-              </div>
-
-              <Card className="bg-white/5 border-white/20">
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-6 text-center text-white/90">
-                    {currentQuestion.question}
-                  </h3>
-                  <RadioGroup
-                    value={formData.careerQuizAnswers[currentQuestion.id] || ""}
-                    onValueChange={(value) =>
-                      updateFormData({
-                        careerQuizAnswers: {
-                          ...formData.careerQuizAnswers,
-                          [currentQuestion.id]: value,
-                        },
-                      })
-                    }
-                    className="space-y-4"
-                  >
-                    {currentQuestion.options.map((option) => {
-                      const selected =
-                        formData.careerQuizAnswers[currentQuestion.id] === option.value;
-                      return (
-                        <label
-                          key={option.value}
-                          htmlFor={option.value}
-                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition ${selected
-                            ? "bg-indigo-500/10 border-indigo-400/40"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                            }`}
-                        >
-                          <RadioGroupItem value={option.value} id={option.value} />
-                          <span className="text-2xl">{option.icon}</span>
-                          <span className="text-white/90">{option.label}</span>
-                        </label>
-                      );
-                    })}
-                  </RadioGroup>
-
-                  <div className="flex justify-between mt-6">
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        setCurrentQuestionIndex((idx) => Math.max(0, idx - 1))
-                      }
-                      disabled={currentQuestionIndex === 0}
-                      className="border-white/20 text-white hover:bg-white/10"
-                    >
-                      <ChevronLeft className="w-4 h-4 mr-2" />
-                      Previous
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        if (currentQuestionIndex < careerQuestions.length - 1) {
-                          setCurrentQuestionIndex((idx) => idx + 1);
-                        } else {
-                          nextStep();
-                        }
-                      }}
-                      disabled={!formData.careerQuizAnswers[currentQuestion.id]}
-                      className="bg-gradient-to-r from-red-600 to-yellow-600 text-black hover:from-blue-500 hover:to-white"
-                    >
-                      {currentQuestionIndex === careerQuestions.length - 1 ? "Continue" : "Next"}
-                      <ChevronRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </StepTransition>
-        );
-      }
-
-      case 4:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <Award className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Skills Assessment
-                </h2>
-                <p className="text-gray-400 mt-2">Rate your current skill levels</p>
-              </div>
-
-              <div className="space-y-6">
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Technical Skills
-                      {formData.academicInterests.length > 0 && (
-                        <span className="text-sm font-normal text-gray-400 ml-2">
-                          (Based on your interests: {formData.academicInterests.join(", ")})
-                        </span>
-                      )}
-                    </h3>
-                    <div className="space-y-4">
-                      {getTechnicalSkills().map((skill) => (
-                        <div key={skill} className="space-y-2">
-                          <div className="flex justify-between">
-                            <Label className="text-white/90">{skill}</Label>
-                            <span className="text-sm text-gray-400">
-                              {((formData.technicalSkills as Record<string, number>)[skill]) ?? 0}/5
-                            </span>
-                          </div>
-                          <Slider
-                            value={[((formData.technicalSkills as Record<string, number>)[skill]) ?? 0]}
-                            onValueChange={(value) =>
-                              updateFormData({
-                                technicalSkills: {
-                                  ...formData.technicalSkills,
-                                  [skill]: value[0],
-                                },
-                              })
-                            }
-                            max={5}
-                            min={0}
-                            step={1}
-                            className="w-full"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Soft Skills
-                    </h3>
-                    <div className="space-y-4">
-                      {softSkillsList.map((skill) => (
-                        <div key={skill} className="space-y-2">
-                          <div className="flex justify-between">
-                            <Label className="text-white/90">{skill}</Label>
-                            <span className="text-sm text-gray-400">
-                              {((formData.softSkills as Record<string, number>)[skill]) ?? 0}/5
-                            </span>
-                          </div>
-                          <Slider
-                            value={[((formData.softSkills as Record<string, number>)[skill]) ?? 0]}
-                            onValueChange={(value) =>
-                              updateFormData({
-                                softSkills: {
-                                  ...formData.softSkills,
-                                  [skill]: value[0],
-                                },
-                              })
-                            }
-                            max={5}
-                            min={0}
-                            step={1}
-                            className="w-full"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Language Skills
-                      <span className="text-sm font-normal text-gray-400 ml-2">
-                        (Based on your country: {formData.country})
-                      </span>
-                    </h3>
-                    <div className="space-y-4">
-                      {getLanguages().map((lang) => (
-                        <div key={lang} className="space-y-2">
-                          <div className="flex justify-between">
-                            <Label className="text-white/90">{lang}</Label>
-                            <span className="text-sm text-gray-400">
-                              {((formData.languageSkills as Record<string, number>)[lang]) ?? 0}/5
-                            </span>
-                          </div>
-                          <Slider
-                            value={[((formData.languageSkills as Record<string, number>)[lang]) ?? 0]}
-                            onValueChange={(value) =>
-                              updateFormData({
-                                languageSkills: {
-                                  ...formData.languageSkills,
-                                  [lang]: value[0],
-                                },
-                              })
-                            }
-                            max={5}
-                            min={0}
-                            step={1}
-                            className="w-full"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex justify-between mt-6">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
-                >
-                  Continue
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-          </StepTransition>
-        );
-
-      case 5:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <MapPin className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Career Goals
-                </h2>
-                <p className="text-gray-400 mt-2">Define your career aspirations</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Primary Career Goal
-                    </h3>
-                    <Select
-                      value={formData.primaryGoal}
-                      onValueChange={(value) => updateFormData({ primaryGoal: value })}
-                    >
-                      <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                        <SelectValue placeholder="Select primary goal" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-white/20">
-                        <SelectItem value="software-engineer" className="text-white hover:bg-white/10">
-                          Software Engineer
-                        </SelectItem>
-                        <SelectItem value="data-scientist" className="text-white hover:bg-white/10">
-                          Data Scientist
-                        </SelectItem>
-                        <SelectItem value="product-manager" className="text-white hover:bg-white/10">
-                          Product Manager
-                        </SelectItem>
-                        <SelectItem value="entrepreneur" className="text-white hover:bg-white/10">
-                          Entrepreneur
-                        </SelectItem>
-                        <SelectItem value="researcher" className="text-white hover:bg-white/10">
-                          Researcher
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <div className="mt-6">
-                      <h4 className="text-sm text-white/80 mb-2">
-                        Secondary Goal (Optional)
-                      </h4>
-                      <Select
-                        value={formData.secondaryGoal}
-                        onValueChange={(value) => updateFormData({ secondaryGoal: value })}
-                      >
-                        <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                          <SelectValue placeholder="Select secondary goal" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-white/20">
-                          <SelectItem value="full-stack" className="text-white hover:bg-white/10">
-                            Full-Stack Developer
-                          </SelectItem>
-                          <SelectItem value="cloud-engineer" className="text-white hover:bg-white/10">
-                            Cloud Engineer
-                          </SelectItem>
-                          <SelectItem value="ai-ml" className="text-white hover:bg-white/10">
-                            AI/ML Engineer
-                          </SelectItem>
-                          <SelectItem value="cybersec" className="text-white hover:bg-white/10">
-                            Cybersecurity
-                          </SelectItem>
-                          <SelectItem value="ui-ux" className="text-white hover:bg-white/10">
-                            UI/UX Designer
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Timeline
-                    </h3>
-                    <RadioGroup
-                      value={formData.timeline}
-                      onValueChange={(value) => updateFormData({ timeline: value })}
-                      className="space-y-3"
-                    >
-                      <label htmlFor="2-years" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                        <RadioGroupItem value="2-years" id="2-years" />
-                        <span className="text-white/90">Within 2 years</span>
-                      </label>
-                      <label htmlFor="4-years" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                        <RadioGroupItem value="4-years" id="4-years" />
-                        <span className="text-white/90">Within 4 years</span>
-                      </label>
-                      <label htmlFor="after-graduation" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                        <RadioGroupItem value="after-graduation" id="after-graduation" />
-                        <span className="text-white/90">After graduation</span>
-                      </label>
-                    </RadioGroup>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Location Preference
-                    </h3>
-                    <Select
-                      value={formData.locationPreference}
-                      onValueChange={(value) => updateFormData({ locationPreference: value })}
-                    >
-                      <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                        <SelectValue placeholder="Select location" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-white/20">
-                        <SelectItem value="india" className="text-white hover:bg-white/10">
-                          India
-                        </SelectItem>
-                        <SelectItem value="international" className="text-white hover:bg-white/10">
-                          International
-                        </SelectItem>
-                        <SelectItem value="remote" className="text-white hover:bg-white/10">
-                          Remote
-                        </SelectItem>
-                        <SelectItem value="flexible" className="text-white hover:bg-white/10">
-                          Flexible
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/5 border-white/20">
-                  <CardContent className="p-6">
-                    <h3 className="text-lg font-semibold mb-4 text-white/90">
-                      Industry Focus
-                    </h3>
-                    <div className="space-y-3">
-                      {(
-                        [
-                          "Technology",
-                          "Finance",
-                          "Healthcare",
-                          "Education",
-                          "Startup",
-                        ] as readonly string[]
-                      ).map((industry) => {
-                        const checked = formData.industryFocus.includes(industry);
-                        return (
-                          <label
-                            key={industry}
-                            htmlFor={industry}
-                            className={`flex items-center gap-3 p-3 rounded-lg border transition ${checked
-                              ? "bg-indigo-500/10 border-indigo-400/40"
-                              : "bg-white/5 border-white/10 hover:bg-white/10"
-                              }`}
-                          >
-                            <Checkbox
-                              id={industry}
-                              checked={checked}
-                              onCheckedChange={(isChecked) => {
-                                if (isChecked) {
-                                  updateFormData({
-                                    industryFocus: [
-                                      ...formData.industryFocus,
-                                      industry,
-                                    ],
-                                  });
-                                } else {
-                                  updateFormData({
-                                    industryFocus: formData.industryFocus.filter(
-                                      (i) => i !== industry
-                                    ),
-                                  });
-                                }
-                              }}
-                              className="border-white/30 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                            />
-                            <span className="text-white/90">{industry}</span>
-                          </label>
-                        );
-                      }
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex justify-between mt-6">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  className="border-white/20 text-white hover:bg-white/10"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Back
-                </Button>
-                <Button
-                  onClick={nextStep}
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
-                >
-                  Continue
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            </div>
-          </StepTransition>
-        );
-
-      case 6:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-yellow-600 rounded-2xl mb-4 shadow-2xl">
-                  <Calendar className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Personalized Roadmap
-                </h2>
-                <p className="text-gray-400 mt-2">
-                  Your customized learning path is ready!
-                </p>
-              </div>
-
-              <Card className="p-6 bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/20">
-                <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-red-300 to-yellow-300">
-                    Congratulations{formData.firstName ? `, ${formData.firstName}` : ""}! 🎉
-                  </h3>
-                  <p className="text-gray-300">
-                    Based on your responses, we've created a personalized roadmap
-                    for your journey to become a{" "}
-                    <span className="text-indigo-300">
-                      {formData.primaryGoal
-                        ? formData.primaryGoal.replace("-", " ")
-                        : "top professional"}
-                    </span>
-                    .
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div className="text-2xl font-bold text-red-300">85%</div>
-                    <div className="text-sm text-gray-400">Goal Alignment</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div className="text-2xl font-bold text-yellow-300">12</div>
-                    <div className="text-sm text-gray-400">Skills to Develop</div>
-                  </div>
-                  <div className="text-center p-4 bg-white/5 rounded-lg border border-white/10">
-                    <div className="text-2xl font-bold text-red-300">24</div>
-                    <div className="text-sm text-gray-400">Months to Goal</div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="font-semibold text-white/90">
-                    Your Learning Path Highlights:
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                      ["Foundation Building", "Core programming skills"],
-                      ["Specialization", "Advanced technical skills"],
-                      ["Project Experience", "Real-world applications"],
-                      ["Career Preparation", "Interview & job readiness"],
-                    ].map(([title, sub], i) => (
-                      <div key={i} className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-gradient-to-r from-red-600 to-yellow-600 rounded-full flex items-center justify-center text-black text-sm font-bold">
-                          {i + 1}
-                        </div>
-                        <div>
-                          <div className="font-medium text-white/90">{title}</div>
-                          <div className="text-sm text-gray-400">{sub}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 bg-white/5 border-white/20">
-                <h4 className="font-semibold mb-4 text-white/90">
-                  Customize Your Experience
-                </h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-white/90">Learning Intensity</Label>
-                    <RadioGroup
-                      value={formData.intensityLevel}
-                      onValueChange={(value) =>
-                        updateFormData({ intensityLevel: value })
-                      }
-                      className="mt-3 space-y-3"
-                    >
-                      <label
-                        htmlFor="light"
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer"
-                      >
-                        <RadioGroupItem value="light" id="light" />
-                        <span className="text-white/90">Light (5–10 hrs/week)</span>
-                      </label>
-                      <label
-                        htmlFor="moderate"
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer"
-                      >
-                        <RadioGroupItem value="moderate" id="moderate" />
-                        <span className="text-white/90">Moderate (10–15 hrs/week)</span>
-                      </label>
-                      <label
-                        htmlFor="intensive"
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer"
-                      >
-                        <RadioGroupItem value="intensive" id="intensive" />
-                        <span className="text-white/90">Intensive (15+ hrs/week)</span>
-                      </label>
-                    </RadioGroup>
-                  </div>
-                </div>
-              </Card>
-
-              <div className="flex gap-4">
-                <Button
-                  variant="outline"
-                  onClick={prevStep}
-                  className="flex-1 border-white/20 text-white hover:bg-white/10"
-                >
-                  Make Adjustments
-                </Button>
-                <Button
-                  onClick={completeProfile}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-red-600 to-yellow-600 hover:from-blue-500 hover:to-white text-black"
-                >
-                  {isLoading ? "Creating Account..." : "Create My Account"}
-                </Button>
-              </div>
-              {error && (
-                <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-300">
-                  {error}
+                    <option value="">Select semester</option>
+                    {SEM_OPTIONS.map(s => <option key={s} value={s}>Semester {s}</option>)}
+                  </select>
                 </div>
               )}
             </div>
-          </StepTransition>
-        );
 
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="space-y-8">
-      {isLoading ? <RocketLaunchLoader /> : renderStep()}
-    </div>
-  );
-};
-
-// === Professional Registration Component ===
-const ProfessionalRegistration = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    company: "",
-    designation: "",
-    industry: "",
-    experience: "",
-    currentSalary: "",
-    expectedSalary: "",
-    linkedin: "",
-    github: "",
-    portfolio: "",
-    password: "",
-    confirmPassword: "",
-    agreeToTerms: false,
-    skills: [] as string[],
-    certifications: "" as string,
-    careerGoals: "" as string,
-    preferredLearningStyle: "" as string,
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>(""); // Add error state
-  const router = useRouter();
-
-  const totalSteps = 3;
-  const progress = (currentStep / totalSteps) * 100;
-
-  const updateFormData = (updates: any) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
-  };
-
-  const nextStep = () => {
-    if (currentStep < totalSteps) setCurrentStep((s) => s + 1);
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) setCurrentStep((s) => s - 1);
-  };
-
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      // Validate required fields
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-        throw new Error("Please fill in all required fields");
-      }
-
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error("Passwords do not match");
-      }
-
-      if (!formData.agreeToTerms) {
-        throw new Error("Please agree to the terms and conditions");
-      }
-
-      // Make API call to register professional
-      const response = await fetch("/api/professionals/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone,
-          company: formData.company,
-          designation: formData.designation,
-          industry: formData.industry,
-          experience: formData.experience,
-          currentSalary: formData.currentSalary,
-          expectedSalary: formData.expectedSalary,
-          linkedin: formData.linkedin,
-          github: formData.github,
-          portfolio: formData.portfolio,
-          password: formData.password,
-          skills: formData.skills,
-          certifications: formData.certifications,
-          careerGoals: formData.careerGoals,
-          preferredLearningStyle: formData.preferredLearningStyle,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Registration failed");
-      }
-
-      // Registration successful - redirect to professional login
-      router.push("/professional-login");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-2xl">
-                  <User className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Personal Information
-                </h2>
-                <p className="text-gray-400 mt-2">Let's start with your basic details</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-white font-medium">
-                    First Name *
-                  </Label>
-                  <Input
-                    id="firstName"
-                    placeholder="Your first name"
-                    value={formData.firstName}
-                    onChange={(e) => updateFormData({ firstName: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-white font-medium">
-                    Last Name *
-                  </Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Your last name"
-                    value={formData.lastName}
-                    onChange={(e) => updateFormData({ lastName: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-medium">
-                    Email Address *
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@company.com"
-                    value={formData.email}
-                    onChange={(e) => updateFormData({ email: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-white font-medium">
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phone"
-                    placeholder="+91 9876543210"
-                    value={formData.phone}
-                    onChange={(e) => updateFormData({ phone: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="linkedin" className="text-white font-medium">
-                    LinkedIn Profile
-                  </Label>
-                  <Input
-                    id="linkedin"
-                    placeholder="linkedin.com/in/yourprofile"
-                    value={formData.linkedin}
-                    onChange={(e) => updateFormData({ linkedin: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="portfolio" className="text-white font-medium">
-                    Portfolio Website
-                  </Label>
-                  <Input
-                    id="portfolio"
-                    placeholder="yourportfolio.com"
-                    value={formData.portfolio}
-                    onChange={(e) => updateFormData({ portfolio: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white font-medium">
-                    Password *
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Create a strong password"
-                    value={formData.password}
-                    onChange={(e) => updateFormData({ password: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-white font-medium">
-                    Confirm Password *
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => updateFormData({ confirmPassword: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
-            </div>
-          </StepTransition>
-        );
-
-      case 2:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-2xl">
-                  <Briefcase className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Professional Information
-                </h2>
-                <p className="text-gray-400 mt-2">Tell us about your professional experience</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Current Company</Label>
-                  <Select
-                    value={formData.company}
-                    onValueChange={(value) => updateFormData({ company: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select your company" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      {[
-                        "Google",
-                        "Microsoft",
-                        "Amazon",
-                        "Apple",
-                        "Meta",
-                        "Netflix",
-                        "Adobe",
-                        "IBM",
-                        "Oracle",
-                        "Intel",
-                        "Other"
-                      ].map((company) => (
-                        <SelectItem key={company} value={company} className="text-white hover:bg-white/10">
-                          {company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="designation" className="text-white font-medium">
-                    Current Designation
-                  </Label>
-                  <Input
-                    id="designation"
-                    placeholder="e.g., Senior Software Engineer"
-                    value={formData.designation}
-                    onChange={(e) => updateFormData({ designation: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Industry</Label>
-                  <Select
-                    value={formData.industry}
-                    onValueChange={(value) => updateFormData({ industry: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select your industry" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      {[
-
-                        "Technology",
-
-                        "Finance",
-
-                        "Healthcare",
-
-                        "Education",
-
-                        "Startup",
-                      ].map((industry) => (
-                        <SelectItem key={industry} value={industry} className="text-white hover:bg-white/10">
-                          {industry}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white font-medium">Years of Experience</Label>
-                  <Select
-                    value={formData.experience}
-                    onValueChange={(value) => updateFormData({ experience: value })}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/20 text-white">
-                      <SelectValue placeholder="Select experience" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-white/20">
-                      <SelectItem value="0-2" className="text-white hover:bg-white/10">0-2 years</SelectItem>
-                      <SelectItem value="2-5" className="text-white hover:bg-white/10">2-5 years</SelectItem>
-                      <SelectItem value="5-10" className="text-white hover:bg-white/10">5-10 years</SelectItem>
-                      <SelectItem value="10-15" className="text-white hover:bg-white/10">10-15 years</SelectItem>
-                      <SelectItem value="15+" className="text-white hover:bg-white/10">15+ years</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="currentSalary" className="text-white font-medium">
-                    Current CTC (Optional)
-                  </Label>
-                  <Input
-                    id="currentSalary"
-                    placeholder="e.g., 15 LPA"
-                    value={formData.currentSalary}
-                    onChange={(e) => updateFormData({ currentSalary: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="expectedSalary" className="text-white font-medium">
-                    Expected CTC (Optional)
-                  </Label>
-                  <Input
-                    id="expectedSalary"
-                    placeholder="e.g., 25 LPA"
-                    value={formData.expectedSalary}
-                    onChange={(e) => updateFormData({ expectedSalary: e.target.value })}
-                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="certifications" className="text-white font-medium">
-                  Certifications (Optional)
-                </Label>
-                <Input
-                  id="certifications"
-                  placeholder="e.g., AWS Certified, PMP, Scrum Master"
-                  value={formData.certifications}
-                  onChange={(e) => updateFormData({ certifications: e.target.value })}
-                  className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
-                />
-              </div>
-            </div>
-          </StepTransition>
-        );
-
-      case 3:
-        return (
-          <StepTransition isActive>
-            <div className="space-y-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-2xl">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                  Career Goals & Preferences
-                </h2>
-                <p className="text-gray-400 mt-2">Help us understand your career aspirations</p>
-              </div>
-
-              <Card className="bg-white/5 border-white/20">
-                <CardContent className="p-6">
-                  <Label className="text-white font-medium mb-4">Top Skills (Select multiple)</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4">
-                    {allAcademicInterests.map((skill) => {
-                      const checked = formData.skills.includes(skill);
-                      return (
-                        <label
-                          key={skill}
-                          htmlFor={skill}
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition cursor-pointer ${checked
-                            ? "bg-yellow-500/10 border-yellow-400/40"
-                            : "bg-white/5 border-white/10 hover:bg-white/10"
-                            }`}
-                        >
-                          <Checkbox
-                            id={skill}
-                            checked={checked}
-                            onCheckedChange={(isChecked) => {
-                              if (isChecked) {
-                                updateFormData({
-                                  skills: [...formData.skills, skill],
-                                });
-                              } else {
-                                updateFormData({
-                                  skills: formData.skills.filter((s) => s !== skill),
-                                });
-                              }
-                            }}
-                            className="border-white/30"
-                          />
-                          <span className="text-white/90 text-sm">{skill}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-2">
-                <Label htmlFor="careerGoals" className="text-white font-medium">
-                  Career Goals (Brief Description)
-                </Label>
-                <textarea
-                  id="careerGoals"
-                  placeholder="Describe your short-term and long-term career goals..."
-                  value={formData.careerGoals}
-                  onChange={(e) => updateFormData({ careerGoals: e.target.value })}
-                  className="w-full min-h-[100px] p-3 bg-white/5 border border-white/20 rounded-md text-white placeholder:text-gray-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-white font-medium">Preferred Learning Style</Label>
-                <RadioGroup
-                  value={formData.preferredLearningStyle}
-                  onValueChange={(value) => updateFormData({ preferredLearningStyle: value })}
-                  className="space-y-3"
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-400">Enrollment Year</Label>
+                <select
+                  value={form.enrollmentYear}
+                  onChange={e => up({ enrollmentYear: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <label htmlFor="self-paced" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                    <RadioGroupItem value="self-paced" id="self-paced" />
-                    <span className="text-white/90">Self-paced online courses</span>
-                  </label>
-                  <label htmlFor="live-sessions" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                    <RadioGroupItem value="live-sessions" id="live-sessions" />
-                    <span className="text-white/90">Live instructor-led sessions</span>
-                  </label>
-                  <label htmlFor="hybrid" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                    <RadioGroupItem value="hybrid" id="hybrid" />
-                    <span className="text-white/90">Hybrid (mix of both)</span>
-                  </label>
-                  <label htmlFor="mentorship" className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10 hover:bg-white/10 cursor-pointer">
-                    <RadioGroupItem value="mentorship" id="mentorship" />
-                    <span className="text-white/90">1-on-1 mentorship</span>
-                  </label>
-                </RadioGroup>
+                  <option value="">Select year</option>
+                  {Array.from({ length: 8 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
-
-              <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                <Checkbox
-                  id="terms-prof"
-                  checked={formData.agreeToTerms}
-                  onCheckedChange={(checked) => updateFormData({ agreeToTerms: checked as boolean })}
-                  className="border-white/20"
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-400">Current GPA / CGPA</Label>
+                <input
+                  type="number" step="0.1" min="0" max="10"
+                  value={form.currentGPA}
+                  onChange={e => up({ currentGPA: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="e.g. 8.2"
                 />
-                <Label htmlFor="terms-prof" className="text-sm text-gray-300">
-                  I agree to the Terms and Conditions and Privacy Policy
-                </Label>
-              </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white"
-              >
-                {isLoading ? "Creating Account..." : "Complete Registration"}
-              </Button>
-
-              {/* Error display */}
-              {error && (
-                <div className="mt-4 rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-300">
-                  {error}
-                </div>
-              )}
-            </div>
-          </StepTransition>
-        );
-
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <div className="space-y-8">
-      {isLoading ? <RocketLaunchLoader /> : renderStep()}
-
-      {currentStep !== 3 && !isLoading && (
-        <div className="flex justify-between mt-6">
-          <Button
-            variant="outline"
-            onClick={prevStep}
-            disabled={currentStep === 1}
-            className="border-white/20 text-white hover:bg-white/10"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-          <Button
-            onClick={nextStep}
-            className="bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white"
-          >
-            Next
-            <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// === Main Register Component ===
-function RegisterPage() {
-  const [mousePosition, setMousePosition] = useState({ x: 50, y: 40 });
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth) * 100,
-        y: (e.clientY / window.innerHeight) * 100,
-      });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  return (
-    <div
-      className="dark min-h-screen relative text-gray-900 dark:text-white"
-      style={{
-        background:
-          "radial-gradient(1200px 600px at 50% 0%, rgba(25,118,210,0.15), transparent 40%), radial-gradient(800px 400px at 100% 20%, rgba(255,152,0,0.10), transparent 40%), #0b0f1a",
-      }}
-    >
-      <AnimatedBackground />
-
-      {/* Mouse-follow spotlight */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          background: `radial-gradient(300px 200px at ${mousePosition.x}% ${mousePosition.y}%, rgba(25,118,210,0.12), rgba(0,0,0,0) 60%)`,
-        }}
-      />
-
-      <div className="relative z-10">
-        {/* Header */}
-        <div className="border-b border-white/10 bg-black/30 backdrop-blur">
-          <div className="max-w-5xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <img
-                  src="/logo.png"
-                  alt="StudentPath Logo"
-                  className="h-15 w-auto"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                  Student Registration
-                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Main Content */}
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <Card className="border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-2xl">
-            <CardContent className="p-8">
-              <StudentRegistration collegeToken={null} collegeInfo={null} />
-            </CardContent>
-          </Card>
-        </div>
+        {/* ── STEP 3: Academic Interests ────────────────── */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <p className="text-sm text-zinc-500">Select topics that interest you in your field. These help personalize your learning and career recommendations.</p>
+            {getInterests().length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {getInterests().map((interest) => {
+                  const selected = form.academicInterests.includes(interest);
+                  return (
+                    <button
+                      key={interest}
+                      type="button"
+                      onClick={() => {
+                        up({
+                          academicInterests: selected
+                            ? form.academicInterests.filter(i => i !== interest)
+                            : [...form.academicInterests, interest],
+                        });
+                      }}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all duration-150 ${
+                        selected
+                          ? "bg-blue-600/20 border-blue-500/60 text-blue-300"
+                          : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      {interest}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-600">Select your department first (Step 2) to see relevant interest options.</p>
+            )}
+            {form.academicInterests.length > 0 && (
+              <p className="text-xs text-zinc-600">{form.academicInterests.length} selected</p>
+            )}
+          </div>
+        )}
 
-        {/* Footer */}
-        <div className="border-t border-white/10 bg-black/30 mt-12">
-          <div className="max-w-5xl mx-auto px-4 py-6 text-center">
-            <p className="text-sm text-gray-300">
-              Already have an account?{" "}
-              <Link
-                href={`/login${token ? `?token=${token}` : ''}`}
-                className="text-blue-300 hover:text-blue-200 font-medium underline-offset-4 hover:underline"
+        {/* ── STEP 4: Skills ────────────────────────────── */}
+        {step === 4 && (
+          <div className="space-y-8">
+            <SkillSelector
+              label="Technical Skills"
+              skills={getTechSkills()}
+              selected={form.technicalSkills}
+              onChange={v => up({ technicalSkills: v })}
+            />
+            <div className="border-t border-zinc-800 pt-6">
+              <SkillSelector
+                label="Soft Skills"
+                skills={SOFT_SKILLS}
+                selected={form.softSkills}
+                onChange={v => up({ softSkills: v })}
+              />
+            </div>
+            <div className="border-t border-zinc-800 pt-6">
+              <LanguageSelector
+                selected={form.languageSkills}
+                onChange={v => up({ languageSkills: v })}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 5: Career Goals ──────────────────────── */}
+        {step === 5 && (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400 uppercase tracking-wider">Primary Career Goal</Label>
+              <div className="flex flex-wrap gap-2">
+                {CAREER_GOALS.map(goal => (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => up({ primaryGoal: goal })}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                      form.primaryGoal === goal
+                        ? "bg-blue-600/20 border-blue-500/60 text-blue-300"
+                        : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400 uppercase tracking-wider">Secondary Goal (optional)</Label>
+              <div className="flex flex-wrap gap-2">
+                {CAREER_GOALS.filter(g => g !== form.primaryGoal).map(goal => (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => up({ secondaryGoal: form.secondaryGoal === goal ? "" : goal })}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all ${
+                      form.secondaryGoal === goal
+                        ? "bg-purple-600/20 border-purple-500/60 text-purple-300"
+                        : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-400">Timeline</Label>
+                <select
+                  value={form.timeline}
+                  onChange={e => up({ timeline: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  {TIMELINE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-zinc-400">Location Preference</Label>
+                <select
+                  value={form.locationPreference}
+                  onChange={e => up({ locationPreference: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  {LOCATION_OPTIONS.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400 uppercase tracking-wider">Industry Focus</Label>
+              <div className="flex flex-wrap gap-2">
+                {INDUSTRY_LIST.map(ind => {
+                  const selected = form.industryFocus.includes(ind);
+                  return (
+                    <button
+                      key={ind}
+                      type="button"
+                      onClick={() => {
+                        up({
+                          industryFocus: selected
+                            ? form.industryFocus.filter(i => i !== ind)
+                            : [...form.industryFocus, ind],
+                        });
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                        selected
+                          ? "bg-emerald-600/20 border-emerald-500/60 text-emerald-300"
+                          : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                      }`}
+                    >
+                      {ind}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-zinc-400">Learning Intensity</Label>
+              <div className="flex gap-3">
+                {["light", "moderate", "intensive"].map(level => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => up({ intensityLevel: level })}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium border capitalize transition-all ${
+                      form.intensityLevel === level
+                        ? "bg-blue-600/20 border-blue-500/60 text-blue-300"
+                        : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="mt-4 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-8 pt-6 border-t border-zinc-800">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleBack}
+            disabled={step === 1 || loading}
+            className="text-zinc-400 hover:text-white disabled:opacity-30"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" /> Back
+          </Button>
+
+          <div className="flex items-center gap-3">
+            {step < TOTAL_STEPS && step > 1 && (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={loading}
+                className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
               >
-                Sign in here
-              </Link>
-            </p>
+                Skip this step →
+              </button>
+            )}
+            <Button
+              type="button"
+              onClick={handleNext}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-500 text-white min-w-[120px]"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  {step === 1 ? "Registering..." : step === TOTAL_STEPS ? "Saving..." : "Next"}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  {step === TOTAL_STEPS ? "Complete Registration" : step === 1 ? "Create Account" : "Continue"}
+                  <ChevronRight className="w-4 h-4" />
+                </span>
+              )}
+            </Button>
           </div>
         </div>
       </div>
@@ -2530,5 +944,32 @@ function RegisterPage() {
   );
 };
 
-export { StudentRegistration };
-export default RegisterPage;
+// ── Simple field helper ───────────────────────────────────────────────────
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      {label && <Label className="text-xs text-zinc-400">{label}</Label>}
+      <Input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="bg-zinc-800 border-zinc-700 text-zinc-200 placeholder:text-zinc-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 h-10"
+      />
+    </div>
+  );
+}
+
+export default StudentRegistration;

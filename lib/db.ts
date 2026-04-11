@@ -640,6 +640,13 @@ export async function initializeDatabase() {
       `);
     } catch (_) { /* column may already exist */ }
 
+    // Add prn column to Students for ERP-verified registrations
+    try {
+      await connection.execute(`
+        ALTER TABLE Students ADD COLUMN prn VARCHAR(100) DEFAULT NULL
+      `);
+    } catch (_) { /* column may already exist */ }
+
     // ── ERP Student Data Tables ───────────────────────────────────────────
 
     // college_erp_students: stores student roster uploaded via ERP Excel
@@ -691,6 +698,28 @@ export async function initializeDatabase() {
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
       )
     `);
+
+    // Safe column migrations for the main Students (capital S) table
+    const safeAlter = async (sql: string): Promise<void> => {
+      try { await connection.execute(sql); } catch (_) { /* column exists — skip */ }
+    };
+    await safeAlter('ALTER TABLE Students ADD COLUMN prn VARCHAR(100) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN division VARCHAR(50) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN roll_no VARCHAR(50) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN address TEXT DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN city VARCHAR(100) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN state VARCHAR(100) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN merged_skills JSON DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN last_skill_analysis TIMESTAMP DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN github_username VARCHAR(255) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN leetcode_username VARCHAR(255) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN linkedin_url VARCHAR(512) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN college_token VARCHAR(100) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN college_id INT DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN country VARCHAR(100) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN dept_code VARCHAR(50) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN placement_status VARCHAR(50) DEFAULT NULL');
+    await safeAlter('ALTER TABLE Students ADD COLUMN department_id INT DEFAULT NULL');
 
     connection.release();
     console.log('Database tables initialized successfully');

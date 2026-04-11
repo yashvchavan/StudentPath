@@ -1,399 +1,675 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import AdminShell from "@/components/admin-shell"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useCallback } from "react";
+import AdminShell from "@/components/admin-shell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
-  Users,
-  Search,
-  UserPlus,
-  Calendar,
-  Mail,
-  Phone,
-  GraduationCap,
-  AlertCircle
-} from "lucide-react"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+  Users, Search, UserPlus, Calendar, Mail, Phone, GraduationCap,
+  AlertCircle, Filter, X, ChevronLeft, ChevronRight, SlidersHorizontal,
+  TrendingUp, Star, Briefcase, Download,
+} from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// ── Types ─────────────────────────────────────────────────────────────────
 interface Student {
-  student_id: number
-  first_name: string
-  last_name: string
-  email: string
-  phone?: string
-  department?: string
-  college?: string
-  program?: string
-  current_year?: number
-  current_semester?: number
-  current_gpa?: number
-  gender?: string
-  enrollment_year?: number
-  date_of_birth?: string
-  location_preference?: string
-  industry_focus?: string
-  intensity_level?: string
-  is_active?: boolean
-  created_at: string
-  updated_at?: string
+  student_id: number;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  department?: string;
+  department_name?: string;
+  department_id?: number;
+  program?: string;
+  current_year?: number;
+  current_semester?: number;
+  current_gpa?: number;
+  gender?: string;
+  academic_interests?: string;
+  skills_list?: string[];
+  total_skills?: number;
+  primary_goal?: string;
+  location_preference?: string;
+  intensity_level?: string;
+  placement_status?: string;
+  placement_status_display?: string;
+  profile_completion?: number;
+  best_ats_score?: number;
+  is_active?: boolean;
+  created_at: string;
 }
 
-export default function AdminStudentsPage() {
-  const [students, setStudents] = useState<Student[]>([])
-  const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all")
-  const [yearFilter, setYearFilter] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const itemsPerPage = 10
+interface Department { id: number; name: string; code: string; }
 
-  // Fetch students from API
-  useEffect(() => {
-    async function fetchStudents() {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        const res = await fetch("/api/student/list", { 
-          cache: "no-store",
-          credentials: 'include', // Important: Include cookies
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        const data = await res.json()
-        
-        if (!res.ok) {
-          throw new Error(data.error || `HTTP error! status: ${res.status}`)
-        }
-        
-        if (data.success) {
-          // Convert current_gpa to number and is_active to boolean
-          const processed: Student[] = data.students.map((s: any) => ({
-            ...s,
-            current_gpa: s.current_gpa !== null ? Number(s.current_gpa) : null,
-            current_year: s.current_year !== null ? Number(s.current_year) : undefined,
-            current_semester: s.current_semester !== null ? Number(s.current_semester) : undefined,
-            is_active: s.is_active === 1 || s.is_active === true,
-          }))
-          setStudents(processed)
-          setFilteredStudents(processed)
-          console.log(`Loaded ${processed.length} students`)
-        } else {
-          throw new Error(data.error || "Failed to fetch students")
-        }
-      } catch (err) {
-        console.error("Failed to fetch students:", err)
-        setError(err instanceof Error ? err.message : "Failed to fetch students")
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchStudents()
-  }, [])
+interface Filters {
+  search: string;
+  departmentId: string;
+  year: string;
+  status: string;
+  placementStatus: string;
+  minGpa: string;
+  maxGpa: string;
+  skills: string;         // comma-separated skill names to filter by
+  interests: string;      // comma-separated interest names
+  primaryGoal: string;
+  intensityLevel: string;
+  minProfileCompletion: string;
+}
 
-  // Apply filters
-  useEffect(() => {
-    let filtered = [...students]
+const INITIAL_FILTERS: Filters = {
+  search: "", departmentId: "", year: "", status: "",
+  placementStatus: "", minGpa: "", maxGpa: "", skills: "",
+  interests: "", primaryGoal: "", intensityLevel: "", minProfileCompletion: "",
+};
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        s =>
-          `${s.first_name ?? ""} ${s.last_name ?? ""}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (s.email ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.student_id.toString().includes(searchTerm)
-      )
-    }
+const COMMON_SKILLS = [
+  "Python", "JavaScript", "Java", "C++", "React", "Node.js", "SQL", "Machine Learning",
+  "Data Analysis", "Cloud Computing", "Docker", "Git", "TypeScript", "Flutter", "AI/ML",
+];
 
-    if (departmentFilter !== "all") {
-      filtered = filtered.filter(s => s.department === departmentFilter)
-    }
+const CAREER_GOALS = [
+  "Software Developer", "Data Scientist", "AI/ML Engineer", "Product Manager",
+  "DevOps Engineer", "Cybersecurity Analyst", "Business Analyst", "Entrepreneur",
+];
 
-    if (yearFilter !== "all") {
-      filtered = filtered.filter(s => s.current_year?.toString() === yearFilter)
-    }
+// ── Advanced Filter Panel ─────────────────────────────────────────────────
+function FilterPanel({
+  filters, setFilters, departments, onApply, onReset, activeCount,
+}: {
+  filters: Filters;
+  setFilters: (f: Filters) => void;
+  departments: Department[];
+  onApply: () => void;
+  onReset: () => void;
+  activeCount: number;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
 
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(s =>
-        statusFilter === "active" ? s.is_active : !s.is_active
-      )
-    }
+  const toggleSkill = (skill: string) => {
+    const current = filters.skills ? filters.skills.split(",").map(s => s.trim()).filter(Boolean) : [];
+    const next = current.includes(skill) ? current.filter(s => s !== skill) : [...current, skill];
+    setFilters({ ...filters, skills: next.join(", ") });
+  };
 
-    setFilteredStudents(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, departmentFilter, yearFilter, statusFilter, students])
-
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
-  const displayedStudents = filteredStudents.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
-
-  // Get unique departments for filter
-  const departments = [...new Set(students.map(s => s.department).filter(Boolean))]
-
-  if (loading) {
-    return (
-      <AdminShell title="Student Management" description="Search, filter, and manage student records.">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading students...</p>
-          </div>
-        </div>
-      </AdminShell>
-    )
-  }
-
-  if (error) {
-    return (
-      <AdminShell title="Student Management" description="Search, filter, and manage student records.">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Error loading students:</strong> {error}
-            <br />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-2"
-              onClick={() => window.location.reload()}
-            >
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      </AdminShell>
-    )
-  }
+  const isSkillActive = (skill: string) =>
+    filters.skills.split(",").map(s => s.trim()).includes(skill);
 
   return (
-    <AdminShell title="Student Management" description="Search, filter, and manage student records.">
-      <div className="mb-4">
-        <Badge variant="outline" className="text-sm">
-          Managing students for your college
-        </Badge>
-      </div>
+    <div>
+      {/* Filter Toggle Button */}
+      <Button
+        variant="outline"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 gap-2 ${activeCount > 0 ? "border-blue-500 text-blue-400" : ""}`}
+      >
+        <SlidersHorizontal className="w-4 h-4" />
+        Advanced Filters
+        {activeCount > 0 && (
+          <Badge className="bg-blue-600 text-white text-xs px-1.5 py-0 h-4">{activeCount}</Badge>
+        )}
+      </Button>
 
+      {/* Filter Panel */}
+      {isOpen && (
+        <div className="mt-3 p-5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-5">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Filter className="w-4 h-4 text-blue-400" /> Advanced Filters
+            </h3>
+            <button onClick={() => setIsOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Row 1: Dept, Year, Status */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Department</Label>
+              <select
+                value={filters.departmentId}
+                onChange={e => setFilters({ ...filters, departmentId: e.target.value })}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">All Departments</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Year</Label>
+              <select
+                value={filters.year}
+                onChange={e => setFilters({ ...filters, year: e.target.value })}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">All Years</option>
+                {[1, 2, 3, 4].map(y => <option key={y} value={y}>Year {y}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Account Status</Label>
+              <select
+                value={filters.status}
+                onChange={e => setFilters({ ...filters, status: e.target.value })}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Placement Status</Label>
+              <select
+                value={filters.placementStatus}
+                onChange={e => setFilters({ ...filters, placementStatus: e.target.value })}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">All</option>
+                <option value="unplaced">Unplaced</option>
+                <option value="placed">Placed</option>
+                <option value="opted_out">Opted Out</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Row 2: GPA, Profile Completion, Intensity, Goal */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Min GPA</Label>
+              <Input
+                type="number" step="0.1" min="0" max="10"
+                value={filters.minGpa}
+                onChange={e => setFilters({ ...filters, minGpa: e.target.value })}
+                placeholder="e.g. 7.0"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Max GPA</Label>
+              <Input
+                type="number" step="0.1" min="0" max="10"
+                value={filters.maxGpa}
+                onChange={e => setFilters({ ...filters, maxGpa: e.target.value })}
+                placeholder="e.g. 10.0"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 h-9 text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Intensity Level</Label>
+              <select
+                value={filters.intensityLevel}
+                onChange={e => setFilters({ ...filters, intensityLevel: e.target.value })}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Any</option>
+                <option value="light">Light</option>
+                <option value="moderate">Moderate</option>
+                <option value="intensive">Intensive</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-zinc-400">Career Goal</Label>
+              <select
+                value={filters.primaryGoal}
+                onChange={e => setFilters({ ...filters, primaryGoal: e.target.value })}
+                className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Any Goal</option>
+                {CAREER_GOALS.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {/* Skills filter */}
+          <div className="space-y-2">
+            <Label className="text-xs text-zinc-400 uppercase tracking-wider">Filter by Skills (must have ALL selected)</Label>
+            <div className="flex flex-wrap gap-2">
+              {COMMON_SKILLS.map(skill => (
+                <button
+                  key={skill}
+                  type="button"
+                  onClick={() => toggleSkill(skill)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    isSkillActive(skill)
+                      ? "bg-blue-600/20 border-blue-500/60 text-blue-300"
+                      : "bg-zinc-800/60 border-zinc-700/40 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                  }`}
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-zinc-500">Or type custom skill names (comma-separated):</Label>
+              <Input
+                value={filters.skills}
+                onChange={e => setFilters({ ...filters, skills: e.target.value })}
+                placeholder="e.g. Python, React, Docker"
+                className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 h-9 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Min profile completion */}
+          <div className="space-y-1.5 max-w-xs">
+            <Label className="text-xs text-zinc-400">Minimum Profile Completion (%)</Label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range" min="0" max="100" step="10"
+                value={filters.minProfileCompletion || "0"}
+                onChange={e => setFilters({ ...filters, minProfileCompletion: e.target.value })}
+                className="flex-1 accent-blue-600"
+              />
+              <span className="text-sm text-zinc-300 w-8 text-right">{filters.minProfileCompletion || "0"}%</span>
+            </div>
+          </div>
+
+          {/* Apply / Reset */}
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
+            <button
+              type="button"
+              onClick={onReset}
+              className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              Reset all filters
+            </button>
+            <Button onClick={() => { onApply(); setIsOpen(false); }} className="bg-blue-600 hover:bg-blue-500 text-white">
+              Apply Filters
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Profile Completion Bar ─────────────────────────────────────────────────
+function CompletionBar({ pct }: { pct: number }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-xs text-zinc-500 w-8">{pct}%</span>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+export default function AdminStudentsPage() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [total, setTotal] = useState(0);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState<Filters>(INITIAL_FILTERS);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const ITEMS_PER_PAGE = 15;
+
+  const buildQueryString = useCallback((f: Filters) => {
+    const params = new URLSearchParams();
+    if (f.search)            params.set("search", f.search);
+    if (f.departmentId)      params.set("departmentId", f.departmentId);
+    if (f.year)              params.set("year", f.year);
+    if (f.placementStatus)   params.set("placementStatus", f.placementStatus);
+    if (f.minGpa)            params.set("minGpa", f.minGpa);
+    if (f.maxGpa)            params.set("maxGpa", f.maxGpa);
+    if (f.skills)            params.set("skills", f.skills);
+    return params.toString();
+  }, []);
+
+  const fetchStudents = useCallback(async (f: Filters) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const qs = buildQueryString(f);
+      const res = await fetch(`/api/student/list?${qs}`, {
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+      if (data.success) {
+        let rows: Student[] = data.students.map((s: any) => ({
+          ...s,
+          is_active: s.is_active === 1 || s.is_active === true,
+          current_gpa: s.current_gpa !== null ? Number(s.current_gpa) : null,
+        }));
+
+        // Client-side post-filter for things not supported server-side
+        if (f.status === "active") rows = rows.filter(s => s.is_active);
+        if (f.status === "inactive") rows = rows.filter(s => !s.is_active);
+        if (f.intensityLevel) rows = rows.filter(s => s.intensity_level === f.intensityLevel);
+        if (f.primaryGoal) rows = rows.filter(s => s.primary_goal === f.primaryGoal);
+        if (f.minProfileCompletion) {
+          const minPct = parseInt(f.minProfileCompletion);
+          rows = rows.filter(s => (s.profile_completion || 0) >= minPct);
+        }
+        if (f.interests) {
+          const requiredInterests = f.interests.toLowerCase().split(",").map(s => s.trim()).filter(Boolean);
+          rows = rows.filter(s => {
+            if (!s.academic_interests) return false;
+            const interestStr = s.academic_interests.toLowerCase();
+            return requiredInterests.every(i => interestStr.includes(i));
+          });
+        }
+
+        setStudents(rows);
+        setTotal(rows.length);
+        setDepartments(data.filters?.availableDepartments || []);
+        setCurrentPage(1);
+      } else {
+        throw new Error(data.error || "Failed to fetch students");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch students");
+    } finally {
+      setLoading(false);
+    }
+  }, [buildQueryString]);
+
+  useEffect(() => { fetchStudents(appliedFilters); }, []);
+
+  const handleApply = () => {
+    setAppliedFilters(filters);
+    fetchStudents(filters);
+  };
+
+  const handleReset = () => {
+    setFilters(INITIAL_FILTERS);
+    setAppliedFilters(INITIAL_FILTERS);
+    fetchStudents(INITIAL_FILTERS);
+  };
+
+  const handleSearch = (val: string) => {
+    const updated = { ...filters, search: val };
+    setFilters(updated);
+    setAppliedFilters(updated);
+    fetchStudents(updated);
+  };
+
+  const totalPages = Math.ceil(students.length / ITEMS_PER_PAGE);
+  const displayed = students.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const activeFilterCount = Object.entries(appliedFilters).filter(([k, v]) => k !== "search" && v !== "").length;
+
+  // Stats
+  const activeCount = students.filter(s => s.is_active).length;
+  const placedCount = students.filter(s => s.placement_status === "placed").length;
+  const avgGpa = students.filter(s => s.current_gpa).reduce((sum, s, _, arr) => sum + (s.current_gpa || 0) / arr.length, 0);
+
+  const placementBadge = (status?: string) => {
+    switch (status) {
+      case "placed":    return { label: "Placed",    cls: "bg-emerald-600/20 text-emerald-400 border-emerald-600/30" };
+      case "opted_out": return { label: "Opted Out", cls: "bg-zinc-700 text-zinc-400 border-zinc-600" };
+      default:          return { label: "Unplaced",  cls: "bg-red-600/20 text-red-400 border-red-600/30" };
+    }
+  };
+
+  const exportCSV = () => {
+    const headers = ["ID", "Name", "Email", "Department", "Year", "GPA", "Skills", "Interests", "Goal", "Placement", "Profile%"];
+    const rows = students.map(s => [
+      s.student_id, s.full_name, s.email,
+      s.department_name || s.program || "",
+      s.current_year || "",
+      s.current_gpa?.toFixed(2) || "",
+      (s.skills_list || []).join("; "),
+      s.academic_interests || "",
+      s.primary_goal || "",
+      s.placement_status || "",
+      s.profile_completion || 0,
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "students.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <AdminShell title="Student Management" description="Search, filter, and export student records with advanced criteria">
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredStudents.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-            <UserPlus className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {filteredStudents.filter(s => s.is_active).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Departments</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{departments.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {filteredStudents.filter(s => {
-                const studentDate = new Date(s.created_at)
-                const now = new Date()
-                return studentDate.getMonth() === now.getMonth() && 
-                       studentDate.getFullYear() === now.getFullYear()
-              }).length}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "Total Shown",    value: total,       Icon: Users,       color: "blue" },
+          { label: "Active",         value: activeCount, Icon: UserPlus,    color: "emerald" },
+          { label: "Placed",         value: placedCount, Icon: Briefcase,   color: "purple" },
+          { label: "Avg GPA",        value: avgGpa > 0 ? avgGpa.toFixed(2) : "N/A", Icon: Star, color: "amber" },
+        ].map(({ label, value, Icon, color }) => (
+          <Card key={label} className="bg-zinc-900 border-zinc-800">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`w-9 h-9 bg-${color}-600/20 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                <Icon className={`w-4 h-4 text-${color}-400`} />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-white">{value}</p>
+                <p className="text-xs text-zinc-500">{label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Search by name, email, or ID..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Search + Filter + Export */}
+      <div className="space-y-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <Input
+              placeholder="Search by name, email, or ID..."
+              value={filters.search}
+              onChange={e => handleSearch(e.target.value)}
+              className="pl-10 bg-zinc-900 border-zinc-700 text-white placeholder:text-zinc-600"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <FilterPanel
+              filters={filters} setFilters={setFilters}
+              departments={departments}
+              onApply={handleApply} onReset={handleReset}
+              activeCount={activeFilterCount}
+            />
+            <Button
+              variant="outline"
+              onClick={exportCSV}
+              disabled={students.length === 0}
+              className="border-zinc-700 text-zinc-300 hover:text-white gap-2"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </Button>
+          </div>
         </div>
 
-        <div className="flex gap-2">
-          <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {departments.map(dept => (
-                <SelectItem key={dept} value={dept ?? "unknown"}>
-                  {dept ?? "Unknown"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={yearFilter} onValueChange={setYearFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Year" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Years</SelectItem>
-              <SelectItem value="1">Year 1</SelectItem>
-              <SelectItem value="2">Year 2</SelectItem>
-              <SelectItem value="3">Year 3</SelectItem>
-              <SelectItem value="4">Year 4</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Active filter chips */}
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-xs text-zinc-500">Active filters:</span>
+            {appliedFilters.departmentId && departments.find(d => String(d.id) === appliedFilters.departmentId) && (
+              <FilterChip label={`Dept: ${departments.find(d => String(d.id) === appliedFilters.departmentId)?.name}`}
+                onRemove={() => { const f = { ...filters, departmentId: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />
+            )}
+            {appliedFilters.year && <FilterChip label={`Year ${appliedFilters.year}`} onRemove={() => { const f = { ...filters, year: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />}
+            {appliedFilters.placementStatus && <FilterChip label={`Placement: ${appliedFilters.placementStatus}`} onRemove={() => { const f = { ...filters, placementStatus: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />}
+            {appliedFilters.minGpa && <FilterChip label={`GPA ≥ ${appliedFilters.minGpa}`} onRemove={() => { const f = { ...filters, minGpa: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />}
+            {appliedFilters.skills && <FilterChip label={`Skills: ${appliedFilters.skills}`} onRemove={() => { const f = { ...filters, skills: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />}
+            {appliedFilters.primaryGoal && <FilterChip label={`Goal: ${appliedFilters.primaryGoal}`} onRemove={() => { const f = { ...filters, primaryGoal: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />}
+            {appliedFilters.intensityLevel && <FilterChip label={`Intensity: ${appliedFilters.intensityLevel}`} onRemove={() => { const f = { ...filters, intensityLevel: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />}
+            {appliedFilters.minProfileCompletion && parseInt(appliedFilters.minProfileCompletion) > 0 && (
+              <FilterChip label={`Profile ≥ ${appliedFilters.minProfileCompletion}%`} onRemove={() => { const f = { ...filters, minProfileCompletion: "" }; setFilters(f); setAppliedFilters(f); fetchStudents(f); }} />
+            )}
+            <button onClick={handleReset} className="text-xs text-red-400 hover:text-red-300 transition-colors ml-1">
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Students Table */}
-      <Card>
+      {/* Table */}
+      <Card className="bg-zinc-900 border-zinc-800">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Student</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Academic Info</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Enrolled</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayedStudents.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    No students found.
-                  </TableCell>
-                </TableRow>
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm text-zinc-500">Loading students...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center gap-3 px-6 py-8 text-red-400">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-sm">Error loading students</p>
+                <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
+                <button onClick={() => fetchStudents(appliedFilters)} className="mt-2 text-xs text-blue-400 hover:text-blue-300">
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : displayed.length === 0 ? (
+            <div className="text-center py-16">
+              <Users className="w-10 h-10 mx-auto mb-3 text-zinc-700" />
+              <p className="text-zinc-500 text-sm">No students match your filters.</p>
+              {activeFilterCount > 0 && (
+                <button onClick={handleReset} className="mt-2 text-sm text-blue-400 hover:text-blue-300">
+                  Reset all filters →
+                </button>
               )}
-              {displayedStudents.map((student) => (
-                <TableRow key={student.student_id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {student.first_name} {student.last_name}
-                      </div>
-                      <div className="text-sm text-muted-foreground">ID: {student.student_id}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="flex items-center text-sm">
-                        <Mail className="w-3 h-3 mr-1" />
-                        <span>{student.email}</span>
-                      </div>
-                      {student.phone && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="w-3 h-3 mr-1" />
-                          {student.phone}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <div className="font-medium">{student.department ?? "N/A"}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Year {student.current_year ?? "N/A"} • GPA: {student.current_gpa !== null && student.current_gpa !== undefined ? student.current_gpa.toFixed(2) : "N/A"}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={student.is_active ? "default" : "secondary"}>
-                      {student.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{new Date(student.created_at).toLocaleDateString()}</div>
-                  </TableCell>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-zinc-800 hover:bg-transparent">
+                  <TableHead className="text-zinc-400">Student</TableHead>
+                  <TableHead className="text-zinc-400">Contact</TableHead>
+                  <TableHead className="text-zinc-400">Dept / Year</TableHead>
+                  <TableHead className="text-zinc-400">GPA</TableHead>
+                  <TableHead className="text-zinc-400">Skills</TableHead>
+                  <TableHead className="text-zinc-400">Placement</TableHead>
+                  <TableHead className="text-zinc-400">Profile</TableHead>
+                  <TableHead className="text-zinc-400">Joined</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {displayed.map(student => {
+                  const p = placementBadge(student.placement_status);
+                  return (
+                    <TableRow key={student.student_id} className="border-zinc-800 hover:bg-zinc-800/40">
+                      <TableCell>
+                        <div>
+                          <p className="font-medium text-white text-sm">{student.full_name}</p>
+                          <p className="text-xs text-zinc-600">#{student.student_id}</p>
+                          {!student.is_active && (
+                            <Badge className="bg-zinc-700 text-zinc-400 border-zinc-600 text-[10px] h-4 mt-0.5">Inactive</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1 text-xs text-zinc-400">
+                            <Mail className="w-3 h-3" />{student.email}
+                          </div>
+                          {student.phone && (
+                            <div className="flex items-center gap-1 text-xs text-zinc-600">
+                              <Phone className="w-3 h-3" />{student.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm text-zinc-200">{student.department_name || student.program || "—"}</p>
+                          <p className="text-xs text-zinc-500">Year {student.current_year || "?"} · Sem {student.current_semester || "?"}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-sm font-medium ${
+                          (student.current_gpa || 0) >= 8 ? "text-emerald-400" :
+                          (student.current_gpa || 0) >= 6 ? "text-amber-400" : "text-zinc-400"
+                        }`}>
+                          {student.current_gpa ? student.current_gpa.toFixed(2) : "N/A"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="text-xs text-zinc-300">{student.total_skills || 0} skills</p>
+                          {student.skills_list && student.skills_list.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {student.skills_list.slice(0, 3).map(skill => (
+                                <span key={skill} className="text-[10px] px-1.5 py-0.5 bg-blue-600/15 text-blue-400 rounded border border-blue-600/20">
+                                  {skill}
+                                </span>
+                              ))}
+                              {(student.skills_list.length > 3) && (
+                                <span className="text-[10px] text-zinc-600">+{student.skills_list.length - 3}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`text-xs ${p.cls}`}>{p.label}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <CompletionBar pct={student.profile_completion || 0} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-zinc-500">
+                          {new Date(student.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "2-digit" })}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-            {Math.min(currentPage * itemsPerPage, filteredStudents.length)} of {filteredStudents.length} students
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
+          <p className="text-sm text-zinc-500">
+            Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, students.length)} of {students.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="border-zinc-700 text-zinc-300 h-8 w-8 p-0">
+              <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
+            <span className="text-sm text-zinc-400">{currentPage} / {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="border-zinc-700 text-zinc-300 h-8 w-8 p-0">
+              <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
       )}
     </AdminShell>
-  )
+  );
+}
+
+// ── Filter Chip ────────────────────────────────────────────────────────────
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <div className="flex items-center gap-1 px-2 py-1 bg-blue-600/10 border border-blue-600/20 rounded-lg text-xs text-blue-300">
+      {label}
+      <button onClick={onRemove} className="ml-0.5 hover:text-white transition-colors">
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
 }

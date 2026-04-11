@@ -1,1083 +1,570 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import DashboardLayout from "@/components/dashboard-layout"
+import { useState, useEffect } from "react";
+import DashboardLayout from "@/components/dashboard-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
-  Search,
-  Grid3X3,
-  List,
-  Calendar,
-  Plus,
-  Download,
-  MoreHorizontal,
-  BookOpen,
-  Clock,
-  Star,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  Eye,
-  Edit,
-  GraduationCap,
-  Target,
-  BarChart3,
-} from "lucide-react"
+  BookOpen, Search, GraduationCap, Clock, FileText, ChevronDown,
+  ChevronRight, AlertCircle, RefreshCw, ExternalLink, Beaker, Layers,
+  CheckCircle2, BookMarked, Star,
+} from "lucide-react";
 
-// Mock data for courses
-const mockCourses = [
-  {
-    id: "cs301",
-    code: "CS301",
-    name: "Data Structures and Algorithms",
-    semester: 3,
-    credits: 4,
-    status: "in-progress",
-    progress: 85,
-    grade: "A",
-    instructor: "Dr. Rajesh Kumar",
-    schedule: "Mon, Wed, Fri 10:00-11:00",
-    prerequisites: ["CS201", "MA201"],
-    skills: ["Problem Solving", "Algorithms", "Data Structures"],
-    description: "Comprehensive study of fundamental data structures and algorithms",
-    difficulty: "medium",
-    lastUpdated: "2 hours ago",
-  },
-  {
-    id: "cs302",
-    code: "CS302",
-    name: "Database Management Systems",
-    semester: 3,
-    credits: 3,
-    status: "in-progress",
-    progress: 72,
-    grade: "A-",
-    instructor: "Prof. Anita Sharma",
-    schedule: "Tue, Thu 2:00-3:30",
-    prerequisites: ["CS201"],
-    skills: ["SQL", "Database Design", "DBMS"],
-    description: "Introduction to database concepts, design, and implementation",
-    difficulty: "medium",
-    lastUpdated: "1 day ago",
-  },
-  {
-    id: "cs303",
-    code: "CS303",
-    name: "Computer Networks",
-    semester: 3,
-    credits: 4,
-    status: "in-progress",
-    progress: 60,
-    grade: "B+",
-    instructor: "Dr. Vikram Singh",
-    schedule: "Mon, Wed 2:00-3:30",
-    prerequisites: ["CS202"],
-    skills: ["Networking", "Protocols", "Security"],
-    description: "Study of computer network architectures and protocols",
-    difficulty: "hard",
-    lastUpdated: "3 days ago",
-  },
-  {
-    id: "ma301",
-    code: "MA301",
-    name: "Discrete Mathematics",
-    semester: 3,
-    credits: 3,
-    status: "in-progress",
-    progress: 90,
-    grade: "A+",
-    instructor: "Dr. Priya Gupta",
-    schedule: "Tue, Thu 10:00-11:30",
-    prerequisites: ["MA201"],
-    skills: ["Logic", "Set Theory", "Graph Theory"],
-    description: "Mathematical foundations for computer science",
-    difficulty: "medium",
-    lastUpdated: "5 hours ago",
-  },
-  {
-    id: "cs201",
-    code: "CS201",
-    name: "Programming Fundamentals",
-    semester: 2,
-    credits: 4,
-    status: "completed",
-    progress: 100,
-    grade: "A",
-    instructor: "Prof. Suresh Patel",
-    schedule: "Completed",
-    prerequisites: [],
-    skills: ["Programming", "C++", "Problem Solving"],
-    description: "Introduction to programming concepts and C++",
-    difficulty: "easy",
-    lastUpdated: "2 months ago",
-  },
-  {
-    id: "cs401",
-    code: "CS401",
-    name: "Machine Learning",
-    semester: 4,
-    credits: 4,
-    status: "not-started",
-    progress: 0,
-    grade: "-",
-    instructor: "Dr. Amit Verma",
-    schedule: "Not Started",
-    prerequisites: ["CS301", "MA301"],
-    skills: ["Machine Learning", "Python", "Statistics"],
-    description: "Introduction to machine learning algorithms and applications",
-    difficulty: "hard",
-    lastUpdated: "Not started",
-  },
-]
-
-const semesterPlan = {
-  1: ["CS101", "MA101", "PH101", "CH101", "EN101"],
-  2: ["CS201", "CS202", "MA201", "PH201", "EN201"],
-  3: ["CS301", "CS302", "CS303", "MA301", "HU301"],
-  4: ["CS401", "CS402", "CS403", "CS404", "HU401"],
-  5: ["CS501", "CS502", "CS503", "EL501", "MG501"],
-  6: ["CS601", "CS602", "CS603", "EL601", "MG601"],
-  7: ["CS701", "CS702", "PR701", "EL701", "MG701"],
-  8: ["CS801", "PR801", "PR802", "EL801", "MG801"],
+// ── Types ─────────────────────────────────────────────────────────────────
+interface Subject {
+  code?: string;
+  name: string;
+  credits?: number;
+  type?: string;
+  semester?: number;
 }
 
+interface SyllabusData {
+  success: boolean;
+  hasData: boolean;
+  isPending?: boolean;
+  message?: string;
+  student: {
+    year?: number;
+    semester?: number;
+    department?: string;
+  };
+  syllabus?: {
+    id: number;
+    title: string;
+    fileName: string;
+    fileUrl: string;
+    parsedAt: string;
+  };
+  currentSemester?: number;
+  currentSubjects?: Subject[];
+  allSemesters?: Record<string, Subject[]>;
+  previousSemesters?: Record<string, Subject[]>;
+  totalSubjectsThisYear?: number;
+}
+
+// ── Subject Card ──────────────────────────────────────────────────────────
+function SubjectCard({
+  subject,
+  isCurrent,
+  searchHighlight,
+}: {
+  subject: Subject;
+  isCurrent: boolean;
+  searchHighlight: string;
+}) {
+  const typeColors: Record<string, string> = {
+    Theory:    "bg-blue-600/15 text-blue-400 border-blue-600/20",
+    Practical: "bg-purple-600/15 text-purple-400 border-purple-600/20",
+    Project:   "bg-amber-600/15 text-amber-400 border-amber-600/20",
+    Elective:  "bg-emerald-600/15 text-emerald-400 border-emerald-600/20",
+    Info:      "bg-zinc-700/40 text-zinc-400 border-zinc-700",
+  };
+
+  const TypeIcon = subject.type === "Practical" ? Beaker :
+                   subject.type === "Project"   ? Star :
+                   subject.type === "Elective"  ? Layers : BookOpen;
+
+  const highlight = (text: string) => {
+    if (!searchHighlight || !text) return text;
+    const idx = text.toLowerCase().indexOf(searchHighlight.toLowerCase());
+    if (idx === -1) return text;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className="bg-yellow-400/30 text-yellow-300 rounded px-0.5">
+          {text.slice(idx, idx + searchHighlight.length)}
+        </mark>
+        {text.slice(idx + searchHighlight.length)}
+      </>
+    );
+  };
+
+  return (
+    <div
+      className={`group px-4 py-3 rounded-xl border transition-all duration-150 ${
+        isCurrent
+          ? "bg-zinc-800/60 border-zinc-700/60 hover:border-blue-500/40 hover:bg-zinc-800"
+          : "bg-zinc-900/50 border-zinc-800/40 hover:border-zinc-700 hover:bg-zinc-900"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+          isCurrent ? "bg-blue-600/20" : "bg-zinc-800"
+        }`}>
+          <TypeIcon className={`w-4 h-4 ${isCurrent ? "text-blue-400" : "text-zinc-500"}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium ${isCurrent ? "text-zinc-100" : "text-zinc-300"} leading-snug`}>
+            {highlight(subject.name) as any}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            {subject.code && (
+              <span className="text-[10px] font-mono text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">
+                {subject.code}
+              </span>
+            )}
+            {subject.type && subject.type !== "Info" && (
+              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${typeColors[subject.type] || typeColors.Theory}`}>
+                {subject.type}
+              </span>
+            )}
+            {subject.credits && (
+              <span className="text-[10px] text-zinc-600">{subject.credits} cr</span>
+            )}
+          </div>
+        </div>
+        {isCurrent && (
+          <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Semester Section ──────────────────────────────────────────────────────
+function SemesterSection({
+  semester, subjects, isCurrentSem, searchQuery,
+}: {
+  semester: number;
+  subjects: Subject[];
+  isCurrentSem: boolean;
+  searchQuery: string;
+}) {
+  const [isOpen, setIsOpen] = useState(isCurrentSem);
+
+  const filtered = subjects.filter(s =>
+    !searchQuery ||
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s.code || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (filtered.length === 0 && searchQuery) return null;
+
+  const theoryCount = subjects.filter(s => s.type === "Theory" || !s.type).length;
+  const practicalCount = subjects.filter(s => s.type === "Practical").length;
+  const totalCredits = subjects.reduce((sum, s) => sum + (s.credits || 0), 0);
+
+  return (
+    <div className={`rounded-xl border overflow-hidden ${
+      isCurrentSem ? "border-blue-500/30 ring-1 ring-blue-500/10" : "border-zinc-800"
+    }`}>
+      {/* Header */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full px-5 py-4 flex items-center justify-between text-left transition-colors ${
+          isCurrentSem ? "bg-blue-600/10 hover:bg-blue-600/15" : "bg-zinc-900 hover:bg-zinc-800/60"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          {isCurrentSem ? (
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BookMarked className="w-4 h-4 text-white" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BookOpen className="w-4 h-4 text-zinc-500" />
+            </div>
+          )}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-semibold ${isCurrentSem ? "text-white" : "text-zinc-300"}`}>
+                Semester {semester}
+              </span>
+              {isCurrentSem && (
+                <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-[10px] h-4">
+                  Current
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {subjects.length} subjects
+              {totalCredits > 0 && ` · ${totalCredits} credits`}
+              {practicalCount > 0 && ` · ${practicalCount} practical`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2">
+            {theoryCount > 0 && (
+              <span className="text-[10px] text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
+                {theoryCount} theory
+              </span>
+            )}
+            {practicalCount > 0 && (
+              <span className="text-[10px] text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded-full">
+                {practicalCount} practical
+              </span>
+            )}
+          </div>
+          {isOpen ? (
+            <ChevronDown className="w-4 h-4 text-zinc-500" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-zinc-500" />
+          )}
+        </div>
+      </button>
+
+      {/* Subjects */}
+      {isOpen && (
+        <div className="p-4 bg-zinc-950 grid gap-2 sm:grid-cols-2">
+          {(searchQuery ? filtered : subjects).map((subject, idx) => (
+            <SubjectCard
+              key={idx}
+              subject={subject}
+              isCurrent={isCurrentSem}
+              searchHighlight={searchQuery}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
 export default function CoursesPage() {
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "timeline">("grid")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [semesterFilter, setSemesterFilter] = useState("all")
-  const [difficultyFilter, setDifficultyFilter] = useState("all")
-  const [sortBy, setSortBy] = useState("alphabetical")
-  const [selectedCourses, setSelectedCourses] = useState<string[]>([])
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
-  const [showCourseDetail, setShowCourseDetail] = useState(false)
-  const [showPlanningView, setShowPlanningView] = useState(false)
+  const [data, setData] = useState<SyllabusData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<"current" | "all">("current");
 
-  const filteredCourses = mockCourses.filter((course) => {
-    const matchesSearch =
-      course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.code.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || course.status === statusFilter
-    const matchesSemester = semesterFilter === "all" || course.semester.toString() === semesterFilter
-    const matchesDifficulty = difficultyFilter === "all" || course.difficulty === difficultyFilter
-
-    return matchesSearch && matchesStatus && matchesSemester && matchesDifficulty
-  })
-
-  const sortedCourses = [...filteredCourses].sort((a, b) => {
-    switch (sortBy) {
-      case "alphabetical":
-        return a.name.localeCompare(b.name)
-      case "semester":
-        return a.semester - b.semester
-      case "credits":
-        return b.credits - a.credits
-      case "grade":
-        return a.grade.localeCompare(b.grade)
-      case "progress":
-        return b.progress - a.progress
-      default:
-        return 0
+  const fetchSyllabus = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/student/syllabus-subjects", { credentials: "include" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to load");
+      setData(json);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
-  })
+  };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "in-progress":
-        return "bg-blue-100 text-blue-800 border-blue-200"
-      case "not-started":
-        return "bg-gray-100 text-gray-800 border-gray-200"
-      case "failed":
-        return "bg-red-100 text-red-800 border-red-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
+  useEffect(() => { fetchSyllabus(); }, []);
+
+  // ── Loading ──────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <DashboardLayout currentPage="courses">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-sm text-zinc-500">Loading your courses...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="w-4 h-4" />
-      case "in-progress":
-        return <Clock className="w-4 h-4" />
-      case "not-started":
-        return <AlertCircle className="w-4 h-4" />
-      case "failed":
-        return <XCircle className="w-4 h-4" />
-      default:
-        return <AlertCircle className="w-4 h-4" />
-    }
+  // ── Error ─────────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <DashboardLayout currentPage="courses">
+        <div className="max-w-lg mx-auto mt-16 text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-white mb-1">Failed to load courses</h2>
+          <p className="text-sm text-zinc-500 mb-4">{error}</p>
+          <Button onClick={fetchSyllabus} className="bg-blue-600 hover:bg-blue-500 text-white gap-2">
+            <RefreshCw className="w-4 h-4" /> Try Again
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
   }
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "text-green-600"
-      case "medium":
-        return "text-yellow-600"
-      case "hard":
-        return "text-red-600"
-      default:
-        return "text-gray-600"
-    }
+  // ── No data ───────────────────────────────────────────────────────────
+  if (!data?.hasData) {
+    return (
+      <DashboardLayout currentPage="courses">
+        <div className="space-y-6">
+          {/* Header */}
+          <div>
+            <h1 className="text-2xl font-bold text-white">My Courses</h1>
+            <p className="text-sm text-zinc-500 mt-1">Subjects from your college's uploaded syllabus</p>
+          </div>
+
+          {/* Student info pill */}
+          {data?.student && (
+            <div className="flex flex-wrap gap-2">
+              {data.student.department && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400 gap-1.5">
+                  <GraduationCap className="w-3 h-3" /> {data.student.department}
+                </Badge>
+              )}
+              {data.student.year && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                  Year {data.student.year}
+                </Badge>
+              )}
+              {data.student.semester && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                  Semester {data.student.semester}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Empty state */}
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardContent className="flex flex-col items-center py-16 px-6 text-center">
+              <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center mb-4">
+                {data?.isPending ? (
+                  <Clock className="w-7 h-7 text-amber-400" />
+                ) : (
+                  <BookOpen className="w-7 h-7 text-zinc-600" />
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-2">
+                {data?.isPending ? "Syllabus Being Processed" : "No Syllabus Available"}
+              </h3>
+              <p className="text-sm text-zinc-500 max-w-sm mb-5">
+                {data?.message}
+              </p>
+              {data?.isPending && (
+                <Button
+                  onClick={fetchSyllabus}
+                  variant="outline"
+                  className="border-zinc-700 text-zinc-300 gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
   }
 
-  const handleCourseSelect = (courseId: string) => {
-    setSelectedCourses((prev) => (prev.includes(courseId) ? prev.filter((id) => id !== courseId) : [...prev, courseId]))
-  }
+  // ── Loaded state ──────────────────────────────────────────────────────
+  const currentSem = data.currentSemester || data.student.semester || 1;
+  const currentSubjects = data.currentSubjects || [];
+  const allSemesters = data.allSemesters || {};
+  const semesterKeys = Object.keys(allSemesters).map(Number).sort((a, b) => a - b);
 
-  const handleSelectAll = () => {
-    if (selectedCourses.length === sortedCourses.length) {
-      setSelectedCourses([])
-    } else {
-      setSelectedCourses(sortedCourses.map((course) => course.id))
-    }
-  }
+  const allSubjectsFlat = Object.values(allSemesters).flat();
+  const searchFiltered = searchQuery
+    ? allSubjectsFlat.filter(s =>
+        s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (s.code || "").toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : [];
 
-  const openCourseDetail = (courseId: string) => {
-    setSelectedCourse(courseId)
-    setShowCourseDetail(true)
-  }
-
-  const selectedCourseData = mockCourses.find((course) => course.id === selectedCourse)
+  const theoryTotal = allSubjectsFlat.filter(s => s.type === "Theory" || !s.type).length;
+  const practicalTotal = allSubjectsFlat.filter(s => s.type === "Practical").length;
+  const creditsTotal = allSubjectsFlat.reduce((sum, s) => sum + (s.credits || 0), 0);
 
   return (
     <DashboardLayout currentPage="courses">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">My Courses</h1>
-            <p className="text-muted-foreground">
-              {mockCourses.length} courses • {mockCourses.filter((c) => c.status === "completed").length} completed
-            </p>
+            <h1 className="text-2xl font-bold text-white">My Courses</h1>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {data.student.department && (
+                <Badge variant="outline" className="border-zinc-700 text-zinc-400 gap-1.5 text-xs">
+                  <GraduationCap className="w-3 h-3" /> {data.student.department}
+                </Badge>
+              )}
+              <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-xs">
+                Year {data.student.year}
+              </Badge>
+              <Badge className="bg-blue-600/20 text-blue-400 border-blue-600/30 text-xs">
+                Semester {currentSem} — Active
+              </Badge>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => setShowPlanningView(true)}>
-              <Calendar className="w-4 h-4 mr-2" />
-              Plan Semester
-            </Button>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Grade
-            </Button>
-          </div>
+          {data.syllabus && (
+            <div className="flex items-center gap-2">
+              <a
+                href={data.syllabus.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                View Syllabus PDF
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <Button onClick={fetchSyllabus} variant="ghost" size="sm" className="text-zinc-500 hover:text-white h-8 w-8 p-0">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Filters and Search */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Search */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search courses..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+        {/* Stats cards ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { label: "This Year",  value: data.totalSubjectsThisYear || allSubjectsFlat.length, color: "blue",   icon: BookOpen },
+            { label: "Theory",     value: theoryTotal,    color: "zinc",   icon: BookMarked },
+            { label: "Practical",  value: practicalTotal, color: "purple", icon: Beaker },
+            { label: "Credits",    value: creditsTotal > 0 ? creditsTotal : "—", color: "amber", icon: Star },
+          ].map(({ label, value, color, icon: Icon }) => (
+            <Card key={label} className="bg-zinc-900 border-zinc-800">
+              <CardContent className="p-3.5 flex items-center gap-3">
+                <div className={`w-8 h-8 bg-${color}-600/20 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-4 h-4 text-${color}-400`} />
                 </div>
-              </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{value}</p>
+                  <p className="text-[10px] text-zinc-500 uppercase tracking-wide">{label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap gap-3">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="not-started">Not Started</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* Search ── */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search subjects by name or code..."
+            className="pl-10 bg-zinc-900 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-blue-500"
+          />
+        </div>
 
-                <Select value={semesterFilter} onValueChange={setSemesterFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Semester" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Semesters</SelectItem>
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                      <SelectItem key={sem} value={sem.toString()}>
-                        Semester {sem}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        {/* Search results ── */}
+        {searchQuery && (
+          <Card className="bg-zinc-900 border-zinc-800">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-zinc-300">
+                {searchFiltered.length} result{searchFiltered.length !== 1 ? "s" : ""} for "{searchQuery}"
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 grid gap-2 sm:grid-cols-2">
+              {searchFiltered.length === 0 ? (
+                <p className="text-sm text-zinc-600 col-span-2 py-4 text-center">No subjects match your search</p>
+              ) : (
+                searchFiltered.map((subj, i) => (
+                  <SubjectCard
+                    key={i}
+                    subject={subj}
+                    isCurrent={(subj.semester || 0) === currentSem}
+                    searchHighlight={searchQuery}
+                  />
+                ))
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-                <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Difficulty" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Difficulty</SelectItem>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="alphabetical">Alphabetical</SelectItem>
-                    <SelectItem value="semester">Semester</SelectItem>
-                    <SelectItem value="credits">Credits</SelectItem>
-                    <SelectItem value="grade">Grade</SelectItem>
-                    <SelectItem value="progress">Progress</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* View Toggle */}
-              <div className="flex items-center border rounded-lg p-1">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "timeline" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("timeline")}
-                >
-                  <Calendar className="w-4 h-4" />
-                </Button>
-              </div>
+        {/* Tabs: Current Semester vs All Semesters ── */}
+        {!searchQuery && (
+          <>
+            <div className="flex gap-1 bg-zinc-900 border border-zinc-800 rounded-xl p-1 w-fit">
+              <button
+                onClick={() => setActiveTab("current")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === "current"
+                    ? "bg-blue-600 text-white"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                Current Semester
+              </button>
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                  activeTab === "all"
+                    ? "bg-zinc-700 text-white"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                All Semesters
+              </button>
             </div>
 
-            {/* Bulk Actions */}
-            {selectedCourses.length > 0 && (
-              <div className="flex items-center justify-between mt-4 p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={selectedCourses.length === sortedCourses.length}
-                    onCheckedChange={handleSelectAll}
-                  />
-                  <span className="text-sm font-medium">
-                    {selectedCourses.length} course{selectedCourses.length !== 1 ? "s" : ""} selected
-                  </span>
+            {/* Current semester view ── */}
+            {activeTab === "current" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                  <h2 className="text-base font-semibold text-white">
+                    Semester {currentSem} — Your Current Subjects
+                  </h2>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm">
-                    Mark Complete
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Update Grades
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Export Selected
-                  </Button>
-                </div>
+
+                {currentSubjects.length === 0 ? (
+                  <Card className="bg-zinc-900 border-zinc-800">
+                    <CardContent className="py-10 text-center">
+                      <p className="text-sm text-zinc-500">
+                        No subjects found for Semester {currentSem}. Your college may not have uploaded the syllabus for this semester yet.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {currentSubjects.map((subject, idx) => (
+                      <SubjectCard
+                        key={idx}
+                        subject={subject}
+                        isCurrent
+                        searchHighlight=""
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Previous semesters summary ── */}
+                {Object.keys(data.previousSemesters || {}).length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-sm font-medium text-zinc-500 mb-3">
+                      Previous Semesters
+                    </h3>
+                    <div className="space-y-3">
+                      {Object.entries(data.previousSemesters || {})
+                        .sort(([a], [b]) => Number(b) - Number(a))
+                        .map(([sem, subjects]) => (
+                          <SemesterSection
+                            key={sem}
+                            semester={Number(sem)}
+                            subjects={subjects}
+                            isCurrentSem={false}
+                            searchQuery=""
+                          />
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Course Content */}
-        {viewMode === "grid" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedCourses.map((course) => (
-              <Card key={course.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedCourses.includes(course.id)}
-                        onCheckedChange={() => handleCourseSelect(course.id)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <Badge variant="secondary">{course.code}</Badge>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge className={getStatusColor(course.status)}>
-                        {getStatusIcon(course.status)}
-                        <span className="ml-1 capitalize">{course.status.replace("-", " ")}</span>
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardTitle className="text-lg">{course.name}</CardTitle>
-                  <CardDescription>
-                    Semester {course.semester} • {course.credits} Credits • {course.instructor}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">Progress</span>
-                        <span className="text-sm font-medium">{course.progress}%</span>
-                      </div>
-                      <Progress value={course.progress} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <span className="text-sm font-medium">{course.grade}</span>
-                      </div>
-                      <span className={`text-sm font-medium ${getDifficultyColor(course.difficulty)}`}>
-                        {course.difficulty}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {course.skills.slice(0, 3).map((skill, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {skill}
-                        </Badge>
-                      ))}
-                      {course.skills.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{course.skills.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-muted-foreground">Updated {course.lastUpdated}</span>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            openCourseDetail(course.id)
-                          }}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+            {/* All semesters view ── */}
+            {activeTab === "all" && (
+              <div className="space-y-3">
+                {semesterKeys.map(sem => (
+                  <SemesterSection
+                    key={sem}
+                    semester={sem}
+                    subjects={allSemesters[String(sem)] || []}
+                    isCurrentSem={sem === currentSem}
+                    searchQuery=""
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
-        {viewMode === "list" && (
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b">
-                    <tr>
-                      <th className="text-left p-4">
-                        <Checkbox
-                          checked={selectedCourses.length === sortedCourses.length}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </th>
-                      <th className="text-left p-4">Course</th>
-                      <th className="text-left p-4">Semester</th>
-                      <th className="text-left p-4">Credits</th>
-                      <th className="text-left p-4">Status</th>
-                      <th className="text-left p-4">Grade</th>
-                      <th className="text-left p-4">Progress</th>
-                      <th className="text-left p-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedCourses.map((course) => (
-                      <tr key={course.id} className="border-b hover:bg-muted/50">
-                        <td className="p-4">
-                          <Checkbox
-                            checked={selectedCourses.includes(course.id)}
-                            onCheckedChange={() => handleCourseSelect(course.id)}
-                          />
-                        </td>
-                        <td className="p-4">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="secondary">{course.code}</Badge>
-                              <span className="font-medium">{course.name}</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">{course.instructor}</p>
-                          </div>
-                        </td>
-                        <td className="p-4">{course.semester}</td>
-                        <td className="p-4">{course.credits}</td>
-                        <td className="p-4">
-                          <Badge className={getStatusColor(course.status)}>
-                            {getStatusIcon(course.status)}
-                            <span className="ml-1 capitalize">{course.status.replace("-", " ")}</span>
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500" />
-                            <span className="font-medium">{course.grade}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Progress value={course.progress} className="w-20" />
-                            <span className="text-sm">{course.progress}%</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => openCourseDetail(course.id)}>
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Syllabus source info ── */}
+        {data.syllabus && (
+          <p className="text-xs text-zinc-700 text-center pt-2">
+            Syllabus: {data.syllabus.title} · Parsed {new Date(data.syllabus.parsedAt).toLocaleDateString("en-IN")}
+          </p>
         )}
-
-        {viewMode === "timeline" && (
-          <div className="space-y-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((semester) => {
-              const semesterCourses = sortedCourses.filter((course) => course.semester === semester)
-              if (semesterCourses.length === 0) return null
-
-              return (
-                <Card key={semester}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <GraduationCap className="w-5 h-5" />
-                      Semester {semester}
-                    </CardTitle>
-                    <CardDescription>
-                      {semesterCourses.length} courses •{" "}
-                      {semesterCourses.reduce((acc, course) => acc + course.credits, 0)} credits
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {semesterCourses.map((course) => (
-                        <div key={course.id} className="p-4 border rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="secondary">{course.code}</Badge>
-                            <Badge className={getStatusColor(course.status)}>{getStatusIcon(course.status)}</Badge>
-                          </div>
-                          <h4 className="font-medium mb-2">{course.name}</h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Progress</span>
-                              <span>{course.progress}%</span>
-                            </div>
-                            <Progress value={course.progress} />
-                            <div className="flex items-center justify-between text-sm">
-                              <span>Grade</span>
-                              <span className="font-medium">{course.grade}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Analytics Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5" />
-                Performance Analytics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Overall GPA</span>
-                  <span className="text-2xl font-bold text-primary">8.2</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Courses Completed</span>
-                  <span className="text-lg font-semibold">
-                    {mockCourses.filter((c) => c.status === "completed").length}/{mockCourses.length}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Credits Earned</span>
-                  <span className="text-lg font-semibold">
-                    {mockCourses
-                      .filter((c) => c.status === "completed")
-                      .reduce((acc, course) => acc + course.credits, 0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Average Progress</span>
-                  <span className="text-lg font-semibold">
-                    {Math.round(mockCourses.reduce((acc, course) => acc + course.progress, 0) / mockCourses.length)}%
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5" />
-                Goal Alignment
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm">Software Engineering Path</span>
-                    <span className="text-sm font-medium">85%</span>
-                  </div>
-                  <Progress value={85} />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm">Technical Skills</span>
-                    <span className="text-sm font-medium">78%</span>
-                  </div>
-                  <Progress value={78} />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm">Industry Readiness</span>
-                    <span className="text-sm font-medium">65%</span>
-                  </div>
-                  <Progress value={65} />
-                </div>
-                <Button variant="outline" className="w-full bg-transparent" size="sm">
-                  View Detailed Analysis
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
-
-      {/* Course Detail Modal */}
-      <Dialog open={showCourseDetail} onOpenChange={setShowCourseDetail}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {selectedCourseData && (
-            <>
-              <DialogHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Badge variant="secondary">{selectedCourseData.code}</Badge>
-                      {selectedCourseData.name}
-                    </DialogTitle>
-                    <DialogDescription>
-                      {selectedCourseData.instructor} • Semester {selectedCourseData.semester} •{" "}
-                      {selectedCourseData.credits} Credits
-                    </DialogDescription>
-                  </div>
-                  <Badge className={getStatusColor(selectedCourseData.status)}>
-                    {getStatusIcon(selectedCourseData.status)}
-                    <span className="ml-1 capitalize">{selectedCourseData.status.replace("-", " ")}</span>
-                  </Badge>
-                </div>
-              </DialogHeader>
-
-              <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="progress">Progress</TabsTrigger>
-                  <TabsTrigger value="skills">Skills & Goals</TabsTrigger>
-                  <TabsTrigger value="resources">Resources</TabsTrigger>
-                  <TabsTrigger value="study-plan">Study Plan</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="overview" className="space-y-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="font-semibold mb-3">Course Description</h3>
-                      <p className="text-muted-foreground mb-4">{selectedCourseData.description}</p>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="font-medium mb-2">Course Details</h4>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span>Schedule:</span>
-                              <span>{selectedCourseData.schedule}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Difficulty:</span>
-                              <span className={getDifficultyColor(selectedCourseData.difficulty)}>
-                                {selectedCourseData.difficulty}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Current Grade:</span>
-                              <span className="font-medium">{selectedCourseData.grade}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-2">Prerequisites</h4>
-                          <div className="flex flex-wrap gap-1">
-                            {selectedCourseData.prerequisites.map((prereq, index) => (
-                              <Badge key={index} variant="outline">
-                                {prereq}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="progress" className="space-y-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="space-y-6">
-                        <div>
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-semibold">Overall Progress</h3>
-                            <span className="text-2xl font-bold text-primary">{selectedCourseData.progress}%</span>
-                          </div>
-                          <Progress value={selectedCourseData.progress} className="h-3" />
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-3">Assessment Breakdown</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div>
-                                <span className="font-medium">Assignment 1</span>
-                                <p className="text-sm text-muted-foreground">Data Structures Implementation</p>
-                              </div>
-                              <div className="text-right">
-                                <Badge variant="outline">A</Badge>
-                                <p className="text-sm text-muted-foreground">Due: Oct 15</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div>
-                                <span className="font-medium">Mid-term Exam</span>
-                                <p className="text-sm text-muted-foreground">Algorithms and Complexity</p>
-                              </div>
-                              <div className="text-right">
-                                <Badge variant="outline">A-</Badge>
-                                <p className="text-sm text-muted-foreground">Completed</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div>
-                                <span className="font-medium">Final Project</span>
-                                <p className="text-sm text-muted-foreground">Algorithm Visualization Tool</p>
-                              </div>
-                              <div className="text-right">
-                                <Badge variant="secondary">In Progress</Badge>
-                                <p className="text-sm text-muted-foreground">Due: Dec 20</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="skills" className="space-y-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="font-semibold mb-3">Skills Developed</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedCourseData.skills.map((skill, index) => (
-                              <Badge key={index} variant="secondary">
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-3">Career Goal Alignment</h4>
-                          <div className="space-y-3">
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm">Software Engineer Path</span>
-                                <span className="text-sm font-medium">92%</span>
-                              </div>
-                              <Progress value={92} />
-                            </div>
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm">Algorithm Specialist</span>
-                                <span className="text-sm font-medium">88%</span>
-                              </div>
-                              <Progress value={88} />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-3">Related Learning Paths</h4>
-                          <div className="space-y-2">
-                            <div className="p-3 border rounded">
-                              <span className="font-medium">Advanced Algorithms</span>
-                              <p className="text-sm text-muted-foreground">Next recommended course</p>
-                            </div>
-                            <div className="p-3 border rounded">
-                              <span className="font-medium">System Design</span>
-                              <p className="text-sm text-muted-foreground">Complementary skill</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="resources" className="space-y-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="font-semibold mb-3">Course Materials</h3>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <BookOpen className="w-4 h-4" />
-                                <span>Introduction to Algorithms (CLRS)</span>
-                              </div>
-                              <Button variant="outline" size="sm">
-                                View
-                              </Button>
-                            </div>
-                            <div className="flex items-center justify-between p-3 border rounded">
-                              <div className="flex items-center gap-3">
-                                <BookOpen className="w-4 h-4" />
-                                <span>Lecture Slides - Week 1-8</span>
-                              </div>
-                              <Button variant="outline" size="sm">
-                                Download
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-3">Recommended Resources</h4>
-                          <div className="space-y-2">
-                            <div className="p-3 border rounded">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <span className="font-medium">LeetCode Algorithm Practice</span>
-                                  <p className="text-sm text-muted-foreground">External platform</p>
-                                </div>
-                                <Button variant="outline" size="sm">
-                                  Visit
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="p-3 border rounded">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <span className="font-medium">Visualgo - Algorithm Visualizations</span>
-                                  <p className="text-sm text-muted-foreground">Interactive learning</p>
-                                </div>
-                                <Button variant="outline" size="sm">
-                                  Visit
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="study-plan" className="space-y-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="space-y-6">
-                        <div>
-                          <h3 className="font-semibold mb-3">Personal Study Schedule</h3>
-                          <div className="space-y-3">
-                            <div className="p-3 border rounded">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium">Weekly Study Goal</span>
-                                <span className="text-sm">8 hours</span>
-                              </div>
-                              <Progress value={75} className="mt-2" />
-                              <p className="text-xs text-muted-foreground mt-1">6/8 hours completed this week</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-3">Study Milestones</h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-3 p-3 border rounded">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <div className="flex-1">
-                                <span className="font-medium">Complete Chapter 1-4</span>
-                                <p className="text-sm text-muted-foreground">Basic data structures</p>
-                              </div>
-                              <span className="text-sm text-green-600">Completed</span>
-                            </div>
-                            <div className="flex items-center gap-3 p-3 border rounded">
-                              <Clock className="w-4 h-4 text-blue-500" />
-                              <div className="flex-1">
-                                <span className="font-medium">Master Sorting Algorithms</span>
-                                <p className="text-sm text-muted-foreground">Chapter 5-7</p>
-                              </div>
-                              <span className="text-sm text-blue-600">In Progress</span>
-                            </div>
-                            <div className="flex items-center gap-3 p-3 border rounded">
-                              <AlertCircle className="w-4 h-4 text-gray-400" />
-                              <div className="flex-1">
-                                <span className="font-medium">Graph Algorithms</span>
-                                <p className="text-sm text-muted-foreground">Chapter 8-10</p>
-                              </div>
-                              <span className="text-sm text-gray-600">Upcoming</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium mb-3">Add Study Goal</h4>
-                          <div className="space-y-3">
-                            <Input placeholder="Goal title" />
-                            <Textarea placeholder="Description" />
-                            <div className="flex gap-2">
-                              <Button size="sm">Add Goal</Button>
-                              <Button variant="outline" size="sm">
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Semester Planning Modal */}
-      <Dialog open={showPlanningView} onOpenChange={setShowPlanningView}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>4-Year Degree Planning</DialogTitle>
-            <DialogDescription>Plan your course schedule across all semesters</DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Object.entries(semesterPlan).map(([semester, courses]) => (
-              <Card key={semester}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Semester {semester}</CardTitle>
-                  <CardDescription>
-                    {courses.length} courses • {courses.length * 3} credits (avg)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {courses.map((courseCode, index) => {
-                      const courseData = mockCourses.find((c) => c.code === courseCode)
-                      return (
-                        <div
-                          key={index}
-                          className={`p-2 border rounded text-sm ${
-                            courseData
-                              ? courseData.status === "completed"
-                                ? "bg-green-50 border-green-200"
-                                : courseData.status === "in-progress"
-                                  ? "bg-blue-50 border-blue-200"
-                                  : "bg-gray-50 border-gray-200"
-                              : "bg-gray-50 border-gray-200"
-                          }`}
-                        >
-                          <div className="font-medium">{courseCode}</div>
-                          {courseData && (
-                            <div className="text-xs text-muted-foreground truncate">{courseData.name}</div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="flex justify-between pt-4">
-            <div className="flex items-center gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-200 rounded"></div>
-                <span>Completed</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-200 rounded"></div>
-                <span>In Progress</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-gray-200 rounded"></div>
-                <span>Planned</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline">Reset Plan</Button>
-              <Button>Save Changes</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
-  )
+  );
 }

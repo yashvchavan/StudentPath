@@ -230,7 +230,7 @@ export function UpgradeModal({
           <div className="space-y-4">
             {/* Pricing badge */}
             <div className="flex items-baseline justify-center gap-1 py-3 rounded-xl bg-primary/5 border border-primary/20">
-              <span className="text-3xl font-bold text-primary">$12</span>
+              <span className="text-3xl font-bold text-primary">₹299</span>
               <span className="text-sm text-muted-foreground">/ year</span>
               <Badge variant="secondary" className="ml-2 text-[10px]">
                 <Zap className="w-2.5 h-2.5 mr-0.5" />
@@ -275,7 +275,7 @@ export function UpgradeModal({
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  Pay $12 - Unlock Pro for 1 Year
+                  Pay ₹299 - Unlock Pro for 1 Year
                 </>
               )}
             </Button>

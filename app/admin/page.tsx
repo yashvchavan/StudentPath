@@ -17,7 +17,8 @@ import {
   BookOpen,
   TrendingUp,
   AlertCircle,
-  Database
+  Database,
+  RefreshCw
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -52,16 +53,27 @@ export default function AdminDashboard() {
   });
   const [recentRegistrations, setRecentRegistrations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     fetchCollegeData();
+    // Auto-refresh every 30 seconds to reflect new student registrations
+    const interval = setInterval(() => {
+      fetchCollegeData(true);
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchCollegeData = async () => {
+  const fetchCollegeData = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (silent) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       setError(null);
 
       // Helper function to get data from cookies
@@ -196,14 +208,28 @@ export default function AdminDashboard() {
           const realData = await collegeDataResponse.json();
           console.log('✅ Real college data received:', realData);
 
-          // Update with real data
-          setCollegeData(prev => ({
-            ...prev!,
-            totalStudents: realData.totalStudents || 0,
-            activeStudents: realData.activeStudents || 0,
-            programs: realData.programs || [],
-            recentRegistrations: realData.recentRegistrations || []
-          }));
+          // Always trust the API for name/email/token — overrides stale localStorage
+          if (realData.collegeInfo) {
+            setCollegeData(prev => ({
+              ...prev!,
+              id: realData.collegeInfo.id || prev!.id,
+              name: realData.collegeInfo.name || prev!.name,
+              email: realData.collegeInfo.email || prev!.email,
+              token: realData.collegeInfo.token || prev!.token,
+              totalStudents: realData.totalStudents || 0,
+              activeStudents: realData.activeStudents || 0,
+              programs: realData.programs || [],
+              recentRegistrations: realData.recentRegistrations || []
+            }));
+          } else {
+            setCollegeData(prev => ({
+              ...prev!,
+              totalStudents: realData.totalStudents || 0,
+              activeStudents: realData.activeStudents || 0,
+              programs: realData.programs || [],
+              recentRegistrations: realData.recentRegistrations || []
+            }));
+          }
 
           setTokenUsage({
             usageCount: realData.tokenUsage?.usageCount || 0,
@@ -213,6 +239,12 @@ export default function AdminDashboard() {
           });
 
           setRecentRegistrations(realData.recentRegistrations || []);
+          setLastUpdated(new Date());
+
+          // Set userType from API data (more reliable than localStorage/auth-me)
+          if (realData.userRole) {
+            setUserType(realData.userRole as 'college' | 'dept_tpo');
+          }
         } else {
           console.warn('⚠️ College data API call failed, using localStorage data only');
         }
@@ -230,14 +262,14 @@ export default function AdminDashboard() {
 
       } catch (apiError) {
         console.warn('⚠️ API error, using localStorage data:', apiError);
-        // Keep using localStorage data if API fails
       }
 
     } catch (error) {
       console.error('❌ Error fetching college data:', error);
-      setError('Failed to load college data');
+      if (!silent) setError('Failed to load college data');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -475,6 +507,30 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div>
+        {/* Stats Overview Header with Refresh */}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">
+            Live Statistics
+          </h3>
+          <div className="flex items-center gap-3">
+            {lastUpdated && (
+              <span className="text-xs text-zinc-600">
+                Updated {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => fetchCollegeData(true)}
+              disabled={isRefreshing}
+              className="h-8 px-3 text-zinc-400 hover:text-white hover:bg-zinc-800 border border-zinc-800"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+
         {/* Stats Overview - Modern SaaS Design */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           {/* Total Students */}
