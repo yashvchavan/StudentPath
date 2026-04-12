@@ -50,8 +50,8 @@ const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    price: "$6",
-    priceSub: "per month • $5/mo billed yearly",
+    price: "$3.21",
+    priceSub: "per year",
     badge: "Most Popular",
     highlight: true,
     description: "For ambitious students who want deeper insights and higher limits.",

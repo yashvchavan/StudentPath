@@ -20,16 +20,16 @@ export function getCheckoutKeyId(): string {
   return RAZORPAY_KEY_ID;
 }
 
-// $12 / year  -> 1200 cents (Razorpay expects smallest currency unit)
+// $3.21 / year -> 321 cents (Razorpay US account; expects smallest currency unit i.e. cents)
 export const PRO_PLAN_AMOUNT_MINOR = Number(
   process.env.RAZORPAY_PRO_PLAN_AMOUNT_MINOR ||
     process.env.RAZORPAY_PRO_PLAN_AMOUNT ||
-    1200
+    321
 );
 export const PRO_PLAN_CURRENCY = (
   process.env.RAZORPAY_PRO_PLAN_CURRENCY || "USD"
 ).toUpperCase();
-export const PRO_PLAN_DISPLAY_PRICE = "$12";
+export const PRO_PLAN_DISPLAY_PRICE = "$3.21";
 export const PRO_PLAN_DISPLAY_LABEL = "per year";
 export const PRO_PLAN_DURATION_MONTHS = 12;
 
