@@ -70,13 +70,13 @@ export default function ErpManagementPage() {
       const token = collegeData?.token;
       if (!token) return;
 
-      const res = await fetch(`/api/admin/erp/status?token=${token}`);
+      const res = await fetch(`/api/admin/erp/status?token=${token}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setErpStats({
           total: data.totalRecords || 0,
-          registered: 0,
-          unregistered: data.totalRecords || 0,
+          registered: data.registeredCount || 0,
+          unregistered: data.unregisteredCount ?? data.totalRecords ?? 0,
         });
       }
     } catch (e) {

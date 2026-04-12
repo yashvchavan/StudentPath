@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
+// Force dynamic so Next.js never caches this route
+export const dynamic = 'force-dynamic';
+
 // Public endpoint — checks by college token (no auth required)
 // Used by the student registration page to decide PRN vs manual flow
 export async function GET(request: NextRequest) {
@@ -32,18 +35,33 @@ export async function GET(request: NextRequest) {
 
     // Count ERP records for this college
     const [countRows]: any = await connection.execute(
-      'SELECT COUNT(*) as total FROM college_erp_students WHERE college_id = ?',
+      `SELECT
+         COUNT(*) as total,
+         SUM(CASE WHEN is_registered = 1 THEN 1 ELSE 0 END) as registered,
+         SUM(CASE WHEN is_registered = 1 THEN 0 ELSE 1 END) as unregistered
+       FROM college_erp_students WHERE college_id = ?`,
       [collegeId]
     );
 
-    const total = countRows[0]?.total || 0;
+    const total = Number(countRows[0]?.total) || 0;
+    const registeredCount = Number(countRows[0]?.registered) || 0;
+    const unregisteredCount = Number(countRows[0]?.unregistered) || 0;
 
-    return NextResponse.json({
-      hasErpData: total > 0,
-      totalRecords: total,
-      collegeName,
-      collegeId,
-    });
+    return NextResponse.json(
+      {
+        hasErpData: total > 0,
+        totalRecords: total,
+        registeredCount,
+        unregisteredCount,
+        collegeName,
+        collegeId,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('[ERP Status] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -174,6 +174,18 @@ export async function POST(request: Request) {
         console.warn('Subscription upsert failed (non-fatal):', subErr);
       }
 
+      // Mark the ERP record as registered (reactivation path)
+      if (studentId && collegeId && updatedUser?.student_id) {
+        try {
+          await connection.execute(
+            `UPDATE college_erp_students
+             SET is_registered = TRUE, registered_student_id = ?
+             WHERE college_id = ? AND prn = ?`,
+            [updatedUser.student_id, collegeId, studentId]
+          );
+        } catch (_) { /* non-fatal */ }
+      }
+
       return NextResponse.json({
         message: 'Account restored successfully',
         userId: updatedUser.student_id,
@@ -282,6 +294,18 @@ export async function POST(request: Request) {
           [studentId, user.student_id]
         );
       } catch (_) { /* prn column may not exist yet — safe to ignore */ }
+
+      // Mark the ERP record as registered and link the new student
+      if (collegeId) {
+        try {
+          await connection.execute(
+            `UPDATE college_erp_students
+             SET is_registered = TRUE, registered_student_id = ?
+             WHERE college_id = ? AND prn = ?`,
+            [user.student_id, collegeId, studentId]
+          );
+        } catch (_) { /* non-fatal */ }
+      }
     }
 
     // Create 30-day free trial subscription
