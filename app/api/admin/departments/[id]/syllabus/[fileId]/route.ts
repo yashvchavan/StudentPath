@@ -7,12 +7,13 @@ import { requireCentralTpo } from "@/lib/tpo-auth";
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string; fileId: string } }
+  { params }: { params: Promise<{ id: string; fileId: string }> }
 ) {
   try {
     const session = await requireCentralTpo();
-    const deptId = parseInt(params.id);
-    const fileId = parseInt(params.fileId);
+    const { id, fileId: fileIdStr } = await params;
+    const deptId = parseInt(id);
+    const fileId = parseInt(fileIdStr);
     if (isNaN(deptId) || isNaN(fileId)) {
       return NextResponse.json({ error: "Invalid IDs" }, { status: 400 });
     }
