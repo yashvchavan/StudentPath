@@ -79,12 +79,17 @@ export async function POST(request: NextRequest) {
         // Rate limit career track generation
         const rl = await checkAndConsumeLimit(String(user.id), "career_track");
         if (!rl.allowed) {
+            const resetStr = rl.resetDate
+                ? new Date(rl.resetDate).toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })
+                : "next week";
             return NextResponse.json(
                 {
-                    error: "Career track generation limit reached for your current plan.",
+                    error: `You've used your plan generation limit for this week (${rl.limit} per week). Next available: ${resetStr}.`,
                     plan: rl.plan,
                     limit: rl.limit,
                     remaining: rl.remaining,
+                    resetDate: rl.resetDate,
+                    periodType: "weekly",
                 },
                 { status: 429 }
             );

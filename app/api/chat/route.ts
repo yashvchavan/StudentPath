@@ -373,10 +373,12 @@ export async function POST(req: NextRequest) {
             if (!rl.allowed) {
                 return NextResponse.json(
                     {
-                        error: "AI chat limit reached for your current plan.",
+                        error: `You've reached your daily AI chat limit (${rl.limit} messages/day). Resets tomorrow.`,
                         plan: rl.plan,
                         limit: rl.limit,
                         remaining: rl.remaining,
+                        resetDate: rl.resetDate,
+                        periodType: "daily",
                     },
                     { status: 429 }
                 );

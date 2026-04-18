@@ -131,12 +131,17 @@ export async function POST(req: NextRequest) {
         // Rate limit resume analysis
         const rl = await checkAndConsumeLimit(String(user.id), "resume_analysis");
         if (!rl.allowed) {
+            const resetStr = rl.resetDate
+                ? new Date(rl.resetDate).toLocaleDateString("en-IN", { weekday: "long", month: "short", day: "numeric" })
+                : "next week";
             return NextResponse.json(
                 {
-                    error: "Resume analysis limit reached for your current plan.",
+                    error: `You've used your resume analysis limit for this week (${rl.limit} per week). Next available: ${resetStr}.`,
                     plan: rl.plan,
                     limit: rl.limit,
                     remaining: rl.remaining,
+                    resetDate: rl.resetDate,
+                    periodType: "weekly",
                 },
                 { status: 429 }
             );

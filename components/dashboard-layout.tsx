@@ -27,6 +27,8 @@ import { useAuth } from "@/hooks/use-auth"
 import { ProfileModal } from "./profile-modal"
 import { UpgradeModal } from "./subscription/UpgradeModal"
 import { ProUpgradeFAB } from "./subscription/ProUpgradeFAB"
+import { FeedbackModal } from "./feedback-modal"
+import { MessageSquareHeart } from "lucide-react"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -109,6 +111,7 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [lockedFeatureLabel, setLockedFeatureLabel] = useState<string>("")
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
   const [subscription, setSubscription] = useState<SubscriptionState>({
     isProActive: true, // optimistically true to avoid flash
     status: null,
@@ -282,8 +285,21 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
             </div>
           </div>
 
-          {/* Right: user dropdown */}
+          {/* Right: feedback + user dropdown */}
           <div className="flex items-center gap-3">
+            {/* Feedback Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFeedbackOpen(true)}
+              className="relative group flex items-center gap-2 text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all duration-200"
+            >
+              <span className="relative">
+                <MessageSquareHeart className="w-[18px] h-[18px] transition-all group-hover:scale-110" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
+              </span>
+              <span className="hidden sm:inline text-sm font-medium">Feedback</span>
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -478,6 +494,9 @@ export default function DashboardLayout({ children, currentPage = "dashboard" }:
         featureLabel={lockedFeatureLabel}
         onSuccess={handlePaymentSuccess}
       />
+
+      {/* Feedback Modal */}
+      <FeedbackModal open={feedbackOpen} onOpenChange={setFeedbackOpen} />
 
       {/* Floating upgrade nudge (visible during trial and after trial expires) */}
       <ProUpgradeFAB

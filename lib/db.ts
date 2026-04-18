@@ -699,6 +699,50 @@ export async function initializeDatabase() {
       )
     `);
 
+    // ── Platform Configuration Table ──────────────────────────────────────
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS platform_config (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        config_key VARCHAR(100) NOT NULL,
+        config_value TEXT NOT NULL,
+        scope ENUM('global','college') DEFAULT 'global',
+        college_id INT NULL,
+        updated_by VARCHAR(255) NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_config_scope (config_key, scope, college_id),
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+      )
+    `);
+
+    // ── User Feedback Table ───────────────────────────────────────────────
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS user_feedback (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        college_id INT NULL,
+        overall_rating INT NOT NULL,
+        ease_of_use INT DEFAULT NULL,
+        feature_usefulness INT DEFAULT NULL,
+        ai_quality INT DEFAULT NULL,
+        ui_design INT DEFAULT NULL,
+        performance_rating INT DEFAULT NULL,
+        would_recommend TINYINT(1) DEFAULT NULL,
+        most_useful_feature VARCHAR(255) DEFAULT NULL,
+        least_useful_feature VARCHAR(255) DEFAULT NULL,
+        missing_feature TEXT DEFAULT NULL,
+        improvement_suggestion TEXT DEFAULT NULL,
+        best_thing TEXT DEFAULT NULL,
+        how_often_use VARCHAR(100) DEFAULT NULL,
+        additional_comments TEXT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES Students(student_id) ON DELETE CASCADE,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
+        INDEX idx_feedback_student (student_id),
+        INDEX idx_feedback_college (college_id),
+        INDEX idx_feedback_created (created_at)
+      )
+    `);
+
     // Safe column migrations for the main Students (capital S) table
     const safeAlter = async (sql: string): Promise<void> => {
       try { await connection.execute(sql); } catch (_) { /* column exists — skip */ }

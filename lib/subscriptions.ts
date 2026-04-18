@@ -67,6 +67,42 @@ function diffDays(from: Date, to: Date): number {
   return Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/** Resolve trial duration in days: platform_config → env → default 30 */
+export async function getTrialDays(collegeId?: number): Promise<number> {
+  try {
+    // 1. Per-college config
+    if (collegeId) {
+      const [collegeRows]: any = await pool.execute(
+        `SELECT config_value FROM platform_config
+         WHERE config_key = 'free_trial_days' AND scope = 'college' AND college_id = ?
+         LIMIT 1`,
+        [collegeId]
+      );
+      if (collegeRows && collegeRows.length > 0) {
+        const parsed = parseInt(collegeRows[0].config_value, 10);
+        if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+      }
+    }
+    // 2. Global config from DB
+    const [globalRows]: any = await pool.execute(
+      `SELECT config_value FROM platform_config
+       WHERE config_key = 'free_trial_days' AND scope = 'global'
+       LIMIT 1`
+    );
+    if (globalRows && globalRows.length > 0) {
+      const parsed = parseInt(globalRows[0].config_value, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) return parsed;
+    }
+  } catch {
+    // Table may not exist yet
+  }
+  // 3. Env var
+  const envVal = parseInt(process.env.FREE_TRIAL_DAYS || "", 10);
+  if (!Number.isNaN(envVal) && envVal > 0) return envVal;
+  // 4. Default
+  return 30;
+}
+
 // ─── Core query: latest subscription row for a student ────────────────────
 export async function getActiveSubscription(
   studentId: string
@@ -109,13 +145,14 @@ export async function getSubscriptionInfo(
   // Fallback: no subscription row — check registration date directly
   if (!rows || rows.length === 0) {
     const [studentRows]: any = await pool.execute(
-      `SELECT created_at FROM Students WHERE student_id = ?`,
+      `SELECT created_at, college_id FROM Students WHERE student_id = ?`,
       [studentId]
     );
     if (studentRows && studentRows.length > 0) {
       const registeredAt = new Date(studentRows[0].created_at);
+      const trialDays = await getTrialDays(studentRows[0].college_id || undefined);
       const trialEnd = new Date(
-        registeredAt.getTime() + 30 * 24 * 60 * 60 * 1000
+        registeredAt.getTime() + trialDays * 24 * 60 * 60 * 1000
       );
       if (now < trialEnd) {
         return {
@@ -205,10 +242,12 @@ export async function getSubscriptionInfo(
 // ─── Create a trial subscription row on registration ──────────────────────
 export async function createTrialSubscription(
   connection: any,
-  studentId: number
+  studentId: number,
+  collegeId?: number
 ): Promise<void> {
   const now = new Date();
-  const trialEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  const trialDays = await getTrialDays(collegeId);
+  const trialEnd = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
   await connection.execute(
     `INSERT INTO subscriptions
