@@ -9,6 +9,7 @@ import {
   AlertCircle, CheckCircle2, Zap,
 } from "lucide-react";
 import { UpgradeModal } from "@/components/subscription/UpgradeModal";
+import { usePricing } from "@/hooks/use-pricing";
 
 type PlanStatus = "trialing" | "active" | "trial_expired" | "expired" | "free" | null;
 
@@ -33,6 +34,7 @@ export function StudentBillingCard() {
     isProActive: false,
   });
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const { pricing } = usePricing();
 
   const load = useCallback(async () => {
     try {
@@ -162,7 +164,7 @@ export function StudentBillingCard() {
               {/* Pricing */}
               {!state.isProActive || state.status === "trial_expired" || state.status === "expired" ? (
                 <div className="flex items-baseline gap-1 rounded-xl bg-primary/5 border border-primary/20 px-4 py-3">
-                  <span className="text-2xl font-bold text-primary">$3.21</span>
+                  <span className="text-2xl font-bold text-primary">{pricing.displayPrice}</span>
                   <span className="text-sm text-muted-foreground">/ year</span>
                   <Badge variant="secondary" className="ml-auto text-[10px]">
                     <Zap className="w-2.5 h-2.5 mr-0.5" />Best value
@@ -183,7 +185,9 @@ export function StudentBillingCard() {
                     className="flex-1 flex items-center justify-center gap-2"
                   >
                     <ShieldCheck className="w-4 h-4" />
-                    {state.status === "trialing" ? "Upgrade Now (Lock in $3.21/yr)" : "Upgrade to Pro — $3.21/yr"}
+                    {state.status === "trialing"
+                      ? `Upgrade Now (Lock in ${pricing.displayPrice}/yr)`
+                      : `Upgrade to Pro — ${pricing.displayPrice}/yr`}
                   </Button>
                 )}
                 <Button

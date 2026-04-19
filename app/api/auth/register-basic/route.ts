@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
+import { getTrialDays } from '@/lib/subscriptions';
 
 export async function POST(request: Request) {
   let connection;
@@ -161,8 +162,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to reactivate account' }, { status: 500 });
       }
 
-      // Upsert subscription
-      const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      // Upsert subscription — duration from platform_config
+      const trialDaysReactivate = await getTrialDays(collegeId ?? undefined);
+      const trialEnd = new Date(Date.now() + trialDaysReactivate * 24 * 60 * 60 * 1000);
       try {
         await connection.execute(
           `INSERT INTO subscriptions (student_id, plan, status, current_period_start, current_period_end, created_at, updated_at)
@@ -308,9 +310,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Create 30-day free trial subscription
-    const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // Create free trial subscription — duration from platform_config (set via Platform Admin)
     try {
+      const trialDays = await getTrialDays(collegeId ?? undefined);
+      const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
       await connection.execute(
         `INSERT INTO subscriptions
            (student_id, plan, status, current_period_start, current_period_end, created_at, updated_at)

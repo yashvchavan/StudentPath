@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
+import { usePricing } from "@/hooks/use-pricing";
 
 declare global {
   interface Window {
@@ -75,6 +76,7 @@ export function UpgradeModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const { pricing } = usePricing();
 
   const handleUpgrade = useCallback(async () => {
     setLoading(true);
@@ -230,7 +232,7 @@ export function UpgradeModal({
           <div className="space-y-4">
             {/* Pricing badge */}
             <div className="flex items-baseline justify-center gap-1 py-3 rounded-xl bg-primary/5 border border-primary/20">
-              <span className="text-3xl font-bold text-primary">$3.21</span>
+              <span className="text-3xl font-bold text-primary">{pricing.displayPrice}</span>
               <span className="text-sm text-muted-foreground">/ year</span>
               <Badge variant="secondary" className="ml-2 text-[10px]">
                 <Zap className="w-2.5 h-2.5 mr-0.5" />
@@ -275,7 +277,7 @@ export function UpgradeModal({
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  Pay $3.21 - Unlock Pro for 1 Year
+                  Pay {pricing.displayPrice} - Unlock Pro for 1 Year
                 </>
               )}
             </Button>

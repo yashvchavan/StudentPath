@@ -18,6 +18,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { UpgradeModal } from "./UpgradeModal";
+import { usePricing } from "@/hooks/use-pricing";
 
 interface PlanFeature {
   label: string;
@@ -49,6 +50,7 @@ interface PricingModalProps {
 
 export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProps) {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const { pricing } = usePricing();
 
   const handleUpgradeSuccess = () => {
     setUpgradeOpen(false);
@@ -120,7 +122,7 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
               <div>
                 <span className="font-semibold text-base">Pro</span>
                 <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-primary">₹299</span>
+                  <span className="text-3xl font-bold text-primary">{pricing.displayPrice}</span>
                   <span className="text-xs text-muted-foreground">/ year</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -146,7 +148,7 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
                 onClick={() => setUpgradeOpen(true)}
               >
                 <ShieldCheck className="w-4 h-4" />
-                Get Pro - ₹299 / year
+                Get Pro - {pricing.displayPrice} / year
               </Button>
 
               <p className="text-[10px] text-center text-muted-foreground -mt-2">

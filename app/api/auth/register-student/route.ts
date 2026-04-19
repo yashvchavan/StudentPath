@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import pool from '@/lib/db';
 import { UserRow, StudentRow, SuccessResult } from '@/lib/db-types';
+import { getTrialDays } from '@/lib/subscriptions';
 
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -169,9 +170,10 @@ export async function POST(request: NextRequest) {
 
     const studentId_result = (result as any).insertId;
 
-    // Create 30-day free trial subscription
-    const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    // Create free trial subscription — duration is read from platform_config (set via Platform Admin)
     try {
+      const trialDays = await getTrialDays(collegeId ?? undefined);
+      const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
       await connection.execute(
         `INSERT INTO subscriptions
            (student_id, plan, status, current_period_start, current_period_end, created_at, updated_at)

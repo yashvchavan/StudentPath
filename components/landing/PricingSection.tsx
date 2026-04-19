@@ -2,7 +2,7 @@
 
 import { motion, type Variants } from "framer-motion";
 import { Check, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const BG = "#030309";
 
@@ -84,6 +84,21 @@ const PLANS: Plan[] = [
 
 export function PricingSection() {
   const [activePlan, setActivePlan] = useState<PlanId>("pro");
+  const [proPrice, setProPrice] = useState("$3.21");
+
+  useEffect(() => {
+    fetch("/api/razorpay/pricing")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.displayPrice) setProPrice(data.displayPrice);
+      })
+      .catch(() => { /* keep default */ });
+  }, []);
+
+  // Build the plans array with the dynamic price
+  const plans: Plan[] = PLANS.map((p) =>
+    p.id === "pro" ? { ...p, price: proPrice } : p
+  );
 
   return (
     <section

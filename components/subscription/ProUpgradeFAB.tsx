@@ -6,6 +6,7 @@ import {
   Sparkles, Clock, X, ChevronRight, Lock,
 } from "lucide-react";
 import { PricingModal } from "./PricingModal";
+import { usePricing } from "@/hooks/use-pricing";
 
 type SubscriptionStatus =
   | "trialing"
@@ -24,6 +25,7 @@ interface ProUpgradeFABProps {
 export function ProUpgradeFAB({ status, daysLeft, onSuccess }: ProUpgradeFABProps) {
   const [dismissed, setDismissed] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
+  const { pricing } = usePricing();
 
   // Don't show for active pro users or if dismissed or still loading
   if (status === "active" || status === null || dismissed) return null;
@@ -31,10 +33,11 @@ export function ProUpgradeFAB({ status, daysLeft, onSuccess }: ProUpgradeFABProp
   const isExpired = status === "trial_expired" || status === "expired";
   const isTrialing = status === "trialing";
 
-  // Trial progress percentage
+  // Trial progress percentage — uses the configured trial days from platform_config
+  const trialTotalDays = pricing.trialDays > 0 ? pricing.trialDays : 30;
   const trialProgress =
     isTrialing && daysLeft !== null
-      ? Math.max(0, Math.min(100, ((30 - daysLeft) / 30) * 100))
+      ? Math.max(0, Math.min(100, ((trialTotalDays - daysLeft) / trialTotalDays) * 100))
       : 100;
 
   const handleSuccess = () => {
@@ -107,7 +110,7 @@ export function ProUpgradeFAB({ status, daysLeft, onSuccess }: ProUpgradeFABProp
           <p className="text-xs text-muted-foreground leading-relaxed">
             {isExpired
               ? "Upgrade to Pro to unlock Career Tracks, AI Assistant, Resume Analyzer and more."
-              : "Upgrade before your trial ends and keep all features - just $3.21/year."}
+              : `Upgrade before your trial ends and keep all features - just ${pricing.displayPrice}/year.`}
           </p>
         </div>
 
