@@ -171,7 +171,7 @@ export function PricingSection() {
           variants={stagger}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
-          {PLANS.map((plan) => {
+          {plans.map((plan) => {
             const isActive = activePlan === plan.id || plan.highlight;
 
             return (

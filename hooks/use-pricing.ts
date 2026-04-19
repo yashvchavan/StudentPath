@@ -20,7 +20,7 @@ const DEFAULT_PRICING: PricingInfo = {
 
 let cachedPricing: PricingInfo | null = null;
 let cacheTime = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 60 * 1000; // 1 minute – keeps pricing fresh after admin changes
 
 export function usePricing() {
   const [pricing, setPricing] = useState<PricingInfo>(

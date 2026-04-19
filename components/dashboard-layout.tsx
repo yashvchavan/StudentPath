@@ -95,7 +95,7 @@ const ALL_SIDEBAR_ITEMS = [
   { icon: GraduationCap,label: "Placements",       href: "/dashboard/career-tracks/placement",   key: "placement" },
   { icon: Award,        label: "Skills Tracker",   href: "/dashboard/skills",                    key: "skills" },
   { icon: Lightbulb,    label: "Recommendations",  href: "/dashboard/recommendations",           key: "recommendations" },
-  { icon: TrendingUp,   label: "Progress Reports", href: "/dashboard/reports",                   key: "reports" },
+  //{ icon: TrendingUp,   label: "Progress Reports", href: "/dashboard/reports",                   key: "reports" },
   { icon: Bot,          label: "AI Assistant",     href: "/dashboard/assistant",                 key: "assistant" },
   { icon: FileText,     label: "Resume Analyzer",  href: "/dashboard/resume",                    key: "resume" },
   { icon: Bell,         label: "Notifications",    href: "/dashboard/notifications",             key: "notifications" },

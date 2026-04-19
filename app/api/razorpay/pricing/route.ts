@@ -26,14 +26,30 @@ export async function GET() {
     });
   } catch (error) {
     console.error("[razorpay/pricing] Error:", error);
-    // Return safe defaults so the UI never breaks
-    return NextResponse.json({
-      success: false,
-      displayPrice: "$3.21",
-      rawPrice: "3.21",
-      currency: "USD",
-      trialDays: 30,
-      label: "per year",
-    });
+    // Try to return live config even on partial failure; ultimate fallback is env/defaults
+    try {
+      const [fallbackPricing, fallbackTrialDays] = await Promise.all([
+        getProPlanPricingConfig(),
+        getTrialDays(),
+      ]);
+      return NextResponse.json({
+        success: false,
+        displayPrice: fallbackPricing.displayPrice,
+        rawPrice: String(fallbackPricing.amountMinor / 100),
+        currency: fallbackPricing.currency,
+        trialDays: fallbackTrialDays,
+        label: fallbackPricing.displayLabel,
+      });
+    } catch {
+      // Last resort hardcoded defaults
+      return NextResponse.json({
+        success: false,
+        displayPrice: "$3.21",
+        rawPrice: "3.21",
+        currency: "USD",
+        trialDays: 30,
+        label: "per year",
+      });
+    }
   }
 }

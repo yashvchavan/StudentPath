@@ -66,10 +66,9 @@ async function getLatestGlobalConfigValue(key: string): Promise<string | null> {
 }
 
 export async function getProPlanPricingConfig(): Promise<ProPlanPricingConfig> {
-  const [amountRaw, currencyRaw, displayRaw] = await Promise.all([
+  const [amountRaw, currencyRaw] = await Promise.all([
     getLatestGlobalConfigValue("pro_plan_amount_minor"),
     getLatestGlobalConfigValue("pro_plan_currency"),
-    getLatestGlobalConfigValue("pro_plan_display_price"),
   ]);
 
   const amountParsed = Number.parseInt(amountRaw ?? "", 10);
@@ -78,15 +77,15 @@ export async function getProPlanPricingConfig(): Promise<ProPlanPricingConfig> {
     : PRO_PLAN_AMOUNT_MINOR;
 
   const currency = (currencyRaw || PRO_PLAN_CURRENCY).toUpperCase();
-  const displayBase = (displayRaw && displayRaw.length > 0)
-    ? displayRaw
-    : String(amountMinor / 100);
-  const hasLeadingSymbol = /^[^\d\s]/.test(displayBase);
+
+  // Always derive display price from the current amount so admin changes
+  // to pro_plan_amount_minor are immediately reflected.
+  const computedDisplay = `${symbolForCurrency(currency)}${(amountMinor / 100).toFixed(2).replace(/\.00$/, "")}`;
 
   return {
     amountMinor,
     currency,
-    displayPrice: hasLeadingSymbol ? displayBase : `${symbolForCurrency(currency)}${displayBase}`,
+    displayPrice: computedDisplay,
     displayLabel: PRO_PLAN_DISPLAY_LABEL,
   };
 }

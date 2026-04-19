@@ -207,8 +207,41 @@ export async function getSubscriptionInfo(
   }
 
   // ── Trialing ──────────────────────────────────────────────────────────
-  if (sub.status === "trialing" && sub.current_period_end) {
-    const trialEnd = new Date(sub.current_period_end);
+  if (sub.status === "trialing" && sub.current_period_start) {
+    // Always recompute trial end from current platform_config so admin
+    // changes to free_trial_days are reflected for existing students.
+    const periodStart = new Date(sub.current_period_start);
+
+    // Resolve college_id for per-college config lookup
+    let collegeId: number | undefined;
+    try {
+      const [studentRows]: any = await pool.execute(
+        `SELECT college_id FROM Students WHERE student_id = ?`,
+        [studentId]
+      );
+      if (studentRows?.[0]?.college_id) collegeId = studentRows[0].college_id;
+    } catch { /* ignore */ }
+
+    const trialDays = await getTrialDays(collegeId);
+    const trialEnd = new Date(
+      periodStart.getTime() + trialDays * 24 * 60 * 60 * 1000
+    );
+
+    // If the DB row is stale (admin changed trial days), update it
+    const storedEnd = sub.current_period_end ? new Date(sub.current_period_end) : null;
+    if (
+      !storedEnd ||
+      Math.abs(storedEnd.getTime() - trialEnd.getTime()) > 60_000 // >1 min drift
+    ) {
+      try {
+        await pool.execute(
+          `UPDATE subscriptions SET current_period_end = ?, updated_at = NOW()
+           WHERE id = ?`,
+          [trialEnd, sub.id]
+        );
+      } catch { /* best-effort update */ }
+    }
+
     if (now < trialEnd) {
       return {
         status: "trialing",
