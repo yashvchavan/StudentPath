@@ -179,15 +179,18 @@ export function StudentBillingCard() {
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     Pro Plan Active
                   </Button>
+                ) : state.status === "trialing" ? (
+                  <Button variant="outline" className="flex-1 flex items-center justify-center gap-2" disabled>
+                    <Clock className="w-4 h-4 text-primary" />
+                    Pro Active (Free Trial)
+                  </Button>
                 ) : (
                   <Button
                     onClick={() => setUpgradeOpen(true)}
                     className="flex-1 flex items-center justify-center gap-2"
                   >
                     <ShieldCheck className="w-4 h-4" />
-                    {state.status === "trialing"
-                      ? `Upgrade Now (Lock in ${pricing.displayPrice}/yr)`
-                      : `Upgrade to Pro — ${pricing.displayPrice}/yr`}
+                    {`Upgrade to Pro — ${pricing.displayPrice}/yr`}
                   </Button>
                 )}
                 <Button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,8 @@ import {
   Bell,
   ShieldCheck,
   Zap,
+  Clock,
+  PartyPopper,
 } from "lucide-react";
 import { usePricing } from "@/hooks/use-pricing";
 
@@ -67,6 +69,13 @@ function loadRazorpayScript(): Promise<boolean> {
   });
 }
 
+interface TrialInfo {
+  isTrialing: boolean;
+  daysLeft: number | null;
+  trialEndsAt: string | null;
+  loaded: boolean;
+}
+
 export function UpgradeModal({
   open,
   onOpenChange,
@@ -77,6 +86,43 @@ export function UpgradeModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const { pricing } = usePricing();
+
+  // Trial status — fetched when modal opens
+  const [trial, setTrial] = useState<TrialInfo>({
+    isTrialing: false,
+    daysLeft: null,
+    trialEndsAt: null,
+    loaded: false,
+  });
+
+  // Fetch subscription status when modal opens
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch("/api/subscription/status", { credentials: "include" });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (!cancelled) {
+          setTrial({
+            isTrialing: data.status === "trialing",
+            daysLeft: data.daysLeft,
+            trialEndsAt: data.trialEndsAt,
+            loaded: true,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          setTrial((t) => ({ ...t, loaded: true }));
+        }
+      }
+    }
+
+    fetchStatus();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const handleUpgrade = useCallback(async () => {
     setLoading(true);
@@ -197,9 +243,27 @@ export function UpgradeModal({
 
   // Reset state when modal closes
   const handleOpenChange = (v: boolean) => {
-    if (!v) { setError(null); setSuccess(false); setLoading(false); }
+    if (!v) {
+      setError(null);
+      setSuccess(false);
+      setLoading(false);
+      setTrial({ isTrialing: false, daysLeft: null, trialEndsAt: null, loaded: false });
+    }
     onOpenChange(v);
   };
+
+  // ── Trial progress bar calculation ──────────────────────────────────────
+  const trialTotalDays = pricing.trialDays > 0 ? pricing.trialDays : 30;
+  const trialProgress =
+    trial.isTrialing && trial.daysLeft !== null
+      ? Math.max(0, Math.min(100, ((trialTotalDays - trial.daysLeft) / trialTotalDays) * 100))
+      : 0;
+
+  const trialEndFormatted = trial.trialEndsAt
+    ? new Date(trial.trialEndsAt).toLocaleDateString("en-IN", {
+        day: "numeric", month: "short", year: "numeric",
+      })
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -207,17 +271,98 @@ export function UpgradeModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Sparkles className="w-5 h-5 text-primary" />
-            Upgrade to Pro
+            {trial.loaded && trial.isTrialing ? "Free Trial Active" : "Upgrade to Pro"}
           </DialogTitle>
           <DialogDescription>
-            {featureLabel
-              ? `"${featureLabel}" is a Pro feature.`
-              : "Unlock all features with a Pro plan."}
-            {" "}Upgrade to continue.
+            {trial.loaded && trial.isTrialing
+              ? "You already have full Pro access during your free trial!"
+              : featureLabel
+                ? `"${featureLabel}" is a Pro feature.`
+                : "Unlock all features with a Pro plan."
+            }
+            {!trial.isTrialing && " Upgrade to continue."}
           </DialogDescription>
         </DialogHeader>
 
-        {success ? (
+        {/* ── Trial Active State ───────────────────────────────────────── */}
+        {trial.loaded && trial.isTrialing ? (
+          <div className="space-y-4 py-2">
+            {/* Celebratory banner */}
+            <div className="flex items-center gap-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-3">
+              <PartyPopper className="w-8 h-8 text-emerald-500 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                  Your free trial is still active!
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  All Pro features are unlocked — enjoy them until your trial ends.
+                </p>
+              </div>
+            </div>
+
+            {/* Trial progress */}
+            <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span>
+                    {trial.daysLeft !== null
+                      ? `${trial.daysLeft} day${trial.daysLeft !== 1 ? "s" : ""} remaining`
+                      : "Trial active"}
+                  </span>
+                </div>
+                {trialEndFormatted && (
+                  <span className="text-xs text-muted-foreground">
+                    Ends {trialEndFormatted}
+                  </span>
+                )}
+              </div>
+              {/* Progress bar */}
+              <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-primary/70 rounded-full transition-all duration-700"
+                  style={{ width: `${trialProgress}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center">
+                {Math.round(trialProgress)}% of your {trialTotalDays}-day trial used
+              </p>
+            </div>
+
+            {/* What's included reminder */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Included in your trial
+              </p>
+              <ul className="space-y-1.5">
+                {PRO_FEATURES.map(({ icon: Icon, label }) => (
+                  <li key={label} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    <Icon className="w-3.5 h-3.5 text-primary shrink-0" />
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Info note */}
+            <div className="rounded-lg bg-muted/50 border border-border px-3 py-2">
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                You can upgrade to Pro after your trial ends to keep all features at just{" "}
+                <span className="font-semibold text-primary">{pricing.displayPrice}/year</span>.
+              </p>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => handleOpenChange(false)}
+            >
+              Got it, continue exploring!
+            </Button>
+          </div>
+        ) : success ? (
+          /* ── Payment Success State ──────────────────────────────────── */
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <CheckCircle2 className="w-12 h-12 text-emerald-500" />
             <p className="font-semibold text-lg">You're on Pro!</p>
@@ -229,6 +374,7 @@ export function UpgradeModal({
             </Button>
           </div>
         ) : (
+          /* ── Payment Form (trial expired / free) ───────────────────── */
           <div className="space-y-4">
             {/* Pricing badge */}
             <div className="flex items-baseline justify-center gap-1 py-3 rounded-xl bg-primary/5 border border-primary/20">

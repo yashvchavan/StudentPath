@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,8 @@ import {
   Sparkles,
   Zap,
   ShieldCheck,
+  Clock,
+  PartyPopper,
 } from "lucide-react";
 import { UpgradeModal } from "./UpgradeModal";
 import { usePricing } from "@/hooks/use-pricing";
@@ -52,6 +54,39 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const { pricing } = usePricing();
 
+  // Track trial status to show appropriate UI
+  const [trialStatus, setTrialStatus] = useState<{
+    isTrialing: boolean;
+    daysLeft: number | null;
+    loaded: boolean;
+  }>({ isTrialing: false, daysLeft: null, loaded: false });
+
+  // Fetch subscription status when modal opens
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch("/api/subscription/status", { credentials: "include" });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (!cancelled) {
+          setTrialStatus({
+            isTrialing: data.status === "trialing",
+            daysLeft: data.daysLeft,
+            loaded: true,
+          });
+        }
+      } catch {
+        if (!cancelled) setTrialStatus((t) => ({ ...t, loaded: true }));
+      }
+    }
+
+    fetchStatus();
+    return () => { cancelled = true; };
+  }, [open]);
+
   const handleUpgradeSuccess = () => {
     setUpgradeOpen(false);
     onOpenChange(false);
@@ -71,6 +106,21 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
               Start with Free or unlock everything with Pro
             </DialogDescription>
           </DialogHeader>
+
+          {/* Trial active info banner */}
+          {trialStatus.loaded && trialStatus.isTrialing && (
+            <div className="flex items-center gap-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 -mt-1">
+              <PartyPopper className="w-5 h-5 text-emerald-500 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                  Free trial active — {trialStatus.daysLeft !== null ? `${trialStatus.daysLeft} day${trialStatus.daysLeft !== 1 ? "s" : ""} left` : "All Pro features unlocked"}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  You can upgrade after your trial ends.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
             {/* ─── Free Plan ──────────────────────────────────────────── */}
@@ -119,7 +169,17 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
                 </Badge>
               </div>
 
-              <div>
+              {/* Trial current badge */}
+              {trialStatus.loaded && trialStatus.isTrialing && (
+                <div className="absolute top-3 left-3">
+                  <Badge variant="secondary" className="text-[10px] gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                    <Clock className="w-2.5 h-2.5" />
+                    Current Plan
+                  </Badge>
+                </div>
+              )}
+
+              <div className={trialStatus.isTrialing ? "mt-5" : ""}>
                 <span className="font-semibold text-base">Pro</span>
                 <div className="mt-2 flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-primary">{pricing.displayPrice}</span>
@@ -143,17 +203,34 @@ export function PricingModal({ open, onOpenChange, onSuccess }: PricingModalProp
                 ))}
               </ul>
 
-              <Button
-                className="w-full gap-2"
-                onClick={() => setUpgradeOpen(true)}
-              >
-                <ShieldCheck className="w-4 h-4" />
-                Get Pro - {pricing.displayPrice} / year
-              </Button>
-
-              <p className="text-[10px] text-center text-muted-foreground -mt-2">
-                Secure payment via Razorpay · Renews after 1 year
-              </p>
+              {trialStatus.loaded && trialStatus.isTrialing ? (
+                /* Trial active: show info instead of upgrade button */
+                <>
+                  <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25 px-3 py-2.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                      You have full Pro access during your trial
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-center text-muted-foreground -mt-2">
+                    Upgrade available after trial ends · {pricing.displayPrice}/year
+                  </p>
+                </>
+              ) : (
+                /* Post-trial: show upgrade button */
+                <>
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => setUpgradeOpen(true)}
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Get Pro - {pricing.displayPrice} / year
+                  </Button>
+                  <p className="text-[10px] text-center text-muted-foreground -mt-2">
+                    Secure payment via Razorpay · Renews after 1 year
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </DialogContent>
