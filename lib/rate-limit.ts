@@ -155,7 +155,8 @@ async function getDbConfigLimit(feature: FeatureKey, plan: PlanName, collegeId?:
     // Then try global
     const [rows]: any = await pool.execute(
       `SELECT config_value FROM platform_config
-       WHERE config_key = ? AND scope = 'global'
+       WHERE config_key = ? AND scope = 'global' AND college_id IS NULL
+       ORDER BY updated_at DESC, id DESC
        LIMIT 1`,
       [configKey]
     );

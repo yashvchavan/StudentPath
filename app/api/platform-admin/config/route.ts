@@ -54,17 +54,22 @@ export async function GET(request: NextRequest) {
       `);
     } catch { /* already exists */ }
 
-    // Fetch all global configs
+    // Fetch all global configs ordered so newest rows are preferred per key.
     const [globalRows]: any = await pool.execute(
-      `SELECT config_key, config_value, updated_at FROM platform_config WHERE scope = 'global'`
+      `SELECT id, config_key, config_value, updated_at
+       FROM platform_config
+       WHERE scope = 'global' AND college_id IS NULL
+       ORDER BY config_key ASC, updated_at DESC, id DESC`
     );
 
     const globalMap = new Map<string, { value: string; updatedAt: string }>();
     for (const row of globalRows) {
-      globalMap.set(row.config_key, {
-        value: row.config_value,
-        updatedAt: row.updated_at,
-      });
+      if (!globalMap.has(row.config_key)) {
+        globalMap.set(row.config_key, {
+          value: row.config_value,
+          updatedAt: row.updated_at,
+        });
+      }
     }
 
     // Build config response with defaults
@@ -170,10 +175,16 @@ export async function PATCH(request: NextRequest) {
             [key, safeValue, college_id]
           );
         } else {
+          // Global rows use college_id=NULL, and NULL values can bypass unique key
+          // deduplication in MySQL. Replace previous global rows for this key first.
+          await connection.execute(
+            `DELETE FROM platform_config
+             WHERE config_key = ? AND scope = 'global' AND college_id IS NULL`,
+            [key]
+          );
           await connection.execute(
             `INSERT INTO platform_config (config_key, config_value, scope, college_id, updated_by)
-             VALUES (?, ?, 'global', NULL, 'platform-admin')
-             ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), updated_by = 'platform-admin'`,
+             VALUES (?, ?, 'global', NULL, 'platform-admin')`,
             [key, safeValue]
           );
         }

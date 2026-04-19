@@ -86,7 +86,8 @@ export async function getTrialDays(collegeId?: number): Promise<number> {
     // 2. Global config from DB
     const [globalRows]: any = await pool.execute(
       `SELECT config_value FROM platform_config
-       WHERE config_key = 'free_trial_days' AND scope = 'global'
+       WHERE config_key = 'free_trial_days' AND scope = 'global' AND college_id IS NULL
+       ORDER BY updated_at DESC, id DESC
        LIMIT 1`
     );
     if (globalRows && globalRows.length > 0) {

@@ -3,10 +3,9 @@ import { getAuthUser } from "@/lib/auth";
 import {
   createRazorpayOrder,
   getCheckoutKeyId,
-  PRO_PLAN_AMOUNT_MINOR,
+  getProPlanPricingConfig,
   PRO_PLAN_CURRENCY,
-  PRO_PLAN_DISPLAY_PRICE,
-  PRO_PLAN_DISPLAY_LABEL,
+  PRO_PLAN_AMOUNT_MINOR,
 } from "@/lib/razorpay";
 
 export async function POST() {
@@ -16,16 +15,20 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const order = await createRazorpayOrder(user.id);
+    const pricing = await getProPlanPricingConfig();
+    const order = await createRazorpayOrder(user.id, {
+      amountMinor: pricing.amountMinor,
+      currency: pricing.currency,
+    });
     const checkoutKeyId = getCheckoutKeyId();
 
     return NextResponse.json({
       success: true,
       orderId: order.id,
-      amount: PRO_PLAN_AMOUNT_MINOR,
-      currency: PRO_PLAN_CURRENCY,
-      displayPrice: PRO_PLAN_DISPLAY_PRICE,
-      displayLabel: PRO_PLAN_DISPLAY_LABEL,
+      amount: pricing.amountMinor,
+      currency: pricing.currency,
+      displayPrice: pricing.displayPrice,
+      displayLabel: pricing.displayLabel,
       keyId: checkoutKeyId,
       mode: checkoutKeyId.startsWith("rzp_test_") ? "test" : "live",
     });

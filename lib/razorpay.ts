@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import pool from "@/lib/db";
 
 export const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID!;
 export const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET!;
@@ -33,13 +34,76 @@ export const PRO_PLAN_DISPLAY_PRICE = "$3.21";
 export const PRO_PLAN_DISPLAY_LABEL = "per year";
 export const PRO_PLAN_DURATION_MONTHS = 12;
 
+export interface ProPlanPricingConfig {
+  amountMinor: number;
+  currency: string;
+  displayPrice: string;
+  displayLabel: string;
+}
+
+function symbolForCurrency(currency: string): string {
+  if (currency === "INR") return "₹";
+  if (currency === "USD") return "$";
+  return `${currency} `;
+}
+
+async function getLatestGlobalConfigValue(key: string): Promise<string | null> {
+  try {
+    const [rows]: any = await pool.execute(
+      `SELECT config_value FROM platform_config
+       WHERE config_key = ? AND scope = 'global' AND college_id IS NULL
+       ORDER BY updated_at DESC, id DESC
+       LIMIT 1`,
+      [key]
+    );
+    if (rows && rows.length > 0 && rows[0].config_value != null) {
+      return String(rows[0].config_value).trim();
+    }
+  } catch {
+    // platform_config may not exist yet; fall back to env/default constants.
+  }
+  return null;
+}
+
+export async function getProPlanPricingConfig(): Promise<ProPlanPricingConfig> {
+  const [amountRaw, currencyRaw, displayRaw] = await Promise.all([
+    getLatestGlobalConfigValue("pro_plan_amount_minor"),
+    getLatestGlobalConfigValue("pro_plan_currency"),
+    getLatestGlobalConfigValue("pro_plan_display_price"),
+  ]);
+
+  const amountParsed = Number.parseInt(amountRaw ?? "", 10);
+  const amountMinor = Number.isInteger(amountParsed) && amountParsed > 0
+    ? amountParsed
+    : PRO_PLAN_AMOUNT_MINOR;
+
+  const currency = (currencyRaw || PRO_PLAN_CURRENCY).toUpperCase();
+  const displayBase = (displayRaw && displayRaw.length > 0)
+    ? displayRaw
+    : String(amountMinor / 100);
+  const hasLeadingSymbol = /^[^\d\s]/.test(displayBase);
+
+  return {
+    amountMinor,
+    currency,
+    displayPrice: hasLeadingSymbol ? displayBase : `${symbolForCurrency(currency)}${displayBase}`,
+    displayLabel: PRO_PLAN_DISPLAY_LABEL,
+  };
+}
+
 // ─── Order creation ────────────────────────────────────────────────────────
-export async function createRazorpayOrder(studentId: string | number) {
+export async function createRazorpayOrder(
+  studentId: string | number,
+  options?: { amountMinor?: number; currency?: string }
+) {
   if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
     throw new Error("Razorpay keys are not configured on server");
   }
 
-  if (!Number.isInteger(PRO_PLAN_AMOUNT_MINOR) || PRO_PLAN_AMOUNT_MINOR <= 0) {
+  const amountMinor = options?.amountMinor ?? PRO_PLAN_AMOUNT_MINOR;
+  const currency = (options?.currency ?? PRO_PLAN_CURRENCY).toUpperCase();
+
+  if (!Number.isInteger(amountMinor) || amountMinor <= 0) {
     throw new Error(
       "Invalid plan amount. Set RAZORPAY_PRO_PLAN_AMOUNT_MINOR as a positive integer (smallest currency unit)."
     );
@@ -58,8 +122,8 @@ export async function createRazorpayOrder(studentId: string | number) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      amount: PRO_PLAN_AMOUNT_MINOR,
-      currency: PRO_PLAN_CURRENCY,
+      amount: amountMinor,
+      currency,
       receipt,
       notes: { plan: "pro", duration: "1_year", student_id: String(studentId) },
     }),
@@ -83,7 +147,7 @@ export async function createRazorpayOrder(studentId: string | number) {
 
     const lower = String(description).toLowerCase();
     const currencyHint =
-      PRO_PLAN_CURRENCY === "USD" &&
+      currency === "USD" &&
       (lower.includes("currency") || lower.includes("international"))
         ? " Enable international/USD in Razorpay dashboard or use a supported currency via RAZORPAY_PRO_PLAN_CURRENCY."
         : "";

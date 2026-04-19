@@ -6,43 +6,23 @@
  */
 
 import { NextResponse } from "next/server";
-import pool from "@/lib/db";
 import { getTrialDays } from "@/lib/subscriptions";
-
-async function getConfigValue(key: string, defaultValue: string): Promise<string> {
-  try {
-    const [rows]: any = await pool.execute(
-      `SELECT config_value FROM platform_config WHERE config_key = ? AND scope = 'global' LIMIT 1`,
-      [key]
-    );
-    if (rows && rows.length > 0 && rows[0].config_value) {
-      return String(rows[0].config_value).trim();
-    }
-  } catch {
-    // platform_config table may not exist yet — fall through to default
-  }
-  return defaultValue;
-}
+import { getProPlanPricingConfig } from "@/lib/razorpay";
 
 export async function GET() {
   try {
-    const [displayPrice, currency, trialDays] = await Promise.all([
-      getConfigValue("pro_plan_display_price", "3.21"),
-      getConfigValue("pro_plan_currency", "USD"),
+    const [pricing, trialDays] = await Promise.all([
+      getProPlanPricingConfig(),
       getTrialDays(),
     ]);
 
-    // Format the display label
-    const currencySymbol = currency === "INR" ? "₹" : "$";
-    const formattedPrice = `${currencySymbol}${displayPrice}`;
-
     return NextResponse.json({
       success: true,
-      displayPrice: formattedPrice,
-      rawPrice: displayPrice,
-      currency,
+      displayPrice: pricing.displayPrice,
+      rawPrice: String(pricing.amountMinor / 100),
+      currency: pricing.currency,
       trialDays,
-      label: "per year",
+      label: pricing.displayLabel,
     });
   } catch (error) {
     console.error("[razorpay/pricing] Error:", error);
