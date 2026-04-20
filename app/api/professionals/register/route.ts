@@ -26,7 +26,9 @@ export async function POST(request: NextRequest) {
       expectedSalary,
       linkedin,
       github,
+      leetcode_url,
       portfolio,
+      projects,
       password,
       skills,
       certifications,
@@ -64,10 +66,10 @@ export async function POST(request: NextRequest) {
     const [result] = await connection.execute(
       `INSERT INTO professionals (
         first_name, last_name, email, phone, company, designation, industry,
-        experience, current_salary, expected_salary, linkedin, github, portfolio,
-        password_hash, skills, certifications, career_goals, preferred_learning_style,
+        experience, current_salary, expected_salary, linkedin, github, leetcode_url, portfolio,
+        password_hash, skills, certifications, projects, career_goals, preferred_learning_style,
         is_active, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
       [
         firstName,
         lastName,
@@ -81,10 +83,12 @@ export async function POST(request: NextRequest) {
         expectedSalary || null,
         linkedin || null,
         github || null,
+        leetcode_url || null,
         portfolio || null,
         passwordHash,
         JSON.stringify(skills || []),
         certifications || null,
+        JSON.stringify(projects || []),
         careerGoals || null,
         preferredLearningStyle || null
       ]

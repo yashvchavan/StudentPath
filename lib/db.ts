@@ -105,7 +105,9 @@ export async function initializeDatabase() {
         expected_salary VARCHAR(50),
         linkedin VARCHAR(255),
         github VARCHAR(255),
+        leetcode_url VARCHAR(255),
         portfolio VARCHAR(255),
+        projects JSON,
         password_hash VARCHAR(255) NOT NULL,
         skills JSON,
         certifications TEXT,
@@ -473,10 +475,6 @@ export async function initializeDatabase() {
     `);
 
     // internship_applications: student applications for internships
-    // Drop and recreate to fix FK reference to Students(student_id)
-    await connection.execute(`DROP TABLE IF EXISTS internship_experiences`);
-    await connection.execute(`DROP TABLE IF EXISTS internship_applications`);
-
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS internship_applications (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -764,6 +762,123 @@ export async function initializeDatabase() {
     await safeAlter('ALTER TABLE Students ADD COLUMN dept_code VARCHAR(50) DEFAULT NULL');
     await safeAlter('ALTER TABLE Students ADD COLUMN placement_status VARCHAR(50) DEFAULT NULL');
     await safeAlter('ALTER TABLE Students ADD COLUMN department_id INT DEFAULT NULL');
+
+    // ── Jobs & Application Tracking Tables ───────────────────────────────
+
+    // jobs: aggregated from free public APIs (Remotive, Himalayas, The Muse) + college-posted
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS jobs (
+        id              INT AUTO_INCREMENT PRIMARY KEY,
+        external_id     VARCHAR(255) NOT NULL,
+        source          ENUM('remotive','himalayas','muse','college') NOT NULL,
+        type            ENUM('internship','fresher','experienced') NOT NULL DEFAULT 'fresher',
+        job_level       ENUM('junior','mid','senior','lead','any') DEFAULT 'any',
+        title           VARCHAR(255) NOT NULL,
+        company         VARCHAR(255) NOT NULL,
+        logo_url        VARCHAR(500),
+        location        VARCHAR(255),
+        is_remote       BOOLEAN DEFAULT FALSE,
+        stipend         VARCHAR(100),
+        salary          VARCHAR(100),
+        salary_min      INT DEFAULT NULL,
+        salary_max      INT DEFAULT NULL,
+        currency        VARCHAR(10) DEFAULT 'INR',
+        min_experience  INT DEFAULT 0,
+        max_experience  INT DEFAULT NULL,
+        skills_required JSON,
+        category        VARCHAR(100),
+        description     TEXT,
+        apply_url       VARCHAR(500) NOT NULL,
+        company_size    VARCHAR(100),
+        industry        VARCHAR(100),
+        posted_at       DATETIME,
+        expires_at      DATETIME,
+        is_active       BOOLEAN DEFAULT TRUE,
+        created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_external (source, external_id),
+        INDEX idx_type (type),
+        INDEX idx_active (is_active),
+        INDEX idx_posted (posted_at),
+        INDEX idx_level (job_level),
+        INDEX idx_industry (industry)
+      )
+    `);
+
+    // job_applications: shared by students and professionals (Kanban tracker)
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS job_applications (
+        id               INT AUTO_INCREMENT PRIMARY KEY,
+        user_id          INT NOT NULL,
+        user_type        ENUM('student','professional') NOT NULL,
+        job_id           INT NULL,
+        job_title        VARCHAR(255) NOT NULL,
+        company          VARCHAR(255) NOT NULL,
+        apply_url        VARCHAR(500),
+        logo_url         VARCHAR(500),
+        location         VARCHAR(255),
+        salary_range     VARCHAR(100),
+        status           ENUM('saved','applied','screening','interview','offer','rejected') NOT NULL DEFAULT 'saved',
+        applied_date     DATE,
+        notes            TEXT,
+        contact_name     VARCHAR(255),
+        contact_email    VARCHAR(255),
+        next_action      VARCHAR(255),
+        next_action_date DATE,
+        interview_rounds JSON,
+        status_history   JSON,
+        created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_user (user_id, user_type),
+        INDEX idx_status (status),
+        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE SET NULL
+      )
+    `);
+
+    // job_scrape_logs: tracks cron runs for debugging
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS job_scrape_logs (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        run_id       VARCHAR(64) NOT NULL,
+        source       VARCHAR(50) NOT NULL,
+        jobs_fetched INT DEFAULT 0,
+        jobs_inserted INT DEFAULT 0,
+        jobs_updated INT DEFAULT 0,
+        error_msg    TEXT,
+        duration_ms  INT DEFAULT 0,
+        ran_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_source (source),
+        INDEX idx_ran_at (ran_at)
+      )
+    `);
+
+    // notifications: unified for students and professionals
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        user_id    INT NOT NULL,
+        user_type  ENUM('student','professional') NOT NULL,
+        type       VARCHAR(100) NOT NULL,
+        title      VARCHAR(255) NOT NULL,
+        body       TEXT,
+        action_url VARCHAR(500),
+        is_read    BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_notif (user_id, user_type),
+        INDEX idx_unread (user_id, user_type, is_read)
+      )
+    `);
+
+
+    // ── Schema migrations (safe, idempotent) ─────────────────────────────
+    // Widen columns that external APIs may overflow
+    await safeAlter(`ALTER TABLE jobs MODIFY COLUMN location VARCHAR(500)`);
+    await safeAlter(`ALTER TABLE jobs MODIFY COLUMN title VARCHAR(500)`);
+    await safeAlter(`ALTER TABLE jobs MODIFY COLUMN company VARCHAR(500)`);
+    await safeAlter(`ALTER TABLE jobs MODIFY COLUMN category VARCHAR(200)`);
+    await safeAlter(`ALTER TABLE jobs MODIFY COLUMN industry VARCHAR(200)`);
+    await safeAlter(`ALTER TABLE jobs MODIFY COLUMN company_size VARCHAR(200)`);
+    await safeAlter(`ALTER TABLE job_applications MODIFY COLUMN location VARCHAR(500)`);
 
     connection.release();
     console.log('Database tables initialized successfully');

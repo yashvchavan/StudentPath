@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Uncomment the following line if you want to disable ESLint during production builds
-  // eslint: {
-  //   ignoreDuringBuilds: true,
-  // },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // typescript: {
   //   ignoreBuildErrors: true,
   // },

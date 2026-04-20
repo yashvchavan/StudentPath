@@ -132,6 +132,20 @@ export async function getAuthUser(): Promise<AuthUser | null> {
                 }
 
                 console.log(`[Auth] Student not found for ID: ${userId}`);
+            } else if (userRole === "professional") {
+                const [rows]: any = await connection.execute(
+                    "SELECT id, first_name, last_name, email FROM professionals WHERE id = ?",
+                    [userId]
+                );
+                if (rows.length > 0) {
+                    const prof = rows[0];
+                    return {
+                        id: prof.id,
+                        role: "professional",
+                        email: prof.email,
+                        name: `${prof.first_name} ${prof.last_name}`
+                    };
+                }
             }
 
             return null;

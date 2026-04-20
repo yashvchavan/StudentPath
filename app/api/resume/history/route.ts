@@ -9,34 +9,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import pool from "@/lib/db";
+import { ensureResumeSchema } from "@/lib/schema";
 
 export async function GET(req: NextRequest) {
     try {
-        // 1. Auth check
+        // 1. Auth check — accept an explicit professionalId for the professional dashboard
         const user = await getAuthUser();
-        if (!user || user.role !== "student") {
+        const url = new URL(req.url);
+        const professionalId = url.searchParams.get("professionalId");
+
+        const resolvedUser = user && ["student", "professional"].includes(user.role)
+            ? user
+            : (professionalId ? { id: Number(professionalId), role: "professional" as const } : null);
+
+        if (!resolvedUser) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // 2. Fetch all resumes for this student
-        const [resumes]: any = await pool.execute(
-            `SELECT id, file_url, file_name, file_type, created_at
-       FROM resumes
-       WHERE student_id = ?
-       ORDER BY created_at DESC`,
-            [user.id]
-        );
+        const idField = resolvedUser.role === "professional" ? "professional_id" : "student_id";
+        const connection = await pool.getConnection();
+        try {
+            await ensureResumeSchema(connection);
 
-        // 3. Fetch all analyses for this student
-        const [analyses]: any = await pool.execute(
+            // 2. Fetch all resumes for this user
+            const [resumes]: any = await connection.execute(
+            `SELECT id, file_url, file_name, file_type, created_at
+             FROM resumes
+             WHERE ${idField} = ?
+             ORDER BY created_at DESC`,
+            [resolvedUser.id]
+            );
+
+            // 3. Fetch all analyses for this user
+            const [analyses]: any = await connection.execute(
             `SELECT id, resume_id, company_name, company_id, target_role,
               ats_score, section_scores, feedback_json, rejection_reasons,
               skill_gaps, improvement_steps, created_at
-       FROM resume_analyses
-       WHERE student_id = ?
-       ORDER BY created_at DESC`,
-            [user.id]
-        );
+             FROM resume_analyses
+             WHERE ${idField} = ?
+             ORDER BY created_at DESC`,
+                        [resolvedUser.id]
+            );
 
         // 4. Group analyses by resume_id
         const analysisMap: Record<number, any[]> = {};
@@ -63,11 +76,14 @@ export async function GET(req: NextRequest) {
             total_analyses: (analysisMap[resume.id] || []).length,
         }));
 
-        return NextResponse.json({
-            success: true,
-            resumes: result,
-            total: resumes.length,
-        });
+            return NextResponse.json({
+                success: true,
+                resumes: result,
+                total: resumes.length,
+            });
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error("[Resume History] Error:", error);
         return NextResponse.json(

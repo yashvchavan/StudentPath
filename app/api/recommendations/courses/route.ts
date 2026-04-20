@@ -6,7 +6,8 @@
  * Request body:
  *   {
  *     "missingSkills": ["React", "Docker", "PostgreSQL"],
- *     "studentId": 42          (optional — used for cache attribution)
+ *     "studentId": 42,         (optional)
+ *     "professionalId": 7      (optional)
  *   }
  *
  * GET /api/recommendations/courses?studentId=42
@@ -35,9 +36,10 @@ import {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { missingSkills, studentId } = body as {
+    const { missingSkills, studentId, professionalId } = body as {
       missingSkills?: string[];
       studentId?:     number;
+      professionalId?: number;
     };
 
     if (!Array.isArray(missingSkills) || missingSkills.length === 0) {
@@ -54,9 +56,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ownerId = professionalId ?? studentId;
+
     const data: CourseRecommendationResult = await recommendCourses(
       missingSkills,
-      studentId
+      ownerId
     );
 
     return NextResponse.json({ success: true, data });

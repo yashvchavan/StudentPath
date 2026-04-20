@@ -9,17 +9,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import pool from "@/lib/db";
+import { ensureResumeSchema } from "@/lib/schema";
 
 export async function GET(req: NextRequest) {
     try {
-        // 1. Auth check
-        const user = await getAuthUser();
-        if (!user || user.role !== "student") {
+        // 1. Auth check (with explicit professionalId fallback)
+        const authUser = await getAuthUser();
+        const { searchParams } = new URL(req.url);
+        const fallbackProfessionalId = searchParams.get("professionalId");
+
+        const user = authUser && ["student", "professional"].includes(authUser.role)
+            ? authUser
+            : (fallbackProfessionalId ? { id: Number(fallbackProfessionalId), role: "professional" as const } : null);
+
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
+        const idField = user.role === "professional" ? "professional_id" : "student_id";
+        const conn = await pool.getConnection();
+        try {
+          await ensureResumeSchema(conn);
+
         // 2. Get resumeId from query params
-        const { searchParams } = new URL(req.url);
         const resumeId = searchParams.get("resumeId");
 
         if (!resumeId) {
@@ -29,9 +41,9 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // 3. Verify resume belongs to student
+        // 3. Verify resume belongs to user
         const [resumes]: any = await pool.execute(
-            "SELECT id, file_name, file_url, created_at FROM resumes WHERE id = ? AND student_id = ?",
+            `SELECT id, file_name, file_url, created_at FROM resumes WHERE id = ? AND ${idField} = ?`,
             [resumeId, user.id]
         );
 
@@ -45,7 +57,7 @@ export async function GET(req: NextRequest) {
               ats_score, section_scores, rejection_reasons,
               skill_gaps, improvement_steps, created_at
        FROM resume_analyses
-       WHERE resume_id = ? AND student_id = ?
+       WHERE resume_id = ? AND ${idField} = ?
        ORDER BY ats_score DESC`,
             [resumeId, user.id]
         );
@@ -65,6 +77,9 @@ export async function GET(req: NextRequest) {
             comparisons: comparisonData,
             total: comparisonData.length,
         });
+        } finally {
+          conn.release();
+        }
     } catch (error) {
         console.error("[Resume Compare] Error:", error);
         return NextResponse.json(

@@ -18,7 +18,7 @@ import {
   Bell, Search, Home, BookOpen, Target, Award, Lightbulb,
   TrendingUp, Bot, Settings, Menu, X, User, LogOut,
   Compass, FileText, Briefcase, GraduationCap, Lock,
-  Sparkles, Clock,
+  Sparkles, Clock, LayoutList, CheckSquare,
 } from "lucide-react"
 import Link from "next/link"
 import { useStudentData } from "../app/contexts/StudentDataContext"
@@ -84,6 +84,7 @@ interface SubscriptionState {
 const PRO_KEYS = new Set([
   "career-tracks", "internships", "placement",
   "recommendations", "reports", "assistant", "resume", "notifications",
+  // NOTE: "jobs" and "applications" are intentionally FREE for all students
 ])
 
 const ALL_SIDEBAR_ITEMS = [
@@ -91,11 +92,12 @@ const ALL_SIDEBAR_ITEMS = [
   { icon: BookOpen,     label: "My Courses",       href: "/dashboard/courses",                   key: "courses" },
   { icon: Target,       label: "Career Goals",     href: "/dashboard/goals",                     key: "goals" },
   { icon: Compass,      label: "Career Tracks",    href: "/dashboard/career-tracks",             key: "career-tracks" },
-  { icon: Briefcase,    label: "Internships",      href: "/dashboard/career-tracks/internships", key: "internships" },
-  { icon: GraduationCap,label: "Placements",       href: "/dashboard/career-tracks/placement",   key: "placement" },
+  { icon: Briefcase,    label: "Job Board",         href: "/dashboard/jobs",                      key: "jobs" },
+  { icon: CheckSquare,  label: "My Applications",  href: "/dashboard/applications",              key: "applications" },
+  { icon: GraduationCap,label: "Internships",      href: "/dashboard/career-tracks/internships", key: "internships" },
+  { icon: LayoutList,   label: "Campus Placements", href: "/dashboard/career-tracks/placement",   key: "placement" },
   { icon: Award,        label: "Skills Tracker",   href: "/dashboard/skills",                    key: "skills" },
   { icon: Lightbulb,    label: "Recommendations",  href: "/dashboard/recommendations",           key: "recommendations" },
-  //{ icon: TrendingUp,   label: "Progress Reports", href: "/dashboard/reports",                   key: "reports" },
   { icon: Bot,          label: "AI Assistant",     href: "/dashboard/assistant",                 key: "assistant" },
   { icon: FileText,     label: "Resume Analyzer",  href: "/dashboard/resume",                    key: "resume" },
   { icon: Bell,         label: "Notifications",    href: "/dashboard/notifications",             key: "notifications" },

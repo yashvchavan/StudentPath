@@ -20,6 +20,7 @@ import { calculateATSScore, type CompanyRequirements } from "@/lib/resume/ats-sc
 import { generateAIFeedback, type StudentContext } from "@/lib/resume/ai-feedback";
 import { seedCompanyRequirements, getCompanyRequirements } from "@/lib/resume/requirements-seed";
 import { checkAndConsumeLimit } from "@/lib/rate-limit";
+import { ensureResumeSchema } from "@/lib/schema";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -123,10 +124,24 @@ Rules:
 export async function POST(req: NextRequest) {
     try {
         // 1. Auth check
-        const user = await getAuthUser();
-        if (!user || user.role !== "student") {
+        const authUser = await getAuthUser();
+
+        // 2. Parse request body
+        const body = await req.json();
+        const { resumeId, companyId, companyName, targetRole, professionalId } = body;
+
+        const user = authUser && ["student", "professional"].includes(authUser.role)
+            ? authUser
+            : (professionalId ? { id: Number(professionalId), role: "professional" as const, email: "", name: "Professional" } : null);
+
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
+
+        const idField = user.role === "professional" ? "professional_id" : "student_id";
+        const connection = await pool.getConnection();
+        try {
+        await ensureResumeSchema(connection);
 
         // Rate limit resume analysis
         const rl = await checkAndConsumeLimit(String(user.id), "resume_analysis");
@@ -147,10 +162,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 2. Parse request body
-        const body = await req.json();
-        const { resumeId, companyId, companyName, targetRole } = body;
-
         if (!resumeId || !targetRole) {
             return NextResponse.json(
                 { error: "Missing required fields: resumeId, targetRole" },
@@ -167,7 +178,7 @@ export async function POST(req: NextRequest) {
 
         // 3. Fetch resume
         const [resumes]: any = await pool.execute(
-            "SELECT * FROM resumes WHERE id = ? AND student_id = ?",
+            `SELECT * FROM resumes WHERE id = ? AND ${idField} = ?`,
             [resumeId, user.id]
         );
 
@@ -281,16 +292,27 @@ export async function POST(req: NextRequest) {
         // 5. Run rule-based ATS scoring
         const atsResult = calculateATSScore(resumeText, companyReqs);
 
-        // 6. Fetch student profile for AI context
-        const [students]: any = await pool.execute(
-            `SELECT first_name, last_name, current_year, program, current_gpa,
-              technical_skills, college
-       FROM students WHERE student_id = ?`,
-            [user.id]
-        );
-
-        const studentProfile = students[0] || {};
+        // 6. Fetch profile for AI context
+        let studentProfile: any = {};
         let techSkills: string[] = [];
+
+        if (user.role === "student") {
+            const [students]: any = await pool.execute(
+                `SELECT first_name, last_name, current_year, program, current_gpa,
+                  technical_skills, college
+                 FROM students WHERE student_id = ?`,
+                [user.id]
+            );
+            studentProfile = students[0] || {};
+        } else {
+             const [pros]: any = await pool.execute(
+                `SELECT first_name, last_name, skills as technical_skills
+                 FROM professionals WHERE id = ?`,
+                [user.id]
+            );
+            studentProfile = pros[0] || {};
+        }
+
         try {
             if (studentProfile.technical_skills) {
                 const parsed = typeof studentProfile.technical_skills === "string"
@@ -320,7 +342,7 @@ export async function POST(req: NextRequest) {
         // 8. Save analysis to database
         const [insertResult]: any = await pool.execute(
             `INSERT INTO resume_analyses
-       (resume_id, student_id, company_name, company_id, target_role,
+       (resume_id, ${idField}, company_name, company_id, target_role,
         ats_score, section_scores, feedback_json, rejection_reasons,
         skill_gaps, improvement_steps)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -362,6 +384,9 @@ export async function POST(req: NextRequest) {
                 created_at: new Date().toISOString(),
             },
         });
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error("[Resume Analyze] Error:", error);
         return NextResponse.json(

@@ -2410,7 +2410,9 @@ const ProfessionalRegistration = () => {
     expectedSalary: "",
     linkedin: "",
     github: "",
+    leetcode_url: "",
     portfolio: "",
+    projects: "",
     password: "",
     confirmPassword: "",
     agreeToTerms: false,
@@ -2475,10 +2477,12 @@ const ProfessionalRegistration = () => {
           expectedSalary: formData.expectedSalary,
           linkedin: formData.linkedin,
           github: formData.github,
+          leetcode_url: formData.leetcode_url,
           portfolio: formData.portfolio,
           password: formData.password,
           skills: formData.skills,
           certifications: formData.certifications,
+          projects: formData.projects ? [{ name: formData.projects }] : [],
           careerGoals: formData.careerGoals,
           preferredLearningStyle: formData.preferredLearningStyle,
         }),
@@ -2589,6 +2593,32 @@ const ProfessionalRegistration = () => {
                     placeholder="linkedin.com/in/yourprofile"
                     value={formData.linkedin}
                     onChange={(e) => updateFormData({ linkedin: e.target.value })}
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="github" className="text-white font-medium">
+                    GitHub Profile
+                  </Label>
+                  <Input
+                    id="github"
+                    placeholder="github.com/yourusername"
+                    value={formData.github}
+                    onChange={(e) => updateFormData({ github: e.target.value })}
+                    className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="leetcode" className="text-white font-medium">
+                    LeetCode Profile
+                  </Label>
+                  <Input
+                    id="leetcode"
+                    placeholder="leetcode.com/u/yourusername"
+                    value={formData.leetcode_url}
+                    onChange={(e) => updateFormData({ leetcode_url: e.target.value })}
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
                   />
                 </div>
@@ -2754,6 +2784,19 @@ const ProfessionalRegistration = () => {
                     className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projects" className="text-white font-medium">
+                  Projects (Optional)
+                </Label>
+                <Input
+                  id="projects"
+                  placeholder="e.g., E-commerce API, React Dashboard"
+                  value={formData.projects}
+                  onChange={(e) => updateFormData({ projects: e.target.value })}
+                  className="bg-white/5 border-white/20 text-white placeholder:text-gray-400"
+                />
               </div>
 
               <div className="space-y-2">

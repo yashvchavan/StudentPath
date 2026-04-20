@@ -534,7 +534,7 @@ What would you like to explore today?`
               </Tooltip>
 
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-yellow-500 to-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-500/20">
                   <Bot className="w-4 h-4 md:w-5 md:h-5 text-black" />
                 </div>
                 <div>
@@ -731,7 +731,7 @@ What would you like to explore today?`
                                 source.type === 'educational' ? 'bg-blue-500/20 text-blue-500' :
                                   source.type === 'market' ? 'bg-green-500/20 text-green-500' :
                                     source.type === 'career' ? 'bg-purple-500/20 text-purple-500' :
-                                      'bg-orange-500/20 text-orange-500'
+                                      'bg-yellow-500/20 text-yellow-500'
                                 }`}>
                                 {source.type === 'profile' ? <Briefcase className="w-3 h-3" /> :
                                   source.type === 'educational' ? <GraduationCap className="w-3 h-3" /> :

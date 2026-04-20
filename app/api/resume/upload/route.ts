@@ -11,6 +11,7 @@ import { getAuthUser } from "@/lib/auth";
 import cloudinary from "@/lib/cloudinary";
 import { parseResume } from "@/lib/resume/parser";
 import pool from "@/lib/db";
+import { ensureResumeSchema } from "@/lib/schema";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     try {
         // 1. Auth check
         const user = await getAuthUser();
-        if (!user || user.role !== "student") {
+        if (!user || !["student", "professional"].includes(user.role)) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
 
         const fileType = isPDF ? "pdf" : "docx";
         const buffer = Buffer.from(await file.arrayBuffer());
+        const connection = await pool.getConnection();
 
         // 5. Upload to Cloudinary (raw resource)
         let fileUrl = "";
@@ -85,25 +87,32 @@ export async function POST(req: NextRequest) {
         }
 
         // 7. Save to database
-        const [result]: any = await pool.execute(
-            `INSERT INTO resumes (student_id, file_url, file_name, file_type, parsed_text)
+        try {
+            await ensureResumeSchema(connection);
+
+            const idField = user.role === "professional" ? "professional_id" : "student_id";
+            const [result]: any = await connection.execute(
+                `INSERT INTO resumes (${idField}, file_url, file_name, file_type, parsed_text)
        VALUES (?, ?, ?, ?, ?)`,
-            [user.id, fileUrl, file.name, fileType, parsedText]
-        );
+                [user.id, fileUrl, file.name, fileType, parsedText]
+            );
 
-        const resumeId = result.insertId;
+            const resumeId = result.insertId;
 
-        return NextResponse.json({
-            success: true,
-            resume: {
-                id: resumeId,
-                file_url: fileUrl,
-                file_name: file.name,
-                file_type: fileType,
-                parsed_text_preview: parsedText.substring(0, 500),
-                created_at: new Date().toISOString(),
-            },
-        });
+            return NextResponse.json({
+                success: true,
+                resume: {
+                    id: resumeId,
+                    file_url: fileUrl,
+                    file_name: file.name,
+                    file_type: fileType,
+                    parsed_text_preview: parsedText.substring(0, 500),
+                    created_at: new Date().toISOString(),
+                },
+            });
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error("[Resume Upload] Error:", error);
         return NextResponse.json(
